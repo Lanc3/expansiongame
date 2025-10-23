@@ -1,0 +1,19 @@
+[remap]
+
+importer="mp3"
+type="AudioStreamMP3"
+uid="uid://bgn1275ixu41w"
+path="res://.godot/imported/Power Up Gained.mp3-3504773e9e3e39de54b1e39786224406.mp3str"
+
+[deps]
+
+source_file="res://assets/audio/Power Up Gained.mp3"
+dest_files=["res://.godot/imported/Power Up Gained.mp3-3504773e9e3e39de54b1e39786224406.mp3str"]
+
+[params]
+
+loop=false
+loop_offset=0
+bpm=0
+beat_count=0
+bar_beats=4

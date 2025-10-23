@@ -9,7 +9,8 @@
 radius = 58.77
 
 [node name="BaseUnit2" instance=ExtResource("1_n4dpo")]
-collision_mask = 6
+collision_layer = 0
+collision_mask = 0
 script = ExtResource("2_ifn6a")
 resource_storage_capacity = 10000.0
 unit_name = "CommandShip"

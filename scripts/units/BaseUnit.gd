@@ -293,6 +293,8 @@ func start_move_to(target: Vector2):
 	# Reset idle behavior
 	idle_behavior_initialized = false
 	
+	# Note: Movement sound is played once per command group in CommandSystem
+	
 	# Check if unit has formation assignment
 	if FormationManager.has_formation(self):
 		target_position = FormationManager.get_formation_target(self, target)
@@ -440,9 +442,29 @@ func process_combat_state(delta: float):
 		complete_current_command()
 		return
 	
-	# Face target and attack
+	# Get weapon range
 	var weapon = get_node_or_null("WeaponComponent")
-	if weapon and weapon.has_method("fire_at"):
+	var weapon_range = 150.0
+	if weapon and "rangeAim" in weapon:
+		weapon_range = weapon.rangeAim
+	
+	# Check distance to target
+	var distance_to_target = global_position.distance_to(target_entity.global_position)
+	
+	# If out of range, move closer
+	if distance_to_target > weapon_range * 0.8:  # Move to 80% of weapon range
+		target_position = target_entity.global_position
+		
+		# Calculate direction and move toward target
+		var direction = (target_entity.global_position - global_position).normalized()
+		var desired_vel = direction * move_speed
+		velocity = velocity.move_toward(desired_vel, acceleration * delta)
+	else:
+		# In range - slow down and fire
+		velocity = velocity.move_toward(Vector2.ZERO, acceleration * delta * 2.0)
+	
+	# Fire weapon if in range
+	if weapon and weapon.has_method("fire_at") and distance_to_target <= weapon_range:
 		weapon.fire_at(target_entity, global_position)
 
 func complete_current_command():

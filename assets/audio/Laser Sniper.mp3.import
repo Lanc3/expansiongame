@@ -1,0 +1,19 @@
+[remap]
+
+importer="mp3"
+type="AudioStreamMP3"
+uid="uid://d2432gw0xp14"
+path="res://.godot/imported/Laser Sniper.mp3-822e94a85f91c595070132c24dc9c77b.mp3str"
+
+[deps]
+
+source_file="res://assets/audio/Laser Sniper.mp3"
+dest_files=["res://.godot/imported/Laser Sniper.mp3-822e94a85f91c595070132c24dc9c77b.mp3str"]
+
+[params]
+
+loop=false
+loop_offset=0
+bpm=0
+beat_count=0
+bar_beats=4

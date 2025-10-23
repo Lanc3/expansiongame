@@ -33,6 +33,10 @@ func fire_at(target: Node2D, from_position: Vector2):
 	
 	cooldown_timer = 1.0 / fire_rate
 	
+	# Play weapon sound with spatial audio
+	if AudioManager:
+		AudioManager.play_weapon_sound(from_position)
+	
 	# Create projectile
 	var projectile = projectile_scene.instantiate()
 	projectile.setup(
@@ -45,6 +49,3 @@ func fire_at(target: Node2D, from_position: Vector2):
 		get_parent()  # Owner (the unit firing)
 	)
 	get_tree().root.add_child(projectile)
-	
-	# Visual/audio feedback
-	AudioManager.play_sound("weapon_fire")

@@ -10,6 +10,7 @@ signal load_requested
 @onready var resume_button: Button = $MenuPanel/VBoxContainer/ResumeButton
 @onready var save_button: Button = $MenuPanel/VBoxContainer/SaveButton
 @onready var load_button: Button = $MenuPanel/VBoxContainer/LoadButton
+@onready var settings_button: Button = $MenuPanel/VBoxContainer/SettingsButton
 @onready var quit_menu_button: Button = $MenuPanel/VBoxContainer/QuitMenuButton
 @onready var quit_desktop_button: Button = $MenuPanel/VBoxContainer/QuitDesktopButton
 @onready var status_label: Label = $MenuPanel/VBoxContainer/StatusLabel
@@ -24,6 +25,7 @@ func _ready():
 	resume_button.pressed.connect(_on_resume_pressed)
 	save_button.pressed.connect(_on_save_pressed)
 	load_button.pressed.connect(_on_load_pressed)
+	settings_button.pressed.connect(_on_settings_pressed)
 	quit_menu_button.pressed.connect(_on_quit_menu_pressed)
 	quit_desktop_button.pressed.connect(_on_quit_desktop_pressed)
 	
@@ -129,6 +131,13 @@ func _on_quit_menu_pressed():
 	GameManager.reset_game()
 	get_tree().paused = false
 	GameManager.change_scene("res://scenes/main/MainMenu.tscn")
+
+func _on_settings_pressed():
+	"""Open settings menu"""
+	var settings = preload("res://scenes/ui/SettingsMenu.tscn").instantiate()
+	add_child(settings)
+	settings.show_settings()
+	settings.closed.connect(func(): settings.queue_free())
 
 func _on_quit_desktop_pressed():
 	"""Quit to desktop"""

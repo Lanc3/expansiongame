@@ -165,7 +165,9 @@ func auto_scan_for_targets():
 		
 		if distance <= detection_range:
 			# Found target, attack it
+			print("%s detected player at distance %.0f (range: %.0f)" % [unit_name, distance, detection_range])
 			if ai_state == AIState.IDLE or (ai_state == AIState.MOVING and command_queue.is_empty()):
+				print("%s engaging target!" % unit_name)
 				start_attack(nearest_player)
 				# Switch to aggressive mode when engaging
 				become_aggressive()

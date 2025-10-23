@@ -1,0 +1,19 @@
+[remap]
+
+importer="mp3"
+type="AudioStreamMP3"
+uid="uid://bveqfdpn3g2kr"
+path="res://.godot/imported/Laser Gun.mp3-eb78b7de4f53132275dec0df931f2c88.mp3str"
+
+[deps]
+
+source_file="res://assets/audio/Laser Gun.mp3"
+dest_files=["res://.godot/imported/Laser Gun.mp3-eb78b7de4f53132275dec0df931f2c88.mp3str"]
+
+[params]
+
+loop=false
+loop_offset=0
+bpm=0
+beat_count=0
+bar_beats=4

@@ -1,0 +1,19 @@
+[remap]
+
+importer="mp3"
+type="AudioStreamMP3"
+uid="uid://dfryk1sht643y"
+path="res://.godot/imported/Laser Pistol.mp3-33c2ccbb65fca2106944f825baff2ffc.mp3str"
+
+[deps]
+
+source_file="res://assets/audio/Laser Pistol.mp3"
+dest_files=["res://.godot/imported/Laser Pistol.mp3-33c2ccbb65fca2106944f825baff2ffc.mp3str"]
+
+[params]
+
+loop=false
+loop_offset=0
+bpm=0
+beat_count=0
+bar_beats=4

@@ -40,6 +40,10 @@ func issue_command(command: Command, selected_units: Array):
 			issue_wormhole_travel_command(selected_units, command.target_entity)
 
 func issue_move_command(units: Array, target_pos: Vector2, queue: bool = false):
+	# Play single move sound for the entire group
+	if units.size() > 0 and AudioManager:
+		AudioManager.play_ship_move_sound(units[0])
+	
 	# Use FormationManager for group movement with proper formations
 	if units.size() > 1:
 		# Assign formation to the group using current default formation

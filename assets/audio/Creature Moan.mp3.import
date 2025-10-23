@@ -1,0 +1,19 @@
+[remap]
+
+importer="mp3"
+type="AudioStreamMP3"
+uid="uid://dw6fud5shwsv4"
+path="res://.godot/imported/Creature Moan.mp3-f705cce4153bb87bc0e398d8bea9d74d.mp3str"
+
+[deps]
+
+source_file="res://assets/audio/Creature Moan.mp3"
+dest_files=["res://.godot/imported/Creature Moan.mp3-f705cce4153bb87bc0e398d8bea9d74d.mp3str"]
+
+[params]
+
+loop=false
+loop_offset=0
+bpm=0
+beat_count=0
+bar_beats=4

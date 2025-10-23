@@ -40,8 +40,11 @@ func _on_blueprint_pressed():
 	GameManager.change_scene("res://scenes/main/GameScene.tscn")
 
 func _on_settings_pressed():
-	# Open settings panel (implement later)
-	print("Settings button pressed")
+	# Open settings panel
+	var settings = preload("res://scenes/ui/SettingsMenu.tscn").instantiate()
+	add_child(settings)
+	settings.show_settings()
+	settings.closed.connect(func(): settings.queue_free())
 
 func _on_quit_pressed():
 	get_tree().quit()
