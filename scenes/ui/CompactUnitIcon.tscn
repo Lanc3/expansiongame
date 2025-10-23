@@ -1,0 +1,23 @@
+[gd_scene load_steps=2 format=3 uid="uid://cwx8ypq0bpktv"]
+
+[ext_resource type="Script" path="res://scripts/ui/CompactUnitIcon.gd" id="1_compact"]
+
+[node name="CompactUnitIcon" type="PanelContainer"]
+custom_minimum_size = Vector2(32, 32)
+script = ExtResource("1_compact")
+
+[node name="VBox" type="VBoxContainer" parent="."]
+layout_mode = 2
+
+[node name="IconSprite" type="TextureRect" parent="VBox"]
+custom_minimum_size = Vector2(28, 28)
+layout_mode = 2
+expand_mode = 1
+stretch_mode = 5
+
+[node name="HealthBar" type="ProgressBar" parent="VBox"]
+custom_minimum_size = Vector2(0, 3)
+layout_mode = 2
+value = 100.0
+show_percentage = false
+

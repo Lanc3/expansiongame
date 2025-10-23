@@ -1,0 +1,88 @@
+[gd_scene load_steps=2 format=3 uid="uid://d1jnqu3e8pa6q"]
+
+[ext_resource type="Script" uid="uid://757xn0tistey" path="res://scripts/ui/BlueprintEditor.gd" id="1_01dak"]
+
+[node name="BlueprintEditor" type="Panel"]
+visible = false
+script = ExtResource("1_01dak")
+
+[node name="VBoxContainer" type="VBoxContainer" parent="."]
+layout_mode = 0
+offset_right = 40.0
+offset_bottom = 40.0
+
+[node name="TitleBar" type="HBoxContainer" parent="VBoxContainer"]
+layout_mode = 2
+
+[node name="TitleLabel" type="Label" parent="VBoxContainer/TitleBar"]
+layout_mode = 2
+
+[node name="CloseButton" type="Button" parent="VBoxContainer/TitleBar"]
+layout_mode = 2
+
+[node name="HBoxContainer" type="HBoxContainer" parent="VBoxContainer"]
+layout_mode = 2
+
+[node name="ComponentPalette" type="Panel" parent="VBoxContainer/HBoxContainer"]
+layout_mode = 2
+
+[node name="VBoxContainer" type="VBoxContainer" parent="VBoxContainer/HBoxContainer/ComponentPalette"]
+layout_mode = 0
+offset_right = 40.0
+offset_bottom = 40.0
+
+[node name="EnergyCoreButton" type="Button" parent="VBoxContainer/HBoxContainer/ComponentPalette/VBoxContainer"]
+layout_mode = 2
+
+[node name="EngineButton" type="Button" parent="VBoxContainer/HBoxContainer/ComponentPalette/VBoxContainer"]
+layout_mode = 2
+
+[node name="WeaponLaserButton" type="Button" parent="VBoxContainer/HBoxContainer/ComponentPalette/VBoxContainer"]
+layout_mode = 2
+
+[node name="WeaponPlasmaButton" type="Button" parent="VBoxContainer/HBoxContainer/ComponentPalette/VBoxContainer"]
+layout_mode = 2
+
+[node name="MiningToolButton" type="Button" parent="VBoxContainer/HBoxContainer/ComponentPalette/VBoxContainer"]
+layout_mode = 2
+
+[node name="ShieldButton" type="Button" parent="VBoxContainer/HBoxContainer/ComponentPalette/VBoxContainer"]
+layout_mode = 2
+
+[node name="StorageButton" type="Button" parent="VBoxContainer/HBoxContainer/ComponentPalette/VBoxContainer"]
+layout_mode = 2
+
+[node name="GridEditor" type="Panel" parent="VBoxContainer/HBoxContainer"]
+layout_mode = 2
+
+[node name="GridContainer" type="GridContainer" parent="VBoxContainer/HBoxContainer/GridEditor"]
+layout_mode = 0
+offset_right = 40.0
+offset_bottom = 40.0
+columns = 3
+
+[node name="StatsPanel" type="Panel" parent="VBoxContainer/HBoxContainer"]
+layout_mode = 2
+
+[node name="VBoxContainer" type="VBoxContainer" parent="VBoxContainer/HBoxContainer/StatsPanel"]
+layout_mode = 0
+offset_right = 40.0
+offset_bottom = 40.0
+
+[node name="StatsLabel" type="Label" parent="VBoxContainer/HBoxContainer/StatsPanel/VBoxContainer"]
+layout_mode = 2
+
+[node name="BottomBar" type="HBoxContainer" parent="VBoxContainer"]
+layout_mode = 2
+
+[node name="ValidationLabel" type="Label" parent="VBoxContainer/BottomBar"]
+layout_mode = 2
+
+[node name="ValidateButton" type="Button" parent="VBoxContainer/BottomBar"]
+layout_mode = 2
+
+[node name="ClearButton" type="Button" parent="VBoxContainer/BottomBar"]
+layout_mode = 2
+
+[node name="SaveButton" type="Button" parent="VBoxContainer/BottomBar"]
+layout_mode = 2

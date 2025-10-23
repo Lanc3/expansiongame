@@ -1,0 +1,58 @@
+[gd_scene load_steps=3 format=3 uid="uid://drtiaq1vb8ely"]
+
+[ext_resource type="Theme" uid="uid://bh3pao1yls74n" path="res://resources/themes/main_theme.tres" id="1_bxi4d"]
+[ext_resource type="Script" uid="uid://bi4kbdc1rckyn" path="res://scripts/ui/ResourceBar.gd" id="2_f7v85"]
+
+[node name="ResourceBar" type="Panel"]
+theme = ExtResource("1_bxi4d")
+script = ExtResource("2_f7v85")
+
+[node name="HBoxContainer" type="HBoxContainer" parent="."]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+offset_left = 131.0
+offset_top = -1.0
+offset_right = 248.0
+offset_bottom = 19.0
+grow_horizontal = 2
+grow_vertical = 2
+theme_override_constants/separation = 20
+
+[node name="ExoticContainer" type="HBoxContainer" parent="HBoxContainer"]
+layout_mode = 2
+
+[node name="TextureRect" type="TextureRect" parent="HBoxContainer/ExoticContainer"]
+layout_mode = 2
+
+[node name="Label" type="Label" parent="HBoxContainer/ExoticContainer"]
+layout_mode = 2
+
+[node name="CommonContainer" type="HBoxContainer" parent="HBoxContainer"]
+layout_mode = 2
+
+[node name="TextureRect" type="TextureRect" parent="HBoxContainer/CommonContainer"]
+layout_mode = 2
+
+[node name="Label" type="Label" parent="HBoxContainer/CommonContainer"]
+layout_mode = 2
+
+[node name="RareContainer" type="HBoxContainer" parent="HBoxContainer"]
+layout_mode = 2
+
+[node name="TextureRect" type="TextureRect" parent="HBoxContainer/RareContainer"]
+layout_mode = 2
+
+[node name="Label" type="Label" parent="HBoxContainer/RareContainer"]
+layout_mode = 2
+
+[node name="spacer" type="Control" parent="HBoxContainer"]
+layout_mode = 2
+size_flags_horizontal = 3
+
+[node name="TimeLabel" type="Label" parent="HBoxContainer"]
+layout_mode = 2
+
+[node name="UnitCountLabel" type="Label" parent="HBoxContainer"]
+layout_mode = 2

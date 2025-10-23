@@ -1,0 +1,56 @@
+[gd_scene load_steps=3 format=3 uid="uid://ctm0frkpmkh7w"]
+
+[ext_resource type="Script" uid="uid://cj1shq6myl0xo" path="res://scripts/ui/MainMenu.gd" id="1_qi05h"]
+[ext_resource type="PackedScene" uid="uid://bvx8k3n2yw1fs" path="res://scenes/world/ParallaxSpaceBackground.tscn" id="2_parallax"]
+
+[node name="MainMenu" type="Control"]
+layout_mode = 3
+anchor_right = 0.31300002
+offset_left = 638.0
+offset_top = 377.0
+offset_right = 237.35999
+offset_bottom = 377.0
+scale = Vector2(2.236912, 2.2755113)
+script = ExtResource("1_qi05h")
+
+[node name="ParallaxSpaceBackground" parent="." instance=ExtResource("2_parallax")]
+auto_scroll = true
+auto_scroll_speed = Vector2(3, 2)
+
+[node name="VBoxContainer" type="VBoxContainer" parent="."]
+layout_mode = 1
+anchors_preset = 8
+anchor_left = 0.5
+anchor_top = 0.5
+anchor_right = 0.5
+anchor_bottom = 0.5
+offset_left = -20.0
+offset_top = -20.0
+offset_right = 20.0
+offset_bottom = 20.0
+grow_horizontal = 2
+grow_vertical = 2
+
+[node name="TitleLabel" type="Label" parent="VBoxContainer"]
+layout_mode = 2
+text = "Expansion RTS Demo"
+
+[node name="StartButton" type="Button" parent="VBoxContainer"]
+layout_mode = 2
+text = "Play"
+
+[node name="LoadButton" type="Button" parent="VBoxContainer"]
+layout_mode = 2
+text = "Load Game"
+
+[node name="BlueprintButton" type="Button" parent="VBoxContainer"]
+layout_mode = 2
+text = "Blueprints"
+
+[node name="SettingsButton" type="Button" parent="VBoxContainer"]
+layout_mode = 2
+text = "Settings"
+
+[node name="QuitButton" type="Button" parent="VBoxContainer"]
+layout_mode = 2
+text = "Quit"

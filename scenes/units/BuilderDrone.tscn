@@ -1,0 +1,22 @@
+[gd_scene load_steps=4 format=3 uid="uid://c2m5n8lap1qwr"]
+
+[ext_resource type="PackedScene" uid="uid://cgdbgusf45058" path="res://scenes/units/BaseUnit.tscn" id="1_base"]
+[ext_resource type="Script" uid="uid://bn3k8qp4m7rxw" path="res://scripts/units/BuilderDrone.gd" id="2_builder"]
+[ext_resource type="Texture2D" uid="uid://bawsn84qgt1ss" path="res://assets/sprites/playerShip2_orange.png" id="3_sprite"]
+
+[node name="BaseUnit" instance=ExtResource("1_base")]
+script = ExtResource("2_builder")
+unit_name = "Builder Drone"
+max_health = 100.0
+move_speed = 120.0
+build_range = 60.0
+build_speed = 1.0
+
+[node name="Sprite2D" parent="." index="1"]
+visible = false
+
+[node name="BuilderSprite" type="Sprite2D" parent="." index="5"]
+rotation = 1.5707964
+scale = Vector2(0.4, 0.4)
+texture = ExtResource("3_sprite")
+

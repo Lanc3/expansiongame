@@ -1,0 +1,55 @@
+[gd_scene load_steps=3 format=3 uid="uid://blhgnya2kybey"]
+
+[ext_resource type="Script" path="res://scripts/ui/ProductionButton.gd" id="1_button"]
+
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_button"]
+bg_color = Color(0.15, 0.15, 0.2, 1)
+border_width_left = 1
+border_width_top = 1
+border_width_right = 1
+border_width_bottom = 1
+border_color = Color(0.4, 0.4, 0.5, 1)
+corner_radius_top_left = 4
+corner_radius_top_right = 4
+corner_radius_bottom_right = 4
+corner_radius_bottom_left = 4
+
+[node name="CompactProductionButton" type="PanelContainer"]
+custom_minimum_size = Vector2(80, 40)
+mouse_filter = 0
+theme_override_styles/panel = SubResource("StyleBoxFlat_button")
+script = ExtResource("1_button")
+
+[node name="HBox" type="HBoxContainer" parent="."]
+layout_mode = 2
+mouse_filter = 0
+theme_override_constants/separation = 3
+
+[node name="IconRect" type="TextureRect" parent="HBox"]
+custom_minimum_size = Vector2(24, 24)
+layout_mode = 2
+size_flags_vertical = 4
+expand_mode = 1
+stretch_mode = 5
+
+[node name="VBox" type="VBoxContainer" parent="HBox"]
+layout_mode = 2
+size_flags_horizontal = 3
+size_flags_vertical = 4
+mouse_filter = 0
+theme_override_constants/separation = 0
+
+[node name="NameLabel" type="Label" parent="HBox/VBox"]
+layout_mode = 2
+theme_override_colors/font_color = Color(0.9, 0.9, 1, 1)
+theme_override_font_sizes/font_size = 9
+text = "Scout"
+clip_text = true
+text_overrun_behavior = 3
+
+[node name="BuildButton" type="Button" parent="HBox/VBox"]
+custom_minimum_size = Vector2(0, 16)
+layout_mode = 2
+theme_override_font_sizes/font_size = 8
+text = "Build"
+

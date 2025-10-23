@@ -1,0 +1,50 @@
+extends Node
+class_name WeaponComponent
+## Weapon component for combat units
+
+enum WeaponType {LASER, PLASMA, MISSILE}
+
+@export var weapon_type: WeaponType = WeaponType.LASER
+@export var damage: float = 10.0
+@export var fire_rate: float = 1.0  # shots per second
+@export var rangeAim: float = 300.0
+@export var projectile_speed: float = 500.0
+@export var homing: bool = false  # For missiles
+
+var cooldown_timer: float = 0.0
+var projectile_scene: PackedScene
+
+func _ready():
+	projectile_scene = preload("res://scenes/effects/Projectile.tscn")
+
+func _process(delta: float):
+	if cooldown_timer > 0:
+		cooldown_timer -= delta
+
+func can_fire() -> bool:
+	return cooldown_timer <= 0
+
+func get_range() -> float:
+	return rangeAim
+
+func fire_at(target: Node2D, from_position: Vector2):
+	if not can_fire() or not is_instance_valid(target):
+		return
+	
+	cooldown_timer = 1.0 / fire_rate
+	
+	# Create projectile
+	var projectile = projectile_scene.instantiate()
+	projectile.setup(
+		weapon_type,
+		damage,
+		from_position,
+		target.global_position,
+		projectile_speed,
+		target if homing else null,
+		get_parent()  # Owner (the unit firing)
+	)
+	get_tree().root.add_child(projectile)
+	
+	# Visual/audio feedback
+	AudioManager.play_sound("weapon_fire")

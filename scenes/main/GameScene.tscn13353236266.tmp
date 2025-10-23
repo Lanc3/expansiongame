@@ -1,0 +1,98 @@
+[gd_scene load_steps=12 format=3 uid="uid://d4ctkd3skn51s"]
+
+[ext_resource type="Script" uid="uid://dwno35l11vbbt" path="res://scripts/systems/RTSCamera.gd" id="1_e8dj1"]
+[ext_resource type="Script" uid="uid://csbhet7jxu3sx" path="res://scripts/systems/InputHandler.gd" id="2_ax44u"]
+[ext_resource type="Script" uid="uid://dtbyf1h6ug3lq" path="res://scripts/systems/ResourceSpawner.gd" id="3_w6s82"]
+[ext_resource type="Script" uid="uid://dux0v2ym4sw5n" path="res://scripts/systems/TestScenarioSetup.gd" id="4_545dc"]
+[ext_resource type="Script" uid="uid://bk3rl8r3oi7nq" path="res://scripts/ui/SelectionBoxDrawer.gd" id="4_w6s82"]
+[ext_resource type="PackedScene" uid="uid://b4o160wovi6jx" path="res://scenes/ui/ResourceBar.tscn" id="5_8apum"]
+[ext_resource type="PackedScene" uid="uid://uqst8elkmddt" path="res://scenes/ui/SelectedUnitsPanel.tscn" id="6_2u0ke"]
+[ext_resource type="PackedScene" uid="uid://cp1g0caexukmo" path="res://scenes/ui/Minimap.tscn" id="7_kgcmi"]
+[ext_resource type="PackedScene" uid="uid://d1jnqu3e8pa6q" path="res://scenes/ui/BlueprintEditor.tscn" id="8_2u0ke"]
+[ext_resource type="PackedScene" uid="uid://7iwjera8s382" path="res://scenes/ui/DebugOverlay.tscn" id="10_3gpyy"]
+
+[sub_resource type="NavigationPolygon" id="NavigationPolygon_wtlub"]
+outlines = Array[PackedVector2Array]([PackedVector2Array(-1.0070001, -0.86600006, 1.019, -0.86050004, 0.9955, 0.99300003, -1.0070001, 1.005)])
+
+[node name="GameScene" type="Node2D"]
+metadata/_edit_vertical_guides_ = [-2002.0, 1991.0]
+metadata/_edit_horizontal_guides_ = [-1995.0, 1998.0, -1709.0]
+
+[node name="Camera2D" type="Camera2D" parent="."]
+script = ExtResource("1_e8dj1")
+
+[node name="NavigationRegion2D" type="NavigationRegion2D" parent="."]
+scale = Vector2(2000, 2000)
+navigation_polygon = SubResource("NavigationPolygon_wtlub")
+
+[node name="WorldLayer" type="Node2D" parent="."]
+
+[node name="ColorRect" type="ColorRect" parent="WorldLayer"]
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+color = Color(0.019607844, 0.019607844, 0.05882353, 1)
+
+[node name="Entities" type="Node2D" parent="WorldLayer"]
+
+[node name="Units" type="Node2D" parent="WorldLayer/Entities"]
+
+[node name="Resources" type="Node2D" parent="WorldLayer/Entities"]
+
+[node name="Buildings" type="Node2D" parent="WorldLayer/Entities"]
+
+[node name="SelectionBox" type="ColorRect" parent="."]
+visible = false
+anchors_preset = -1
+offset_right = 40.0
+offset_bottom = 40.0
+mouse_filter = 2
+color = Color(0, 1, 0, 0.2)
+script = ExtResource("4_w6s82")
+
+[node name="UILayer" type="CanvasLayer" parent="."]
+layer = 10
+
+[node name="ResourceBar" parent="UILayer" instance=ExtResource("5_8apum")]
+anchors_preset = 10
+anchor_right = 1.0
+grow_horizontal = 2
+
+[node name="SelectedUnitsPanel" parent="UILayer" instance=ExtResource("6_2u0ke")]
+offset_left = 320.0
+offset_top = 480.0
+offset_right = 960.0
+offset_bottom = 720.0
+
+[node name="Minimap" parent="UILayer" instance=ExtResource("7_kgcmi")]
+offset_left = 1020.0
+offset_top = 520.0
+offset_right = 1280.0
+offset_bottom = 720.0
+
+[node name="BlueprintEditorLayer" type="CanvasLayer" parent="UILayer"]
+layer = 20
+
+[node name="BlueprintEditor" parent="UILayer/BlueprintEditorLayer" instance=ExtResource("8_2u0ke")]
+anchors_preset = 8
+anchor_left = 0.5
+anchor_top = 0.5
+anchor_right = 0.5
+anchor_bottom = 0.5
+grow_horizontal = 2
+grow_vertical = 2
+
+[node name="DebugOverlay" parent="UILayer" instance=ExtResource("10_3gpyy")]
+
+[node name="Systems" type="Node2D" parent="."]
+
+[node name="InputHandler" type="Node" parent="Systems"]
+script = ExtResource("2_ax44u")
+
+[node name="ResourceSpawner" type="Node2D" parent="Systems"]
+script = ExtResource("3_w6s82")
+
+[node name="TestScenarioSetup" type="Node" parent="Systems"]
+script = ExtResource("4_545dc")

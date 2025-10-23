@@ -1,0 +1,35 @@
+[gd_scene load_steps=6 format=3 uid="uid://cqbv1w4lyx3rs"]
+
+[ext_resource type="PackedScene" uid="uid://cgdbgusf45058" path="res://scenes/units/BaseUnit.tscn" id="1_base"]
+[ext_resource type="Script" path="res://scripts/units/enemies/EnemyBomber.gd" id="2_script"]
+[ext_resource type="Texture2D" uid="uid://dbpqp1bpqr3p2" path="res://assets/sprites/playerShip3_red.png" id="3_sprite"]
+[ext_resource type="Texture2D" uid="uid://bsg08g4ku3nr1" path="res://assets/sprites/effects/shield2.png" id="4_selection"]
+[ext_resource type="Script" uid="uid://cnyap8loadx75" path="res://scripts/components/WeaponComponent.gd" id="5_weapon"]
+
+[node name="EnemyBomber" instance=ExtResource("1_base")]
+script = ExtResource("2_script")
+
+[node name="Sprite2D" parent="." index="1"]
+visible = false
+
+[node name="SelectionCircle" type="Sprite2D" parent="." index="2"]
+visible = false
+modulate = Color(1, 0.3, 0.3, 0.5)
+texture = ExtResource("4_selection")
+
+[node name="EnemySprite" type="Sprite2D" parent="." index="5"]
+modulate = Color(1, 0.2, 0.2, 1)
+rotation = 1.5707964
+scale = Vector2(0.5, 0.5)
+texture = ExtResource("3_sprite")
+
+[node name="WeaponComponent" type="Node" parent="." index="6"]
+script = ExtResource("5_weapon")
+weapon_type = 2
+damage = 35.0
+fire_rate = 0.5
+rangeAim = 280.0
+projectile_speed = 400.0
+homing = true
+
+

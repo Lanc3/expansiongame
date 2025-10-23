@@ -1,0 +1,39 @@
+[gd_scene load_steps=3 format=3 uid="uid://cqj5x8h7wr2kp"]
+
+[ext_resource type="Script" path="res://scripts/world/Wormhole.gd" id="1_wormhole"]
+
+[sub_resource type="CircleShape2D" id="CircleShape2D_wormhole"]
+radius = 80.0
+
+[node name="Wormhole" type="Area2D"]
+input_pickable = true
+monitorable = true
+monitoring = true
+script = ExtResource("1_wormhole")
+
+[node name="Sprite2D" type="Sprite2D" parent="."]
+
+[node name="CollisionShape2D" type="CollisionShape2D" parent="."]
+shape = SubResource("CircleShape2D_wormhole")
+debug_color = Color(0.8, 0.3, 1, 0.42)
+
+[node name="CPUParticles2D" type="CPUParticles2D" parent="."]
+z_index = -1
+
+[node name="GlowParticles" type="CPUParticles2D" parent="."]
+z_index = -2
+
+[node name="Label" type="Label" parent="."]
+offset_left = -60.0
+offset_top = -80.0
+offset_right = 60.0
+offset_bottom = -50.0
+mouse_filter = 2
+theme_override_colors/font_color = Color(0.8, 0.5, 1, 1)
+theme_override_colors/font_outline_color = Color(0, 0, 0, 1)
+theme_override_constants/outline_size = 3
+theme_override_font_sizes/font_size = 14
+text = "WORMHOLE"
+horizontal_alignment = 1
+vertical_alignment = 1
+

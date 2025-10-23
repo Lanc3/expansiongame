@@ -1,0 +1,43 @@
+[gd_scene load_steps=6 format=3 uid="uid://cgdbgusf45058"]
+
+[ext_resource type="Script" uid="uid://da367ru355ke1" path="res://scripts/units/BaseUnit.gd" id="1_umhv7"]
+[ext_resource type="Texture2D" uid="uid://dpeky2dmnggxe" path="res://assets/sprites/playerShip3_red.png" id="2_wf76u"]
+
+[sub_resource type="CircleShape2D" id="CircleShape2D_nxg6i"]
+radius = 16.0
+
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_ampot"]
+bg_color = Color(1, 0, 0, 1)
+
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_8jmq4"]
+bg_color = Color(0, 1, 0, 1)
+
+[node name="BaseUnit3" type="CharacterBody2D"]
+z_index = 10
+rotation = 1.5928192
+collision_layer = 1
+collision_mask = 2
+script = ExtResource("1_umhv7")
+avoidance_weight = 2.0
+separation_distance = 100.0
+
+[node name="CollisionShape2D" type="CollisionShape2D" parent="."]
+shape = SubResource("CircleShape2D_nxg6i")
+
+[node name="Sprite2D" type="Sprite2D" parent="."]
+scale = Vector2(0.5, 0.5)
+texture = ExtResource("2_wf76u")
+
+[node name="HealthBar" type="ProgressBar" parent="."]
+visible = false
+offset_top = -30.0
+offset_right = 50.0
+offset_bottom = -3.0
+theme_override_styles/background = SubResource("StyleBoxFlat_ampot")
+theme_override_styles/fill = SubResource("StyleBoxFlat_8jmq4")
+value = 100.0
+
+[node name="NavigationAgent2D" type="NavigationAgent2D" parent="."]
+path_desired_distance = 10.0
+target_desired_distance = 5.0
+radius = 20.0

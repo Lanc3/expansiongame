@@ -1,0 +1,18 @@
+[gd_scene load_steps=2 format=3 uid="uid://cp1g0caexukmo"]
+
+[ext_resource type="Script" uid="uid://dm5wrambifduc" path="res://scripts/ui/Minimap.gd" id="1_s30ul"]
+
+[node name="Minimap" type="Panel"]
+script = ExtResource("1_s30ul")
+
+[node name="MinimapRect" type="ColorRect" parent="."]
+visible = false
+layout_mode = 0
+offset_right = 40.0
+offset_bottom = 40.0
+
+[node name="ViewportIndicator" type="ColorRect" parent="."]
+visible = false
+layout_mode = 0
+offset_right = 40.0
+offset_bottom = 40.0

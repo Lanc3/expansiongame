@@ -1,0 +1,46 @@
+[gd_scene load_steps=2 format=3 uid="uid://dap5n8k3m7qrx"]
+
+[ext_resource type="Script" path="res://scripts/ui/ResourceSlot.gd" id="1_slot"]
+
+[node name="ResourceSlot" type="ColorRect"]
+custom_minimum_size = Vector2(40, 40)
+script = ExtResource("1_slot")
+
+[node name="VBox" type="VBoxContainer" parent="."]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+theme_override_constants/separation = 0
+
+[node name="TopRow" type="HBoxContainer" parent="VBox"]
+layout_mode = 2
+size_flags_vertical = 3
+
+[node name="PinButton" type="Button" parent="VBox/TopRow"]
+custom_minimum_size = Vector2(14, 14)
+layout_mode = 2
+theme_override_font_sizes/font_size = 10
+text = "☆"
+flat = true
+
+[node name="Spacer" type="Control" parent="VBox/TopRow"]
+layout_mode = 2
+size_flags_horizontal = 3
+
+[node name="AcronymLabel" type="Label" parent="VBox"]
+layout_mode = 2
+size_flags_vertical = 3
+theme_override_font_sizes/font_size = 10
+text = "IRO"
+horizontal_alignment = 1
+vertical_alignment = 1
+
+[node name="CountLabel" type="Label" parent="VBox"]
+layout_mode = 2
+theme_override_font_sizes/font_size = 9
+text = "0"
+horizontal_alignment = 1
+

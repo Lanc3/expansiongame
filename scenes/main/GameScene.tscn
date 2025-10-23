@@ -1,0 +1,159 @@
+[gd_scene load_steps=24 format=3 uid="uid://d4ctkd3skn51s"]
+
+[ext_resource type="Script" uid="uid://dwno35l11vbbt" path="res://scripts/systems/RTSCamera.gd" id="1_e8dj1"]
+[ext_resource type="Script" uid="uid://csbhet7jxu3sx" path="res://scripts/systems/InputHandler.gd" id="2_ax44u"]
+[ext_resource type="Script" uid="uid://cjtui5rapuqav" path="res://scripts/systems/UIController.gd" id="3_ui_controller"]
+[ext_resource type="Script" uid="uid://dtbyf1h6ug3lq" path="res://scripts/systems/ResourceSpawner.gd" id="3_w6s82"]
+[ext_resource type="Script" uid="uid://dux0v2ym4sw5n" path="res://scripts/systems/TestScenarioSetup.gd" id="4_545dc"]
+[ext_resource type="Script" uid="uid://bk3rl8r3oi7nq" path="res://scripts/ui/SelectionBoxDrawer.gd" id="4_w6s82"]
+[ext_resource type="PackedScene" uid="uid://bytv4y0i5oqlg" path="res://scenes/ui/TopInfoBar.tscn" id="5_8apum"]
+[ext_resource type="Script" uid="uid://dlmbopel6il20" path="res://scripts/systems/ZoneSetup.gd" id="5_zonesetup"]
+[ext_resource type="PackedScene" uid="uid://uqst8elkmddt" path="res://scenes/ui/SelectedUnitsPanel.tscn" id="6_2u0ke"]
+[ext_resource type="Script" uid="uid://xf74mr07hjxe" path="res://scripts/systems/EnemySpawnerSystem.gd" id="6_enemyspawner"]
+[ext_resource type="PackedScene" uid="uid://cpk1wj8n3qw2o" path="res://scenes/ui/CommandShipPanel.tscn" id="7_commandpanel"]
+[ext_resource type="PackedScene" uid="uid://cp1g0caexukmo" path="res://scenes/ui/Minimap.tscn" id="7_kgcmi"]
+[ext_resource type="PackedScene" uid="uid://d1jnqu3e8pa6q" path="res://scenes/ui/BlueprintEditor.tscn" id="8_2u0ke"]
+[ext_resource type="PackedScene" uid="uid://ctfb6m8n2ykw3" path="res://scenes/ui/AsteroidInfoPanel.tscn" id="9_asteroid"]
+[ext_resource type="PackedScene" uid="uid://7iwjera8s382" path="res://scenes/ui/DebugOverlay.tscn" id="10_3gpyy"]
+[ext_resource type="PackedScene" uid="uid://bvx8k3n2yw1fs" path="res://scenes/world/ParallaxSpaceBackground.tscn" id="11_parallax"]
+[ext_resource type="PackedScene" uid="uid://b5m7n2lap4tsx" path="res://scenes/ui/ResourceInventoryPanel.tscn" id="12_inventory"]
+[ext_resource type="PackedScene" uid="uid://dqk8v3r4xj8yp" path="res://scenes/ui/PauseMenu.tscn" id="13_pausemenu"]
+[ext_resource type="PackedScene" uid="uid://bpw8v2tn3qk5r" path="res://scenes/ui/ZoneSwitcher.tscn" id="14_zoneswitcher"]
+[ext_resource type="PackedScene" path="res://scenes/ui/WormholeInfoPanel.tscn" id="15_wormholeinfo"]
+[ext_resource type="PackedScene" uid="uid://cs4kq7w8vfm2x" path="res://scenes/effects/WormholeTravelEffect.tscn" id="16_traveleffect"]
+[ext_resource type="PackedScene" uid="uid://b5gtwwtgu7u36" path="res://scenes/ui/FogOverlay.tscn" id="17_fogoverlay"]
+
+[sub_resource type="Environment" id="Environment_space"]
+background_mode = 3
+background_color = Color(0.01, 0.01, 0.05, 1)
+glow_enabled = true
+glow_strength = 1.2
+glow_bloom = 0.3
+glow_blend_mode = 0
+adjustment_enabled = true
+adjustment_brightness = 1.05
+adjustment_contrast = 1.1
+adjustment_saturation = 1.15
+
+[node name="GameScene" type="Node2D"]
+metadata/_edit_vertical_guides_ = [-2002.0, 1991.0]
+metadata/_edit_horizontal_guides_ = [-1995.0, 1998.0, -1709.0]
+
+[node name="WorldEnvironment" type="WorldEnvironment" parent="."]
+environment = SubResource("Environment_space")
+
+[node name="Camera2D" type="Camera2D" parent="."]
+script = ExtResource("1_e8dj1")
+
+[node name="ParallaxSpaceBackground" parent="." instance=ExtResource("11_parallax")]
+
+[node name="WorldLayer" type="Node2D" parent="."]
+
+[node name="Entities" type="Node2D" parent="WorldLayer"]
+
+[node name="Units" type="Node2D" parent="WorldLayer/Entities"]
+
+[node name="Resources" type="Node2D" parent="WorldLayer/Entities"]
+
+[node name="Buildings" type="Node2D" parent="WorldLayer/Entities"]
+
+[node name="UILayer" type="CanvasLayer" parent="."]
+layer = 10
+
+[node name="FogOverlay" parent="UILayer" instance=ExtResource("17_fogoverlay")]
+layout_mode = 3
+
+[node name="TopInfoBar" parent="UILayer" instance=ExtResource("5_8apum")]
+offset_left = -1.0
+offset_top = 1.0
+offset_right = -1.0
+offset_bottom = 51.0
+
+[node name="SelectedUnitsPanel" parent="UILayer" instance=ExtResource("6_2u0ke")]
+offset_left = 1.0
+offset_top = 620.0
+offset_right = 401.0
+offset_bottom = 720.0
+
+[node name="Minimap" parent="UILayer" instance=ExtResource("7_kgcmi")]
+offset_left = 1020.0
+offset_top = 520.0
+offset_right = 1280.0
+offset_bottom = 720.0
+
+[node name="BlueprintEditorLayer" type="CanvasLayer" parent="UILayer"]
+layer = 20
+
+[node name="BlueprintEditor" parent="UILayer/BlueprintEditorLayer" instance=ExtResource("8_2u0ke")]
+anchors_preset = 8
+anchor_left = 0.5
+anchor_top = 0.5
+anchor_right = 0.5
+anchor_bottom = 0.5
+grow_horizontal = 2
+grow_vertical = 2
+
+[node name="AsteroidInfoPanel" parent="UILayer" instance=ExtResource("9_asteroid")]
+offset_left = 640.0
+offset_top = 200.0
+offset_right = 940.0
+offset_bottom = 400.0
+
+[node name="DebugOverlay" parent="UILayer" instance=ExtResource("10_3gpyy")]
+
+[node name="ZoneSwitcher" parent="UILayer" instance=ExtResource("14_zoneswitcher")]
+offset_left = 540.0
+offset_top = 630.0
+offset_right = 740.0
+offset_bottom = 710.0
+
+[node name="CommandShipPanel" parent="UILayer" instance=ExtResource("7_commandpanel")]
+
+[node name="InventoryLayer" type="CanvasLayer" parent="UILayer"]
+layer = 30
+
+[node name="ResourceInventoryPanel" parent="UILayer/InventoryLayer" instance=ExtResource("12_inventory")]
+
+[node name="Systems" type="Node2D" parent="."]
+
+[node name="InputHandler" type="Node" parent="Systems"]
+script = ExtResource("2_ax44u")
+
+[node name="UIController" type="Node" parent="Systems"]
+script = ExtResource("3_ui_controller")
+
+[node name="ResourceSpawner" type="Node2D" parent="Systems"]
+script = ExtResource("3_w6s82")
+base_asteroid_count = null
+min_spacing = null
+
+[node name="TestScenarioSetup" type="Node" parent="Systems"]
+script = ExtResource("4_545dc")
+
+[node name="ZoneSetup" type="Node" parent="Systems"]
+script = ExtResource("5_zonesetup")
+
+[node name="EnemySpawnerSystem" type="Node" parent="Systems"]
+script = ExtResource("6_enemyspawner")
+
+[node name="SelectionBoxLayer" type="CanvasLayer" parent="."]
+layer = 2
+
+[node name="SelectionBox" type="ColorRect" parent="SelectionBoxLayer"]
+offset_right = 40.0
+offset_bottom = 40.0
+mouse_filter = 2
+color = Color(0, 1, 0, 0.2)
+script = ExtResource("4_w6s82")
+
+[node name="WormholeInfoLayer" type="CanvasLayer" parent="."]
+layer = 50
+
+[node name="WormholeInfoPanel" parent="WormholeInfoLayer" instance=ExtResource("15_wormholeinfo")]
+
+[node name="PauseMenuLayer" type="CanvasLayer" parent="."]
+layer = 100
+
+[node name="PauseMenu" parent="PauseMenuLayer" instance=ExtResource("13_pausemenu")]
+
+[node name="WormholeTravelEffect" parent="." instance=ExtResource("16_traveleffect")]

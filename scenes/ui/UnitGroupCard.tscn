@@ -1,0 +1,43 @@
+[gd_scene load_steps=2 format=3 uid="uid://dq6h5m4xb8yko"]
+
+[ext_resource type="Script" path="res://scripts/ui/UnitGroupCard.gd" id="1_group"]
+
+[node name="UnitGroupCard" type="PanelContainer"]
+custom_minimum_size = Vector2(0, 60)
+script = ExtResource("1_group")
+
+[node name="VBox" type="VBoxContainer" parent="."]
+layout_mode = 2
+
+[node name="Header" type="HBoxContainer" parent="VBox"]
+layout_mode = 2
+
+[node name="Icon" type="TextureRect" parent="VBox/Header"]
+custom_minimum_size = Vector2(32, 32)
+layout_mode = 2
+expand_mode = 1
+stretch_mode = 5
+
+[node name="Label" type="Label" parent="VBox/Header"]
+layout_mode = 2
+size_flags_horizontal = 3
+text = "Unit Type"
+
+[node name="Count" type="Label" parent="VBox/Header"]
+layout_mode = 2
+text = "x0"
+
+[node name="HealthBar" type="ProgressBar" parent="VBox"]
+custom_minimum_size = Vector2(0, 8)
+layout_mode = 2
+value = 100.0
+show_percentage = false
+
+[node name="StatsLabel" type="Label" parent="VBox"]
+layout_mode = 2
+text = "HP: 100%"
+
+[node name="ExpandButton" type="Button" parent="VBox"]
+layout_mode = 2
+text = "Show all"
+

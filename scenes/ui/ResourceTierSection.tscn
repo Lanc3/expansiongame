@@ -1,0 +1,18 @@
+[gd_scene load_steps=2 format=3 uid="uid://c88y0py5xu16"]
+
+[ext_resource type="Script" path="res://scripts/ui/ResourceTierSection.gd" id="1_tier"]
+
+[node name="ResourceTierSection" type="VBoxContainer"]
+script = ExtResource("1_tier")
+
+[node name="HeaderButton" type="Button" parent="."]
+layout_mode = 2
+text = "▼ Tier 0-2: Common (0 collected)"
+alignment = 0
+
+[node name="ContentGrid" type="GridContainer" parent="."]
+layout_mode = 2
+columns = 8
+theme_override_constants/h_separation = 4
+theme_override_constants/v_separation = 4
+

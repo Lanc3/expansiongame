@@ -1,0 +1,30 @@
+[gd_scene load_steps=2 format=3 uid="uid://dw8k3m5n7qp2x"]
+
+[ext_resource type="Script" path="res://scripts/ui/ResourceIcon.gd" id="1_resource"]
+
+[node name="ResourceIcon" type="PanelContainer"]
+custom_minimum_size = Vector2(35, 45)
+script = ExtResource("1_resource")
+
+[node name="VBox" type="VBoxContainer" parent="."]
+layout_mode = 2
+theme_override_constants/separation = 1
+
+[node name="Background" type="ColorRect" parent="VBox"]
+custom_minimum_size = Vector2(0, 20)
+layout_mode = 2
+
+[node name="AcronymLabel" type="Label" parent="VBox"]
+layout_mode = 2
+theme_override_font_sizes/font_size = 9
+text = "IRO"
+horizontal_alignment = 1
+vertical_alignment = 1
+
+[node name="CountLabel" type="Label" parent="VBox"]
+layout_mode = 2
+theme_override_font_sizes/font_size = 11
+text = "0"
+horizontal_alignment = 1
+vertical_alignment = 1
+
