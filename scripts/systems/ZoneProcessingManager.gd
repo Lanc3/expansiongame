@@ -103,3 +103,4 @@ func on_building_created(building: Node2D, zone_id: int):
 		building.set_processing_active(zone_id == active_zone_id)
 
 
+

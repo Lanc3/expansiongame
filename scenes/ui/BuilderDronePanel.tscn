@@ -1,0 +1,84 @@
+[gd_scene load_steps=3 format=3 uid="uid://bi064hdimhw6h"]
+
+[ext_resource type="Script" path="res://scripts/ui/BuilderDronePanel.gd" id="1_builder"]
+
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_panel"]
+bg_color = Color(0.1, 0.1, 0.15, 0.95)
+border_width_left = 2
+border_width_top = 2
+border_width_right = 2
+border_width_bottom = 2
+border_color = Color(0.5, 0.8, 0.3, 1)
+corner_radius_top_left = 8
+corner_radius_top_right = 8
+corner_radius_bottom_right = 8
+corner_radius_bottom_left = 8
+
+[node name="BuilderDronePanel" type="Panel"]
+custom_minimum_size = Vector2(615, 100)
+offset_left = 405.0
+offset_top = 500.0
+offset_right = 1020.0
+offset_bottom = 600.0
+mouse_filter = 0
+theme_override_styles/panel = SubResource("StyleBoxFlat_panel")
+script = ExtResource("1_builder")
+
+[node name="VBox" type="VBoxContainer" parent="."]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+mouse_filter = 0
+theme_override_constants/separation = 2
+
+[node name="BuildButtonsRow" type="HBoxContainer" parent="VBox"]
+custom_minimum_size = Vector2(0, 45)
+layout_mode = 2
+size_flags_vertical = 3
+mouse_filter = 0
+
+[node name="Label" type="Label" parent="VBox/BuildButtonsRow"]
+custom_minimum_size = Vector2(60, 0)
+layout_mode = 2
+theme_override_colors/font_color = Color(0.8, 0.9, 1, 1)
+theme_override_font_sizes/font_size = 10
+text = "Build:"
+vertical_alignment = 1
+
+[node name="ButtonScroll" type="ScrollContainer" parent="VBox/BuildButtonsRow"]
+layout_mode = 2
+size_flags_horizontal = 3
+horizontal_scroll_mode = 2
+vertical_scroll_mode = 0
+mouse_filter = 0
+
+[node name="BuildingButtons" type="HBoxContainer" parent="VBox/BuildButtonsRow/ButtonScroll"]
+layout_mode = 2
+size_flags_horizontal = 3
+theme_override_constants/separation = 4
+mouse_filter = 0
+
+[node name="InfoRow" type="HBoxContainer" parent="VBox"]
+custom_minimum_size = Vector2(0, 45)
+layout_mode = 2
+size_flags_vertical = 3
+mouse_filter = 0
+
+[node name="Label" type="Label" parent="VBox/InfoRow"]
+custom_minimum_size = Vector2(60, 0)
+layout_mode = 2
+theme_override_colors/font_color = Color(0.8, 0.9, 1, 1)
+theme_override_font_sizes/font_size = 10
+text = "Status:"
+vertical_alignment = 1
+
+[node name="StatusLabel" type="Label" parent="VBox/InfoRow"]
+layout_mode = 2
+size_flags_horizontal = 3
+theme_override_colors/font_color = Color(0.8, 0.9, 1, 1)
+theme_override_font_sizes/font_size = 10
+text = "Select a building to construct"
+vertical_alignment = 1

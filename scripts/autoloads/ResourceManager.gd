@@ -21,10 +21,18 @@ func _ready():
 	for i in range(100):
 		resource_counts[i] = 0
 	
-	# Give some starter resources for testing
-	resource_counts[0] = 50   # Iron Ore
-	resource_counts[1] = 30   # Carbon
-	resource_counts[2] = 40   # Silicon
+	# Give generous starter resources for testing building system
+	# Enough for 2 Research Buildings + research costs
+	resource_counts[0] = 1000   # Iron Ore (Research Building needs 300 each)
+	resource_counts[1] = 800    # Carbon (Research Building needs 250 each)
+	resource_counts[2] = 600    # Silicon (Research Building needs 200 each)
+	resource_counts[10] = 500   # Copper (Research Building needs 150 each)
+	resource_counts[11] = 300   # Zinc (for research costs)
+	resource_counts[14] = 200   # Nickel (for turrets after research)
+	resource_counts[20] = 300   # Silver (for research)
+	resource_counts[21] = 200   # Lithium (for research)
+	resource_counts[30] = 150   # Gold (for research)
+	resource_counts[31] = 100   # Titanium (for research)
 	
 	# Emit initial resource state (legacy)
 	resources_changed.emit(common_material, rare_material, exotic_material)

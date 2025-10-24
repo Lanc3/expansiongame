@@ -7,8 +7,8 @@ class_name RTSCamera
 @export var zoom_speed: float = 0.1
 @export var min_zoom: float = 0.25
 @export var max_zoom: float = 2.0
-@export var edge_scroll_margin: int = 0
-@export var enable_edge_scrolling: bool = false
+@export var edge_scroll_margin: int = 5
+@export var enable_edge_scrolling: bool = true
 
 # Camera bounds
 @export var use_bounds: bool = true

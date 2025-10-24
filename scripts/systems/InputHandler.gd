@@ -32,6 +32,23 @@ func _input(event: InputEvent):
 			if command_ship_panel is Control and command_ship_panel.get_global_rect().has_point(event.position):
 				return
 		
+		# Check if BuilderDronePanel is visible and mouse is over it
+		var builder_panel = get_tree().root.find_child("BuilderDronePanel", true, false)
+		if builder_panel and builder_panel.visible:
+			if builder_panel is Control and builder_panel.get_global_rect().has_point(event.position):
+				return
+		
+		# Check if TechTreeUI is visible and mouse is over it
+		var tech_tree = get_tree().root.find_child("TechTreeUI", true, false)
+		if tech_tree and tech_tree.visible:
+			if tech_tree is Control and tech_tree.get_global_rect().has_point(event.position):
+				return
+		# Check if BlueprintBuilderUI is visible and mouse is over it
+		var blueprint_builder = get_tree().root.find_child("BlueprintBuilderUI", true, false)
+		if blueprint_builder and blueprint_builder.visible:
+			if blueprint_builder is Control and blueprint_builder.get_global_rect().has_point(event.position):
+				return
+		
 		# Fallback to our custom detection
 		if is_mouse_over_ui(event.position):
 			return  # Let UI handle it
@@ -86,8 +103,8 @@ func handle_keyboard(event: InputEventKey):
 				# Finally, toggle pause menu if nothing is selected
 				else:
 					toggle_pause_menu()
-			KEY_B:
-				toggle_blueprint_editor()
+			KEY_P:
+				_toggle_blueprint_builder()
 			KEY_H:
 				# Hold position - only if units are selected
 				if has_selection:
@@ -157,7 +174,18 @@ func single_unit_selection(screen_pos: Vector2):
 			SelectionManager.select_unit(unit, add_to_selection)
 			return
 	
-	# If no unit found, check for asteroids (layer 4)
+	# Check for buildings (layer 2)
+	query.collision_mask = 2  # Buildings layer
+	result = space_state.intersect_point(query, 1)
+	
+	if result.size() > 0:
+		var building = result[0].collider
+		# Check if it's a player building
+		if "team_id" in building and building.team_id == 0:
+			SelectionManager.select_building(building)
+			return
+	
+	# If no unit or building found, check for asteroids (layer 4)
 	query.collision_mask = 4  # Resources layer
 	result = space_state.intersect_point(query, 1)
 	
@@ -266,6 +294,11 @@ func toggle_blueprint_editor():
 	if editor:
 		editor.visible = !editor.visible
 
+func _toggle_blueprint_builder():
+	var builder = get_tree().root.find_child("BlueprintBuilderUI", true, false)
+	if builder:
+		builder.visible = !builder.visible
+
 func toggle_resource_inventory():
 	var inventory = get_tree().root.find_child("ResourceInventoryPanel", true, false)
 	if inventory:
@@ -287,6 +320,10 @@ func _any_panel_open() -> bool:
 	"""Check if any UI panel is currently open"""
 	var blueprint_editor = get_tree().root.find_child("BlueprintEditor", true, false)
 	if blueprint_editor and blueprint_editor.visible:
+		return true
+
+	var blueprint_builder = get_tree().root.find_child("BlueprintBuilderUI", true, false)
+	if blueprint_builder and blueprint_builder.visible:
 		return true
 	
 	var inventory = get_tree().root.find_child("ResourceInventoryPanel", true, false)
@@ -350,6 +387,16 @@ func is_mouse_over_ui(mouse_pos: Vector2) -> bool:
 	var command_ship_panel = get_tree().root.find_child("CommandShipPanel", true, false)
 	if command_ship_panel and command_ship_panel.visible:
 		if command_ship_panel is Control and command_ship_panel.get_global_rect().has_point(mouse_pos):
+			return true
+	
+	var builder_panel = get_tree().root.find_child("BuilderDronePanel", true, false)
+	if builder_panel and builder_panel.visible:
+		if builder_panel is Control and builder_panel.get_global_rect().has_point(mouse_pos):
+			return true
+	
+	var tech_tree = get_tree().root.find_child("TechTreeUI", true, false)
+	if tech_tree and tech_tree.visible:
+		if tech_tree is Control and tech_tree.get_global_rect().has_point(mouse_pos):
 			return true
 	
 	var wormhole_info_panel = get_tree().root.find_child("WormholeInfoPanel", true, false)

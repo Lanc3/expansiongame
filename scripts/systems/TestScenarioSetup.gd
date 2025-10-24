@@ -11,6 +11,8 @@ var command_ship_scene = preload("res://scenes/units/CommandShip.tscn")
 var mining_drone_scene = preload("res://scenes/units/MiningDrone.tscn")
 var combat_drone_scene = preload("res://scenes/units/CombatDrone.tscn")
 var scout_drone_scene = preload("res://scenes/units/ScoutDrone.tscn")
+var research_building_scene = preload("res://scenes/buildings/ResearchBuilding.tscn")
+var builder_drone_scene = preload("res://scenes/units/BuilderDrone.tscn")
 
 func _ready():
 
@@ -103,3 +105,80 @@ func setup_test_scenario():
 				FogOfWarManager.reveal_position(1, unit.global_position, unit_vision)
 		
 		print("TestScenarioSetup: Initial fog revealed around %d starting units" % player_units.size())
+
+func _input(event: InputEvent):
+	# Test hotkeys for spawning buildings
+	if event is InputEventKey and event.pressed and not event.echo:
+		match event.keycode:
+			KEY_R:
+				# Press R to spawn a Research Building at mouse position
+				spawn_test_research_building()
+			KEY_B:
+				# Press B to spawn a Builder Drone at mouse position
+				spawn_test_builder()
+
+func spawn_test_research_building():
+	"""Spawn a Research Building at camera/mouse position for testing"""
+	if not ZoneManager:
+		print("TestScenarioSetup: ZoneManager not available")
+		return
+	
+	var current_zone = ZoneManager.current_zone_id
+	var zone_data = ZoneManager.get_zone(current_zone)
+	
+	if zone_data.is_empty() or not zone_data.layer_node:
+		print("TestScenarioSetup: Zone data not available")
+		return
+	
+	var buildings_node = zone_data.layer_node.get_node_or_null("Entities/Buildings")
+	if not buildings_node:
+		print("TestScenarioSetup: Buildings node not found")
+		return
+	
+	# Get camera position or mouse position
+	var spawn_pos = Vector2.ZERO
+	var camera = get_tree().root.get_camera_2d()
+	if camera:
+		spawn_pos = camera.global_position
+	
+	# Spawn the building
+	var building = research_building_scene.instantiate()
+	building.global_position = spawn_pos
+	building.zone_id = current_zone
+	building.team_id = 0  # Player team
+	buildings_node.add_child(building)
+	
+	# Register with EntityManager
+	if EntityManager:
+		EntityManager.register_building(building)
+	
+	print("TestScenarioSetup: Spawned Research Building at %s in Zone %d (Press R)" % [spawn_pos, current_zone])
+
+func spawn_test_builder():
+	"""Spawn a Builder Drone at camera position for testing"""
+	if not ZoneManager:
+		return
+	
+	var current_zone = ZoneManager.current_zone_id
+	var zone_data = ZoneManager.get_zone(current_zone)
+	
+	if zone_data.is_empty() or not zone_data.layer_node:
+		return
+	
+	var units_node = zone_data.layer_node.get_node_or_null("Entities/Units")
+	if not units_node:
+		return
+	
+	# Get camera position
+	var spawn_pos = Vector2.ZERO
+	var camera = get_tree().root.get_camera_2d()
+	if camera:
+		spawn_pos = camera.global_position + Vector2(100, 100)  # Offset slightly
+	
+	# Spawn the builder
+	var builder = builder_drone_scene.instantiate()
+	builder.global_position = spawn_pos
+	builder.team_id = 0
+	units_node.add_child(builder)
+	
+	print("TestScenarioSetup: Spawned Builder Drone at %s in Zone %d (Press B)" % [spawn_pos, current_zone])

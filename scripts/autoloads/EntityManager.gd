@@ -143,12 +143,31 @@ func get_nearest_resource(position: Vector2, resource_type: int = -1) -> Node2D:
 	return nearest
 
 # Building Management
-func register_building(building: Node2D):
+func register_building(building: Node2D, zone_id: int = -1):
+	"""Register a building with zone tracking"""
 	if building not in buildings:
 		buildings.append(building)
+		
+		# Determine zone if not provided
+		if zone_id == -1:
+			zone_id = ZoneManager.get_unit_zone(building) if ZoneManager else 1
+		
+		# Add to zone tracking
+		if zone_id in buildings_by_zone:
+			if building not in buildings_by_zone[zone_id]:
+				buildings_by_zone[zone_id].append(building)
+		
+		print("EntityManager: Registered building in zone %d" % zone_id)
 
 func unregister_building(building: Node2D):
-	buildings.erase(building)
+	"""Unregister a building from tracking"""
+	if building in buildings:
+		buildings.erase(building)
+		
+		# Remove from zone tracking
+		for zone_id in buildings_by_zone:
+			if building in buildings_by_zone[zone_id]:
+				buildings_by_zone[zone_id].erase(building)
 
 # Projectile Management
 func register_projectile(projectile: Node2D):
@@ -179,6 +198,12 @@ func get_units_in_zone(zone_id: int) -> Array:
 	"""Get all units in a specific zone"""
 	if zone_id in units_by_zone:
 		return units_by_zone[zone_id].duplicate()
+	return []
+
+func get_buildings_in_zone(zone_id: int) -> Array:
+	"""Get all buildings in a specific zone"""
+	if zone_id in buildings_by_zone:
+		return buildings_by_zone[zone_id].duplicate()
 	return []
 
 func get_resources_in_zone(zone_id: int) -> Array:

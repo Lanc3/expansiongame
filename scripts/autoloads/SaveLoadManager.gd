@@ -20,19 +20,22 @@ func save_game() -> bool:
 	print("SaveLoadManager: Starting save process...")
 	
 	var save_data = {
-		"version": "2.0",  # Updated for multi-zone support
+		"version": "2.1",  # Updated for research system
 		"timestamp": Time.get_unix_time_from_system(),
 		"game_time": GameManager.game_time,
 		"current_zone_id": ZoneManager.current_zone_id if ZoneManager else 1,
 		"resources": _save_resources(),
 		"units": _save_units_by_zone(),
+		"buildings": _save_buildings_by_zone(),
 		"resource_nodes": _save_resource_nodes_by_zone(),
 		"wormhole_positions": _save_wormhole_positions(),
 		"control_groups": _save_control_groups(),
 		"camera_position": _save_camera_position(),
 		"fog_of_war": FogOfWarManager.save_fog_data() if FogOfWarManager else {},
 		"planets": _save_planets(),
-		"asteroid_orbits": _save_asteroid_orbits()
+		"asteroid_orbits": _save_asteroid_orbits(),
+		"research": _save_research(),
+		"satellites": _save_satellites()
 	}
 	
 	var json_string = JSON.stringify(save_data, "\t")
@@ -155,6 +158,53 @@ func _save_units_by_zone() -> Dictionary:
 	print("SaveLoadManager: Saved units across all zones")
 	return units_by_zone
 
+func _save_buildings_by_zone() -> Dictionary:
+	"""Save all buildings organized by zone"""
+	var buildings_by_zone = {}
+	
+	if not EntityManager or not ZoneManager:
+		return buildings_by_zone
+	
+	# Save buildings for each zone
+	for zone_id in range(1, 10):
+		var zone_buildings = EntityManager.get_buildings_in_zone(zone_id)
+		var buildings_data = []
+		
+		for building in zone_buildings:
+			if not is_instance_valid(building):
+				continue
+			
+			# Get building type
+			var building_type = "Unknown"
+			if "building_type" in building:
+				building_type = building.building_type
+			elif building is ResearchBuilding:
+				building_type = "ResearchBuilding"
+			
+			var building_data = {
+				"type": building_type,
+				"position": {
+					"x": building.global_position.x,
+					"y": building.global_position.y
+				},
+				"team_id": building.team_id if "team_id" in building else 0,
+				"health": building.current_health if "current_health" in building else 100,
+				"max_health": building.max_health if "max_health" in building else 100,
+				"zone_id": zone_id
+			}
+			
+			# Save additional building-specific data
+			if building.has_method("get_save_data"):
+				building_data["custom_data"] = building.get_save_data()
+			
+			buildings_data.append(building_data)
+		
+		if buildings_data.size() > 0:
+			buildings_by_zone[str(zone_id)] = buildings_data
+	
+	print("SaveLoadManager: Saved %d buildings across all zones" % buildings_by_zone.size())
+	return buildings_by_zone
+
 func _save_control_groups() -> Dictionary:
 	"""Save control group assignments"""
 	var groups = {}
@@ -212,6 +262,10 @@ func _load_game_state(save_data: Dictionary):
 			# Legacy format
 			_load_units(save_data["units"])
 	
+	# Restore buildings (zone-aware)
+	if save_data.has("buildings"):
+		_load_buildings_by_zone(save_data["buildings"])
+	
 	# Restore resource nodes (zone-aware)
 	if save_data.has("resource_nodes"):
 		if save_data["resource_nodes"] is Dictionary:
@@ -231,6 +285,14 @@ func _load_game_state(save_data: Dictionary):
 	# Restore planets and asteroid orbits
 	if save_data.has("planets"):
 		_load_planets(save_data["planets"])
+	
+	# Restore research progress
+	if save_data.has("research") and ResearchManager:
+		_load_research(save_data["research"])
+	
+	# Restore satellites
+	if save_data.has("satellites") and SatelliteManager:
+		_load_satellites(save_data["satellites"])
 	
 	if save_data.has("asteroid_orbits"):
 		_load_asteroid_orbits(save_data["asteroid_orbits"])
@@ -595,6 +657,76 @@ func _load_units_by_zone(units_by_zone: Dictionary):
 	
 	print("SaveLoadManager: Units loaded by zone")
 
+func _load_buildings_by_zone(buildings_by_zone: Dictionary):
+	"""Restore buildings to their respective zones"""
+	print("SaveLoadManager: Loading buildings by zone...")
+	
+	for zone_id_str in buildings_by_zone.keys():
+		var zone_id = int(zone_id_str)
+		var buildings_data = buildings_by_zone[zone_id_str]
+		
+		var zone = ZoneManager.get_zone(zone_id)
+		if zone.is_empty() or not zone.layer_node:
+			print("SaveLoadManager: Zone %d not ready, skipping buildings" % zone_id)
+			continue
+		
+		var buildings_container = zone.layer_node.get_node_or_null("Entities/Buildings")
+		if not buildings_container:
+			print("SaveLoadManager: Buildings container not found in Zone %d" % zone_id)
+			continue
+		
+		for building_data in buildings_data:
+			if not building_data.has("type"):
+				continue
+			
+			var building_type = building_data["type"]
+			
+			# Get building scene from BuildingDatabase
+			var building_info = BuildingDatabase.get_building_data(building_type)
+			if building_info.is_empty() or not building_info.has("scene"):
+				print("SaveLoadManager: Building type not found in database: %s" % building_type)
+				continue
+			
+			var building_scene = load(building_info["scene"])
+			if not building_scene:
+				push_error("Failed to load building scene: " + building_info["scene"])
+				continue
+			
+			var building = building_scene.instantiate()
+			
+			# Set position
+			if building_data.has("position"):
+				building.global_position = Vector2(building_data["position"]["x"], building_data["position"]["y"])
+			
+			# Set team
+			if building_data.has("team_id") and "team_id" in building:
+				building.team_id = building_data["team_id"]
+			
+			# Set health
+			if building_data.has("health") and "current_health" in building:
+				building.current_health = building_data["health"]
+			if building_data.has("max_health") and "max_health" in building:
+				building.max_health = building_data["max_health"]
+			
+			# Set zone
+			if building_data.has("zone_id") and "zone_id" in building:
+				building.zone_id = building_data["zone_id"]
+			
+			# Restore custom data
+			if building_data.has("custom_data") and building.has_method("load_save_data"):
+				building.load_save_data(building_data["custom_data"])
+			
+			# Add to zone's buildings container
+			buildings_container.add_child(building)
+			
+			# Register with EntityManager
+			if EntityManager.has_method("register_building"):
+				EntityManager.register_building(building)
+			
+			print("SaveLoadManager: Restored %s in Zone %d" % [building_type, zone_id])
+	
+	print("SaveLoadManager: Buildings loaded by zone")
+
 func _load_resource_nodes_by_zone(resources_by_zone: Dictionary):
 	"""Restore resource nodes to their respective zones"""
 	print("SaveLoadManager: Loading resource nodes by zone...")
@@ -797,3 +929,41 @@ func _load_asteroid_orbits(orbits_data: Dictionary):
 					OrbitalManager.restore_asteroid_orbit(found_resource, planet_pos, orbit_data["orbital_radius"], orbit_data["orbital_angle"])
 		
 		print("SaveLoadManager: Restored %d orbital asteroids for Zone %d" % [orbits_data[zone_id_str].size(), zone_id])
+
+# ============================================================================
+# RESEARCH SYSTEM SAVE/LOAD
+# ============================================================================
+
+func _save_research() -> Dictionary:
+	"""Save research progress"""
+	if not ResearchManager:
+		return {}
+	
+	return ResearchManager.get_save_data()
+
+func _load_research(data: Dictionary):
+	"""Load research progress"""
+	if not ResearchManager:
+		return
+	
+	ResearchManager.load_save_data(data)
+	print("SaveLoadManager: Research data loaded")
+
+# ============================================================================
+# SATELLITE SYSTEM SAVE/LOAD
+# ============================================================================
+
+func _save_satellites() -> Dictionary:
+	"""Save deployed satellites"""
+	if not SatelliteManager:
+		return {}
+	
+	return SatelliteManager.get_save_data()
+
+func _load_satellites(data: Dictionary):
+	"""Load deployed satellites"""
+	if not SatelliteManager:
+		return
+	
+	SatelliteManager.load_save_data(data)
+	print("SaveLoadManager: Satellite data loaded")

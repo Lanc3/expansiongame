@@ -6,9 +6,12 @@ signal unit_selected(unit: Node2D)
 signal unit_deselected(unit: Node2D)
 signal asteroid_selected(asteroid: ResourceNode)
 signal asteroid_deselected()
+signal building_selected(building: Node2D)
+signal building_deselected()
 
 var selected_units: Array = []
 var selected_asteroid: ResourceNode = null
+var selected_building: Node2D = null
 var is_dragging: bool = false
 var drag_start: Vector2 = Vector2.ZERO
 var drag_end: Vector2 = Vector2.ZERO
@@ -54,6 +57,13 @@ func clear_selection():
 		selected_asteroid = null
 		asteroid_deselected.emit()
 	
+	# Clear building selection
+	if selected_building != null:
+		if selected_building.has_method("set_selected"):
+			selected_building.set_selected(false)
+		selected_building = null
+		building_deselected.emit()
+	
 	selection_changed.emit(selected_units)
 
 func select_units_in_rect(rect: Rect2, add_to_selection: bool = false):
@@ -97,6 +107,28 @@ func deselect_asteroid():
 	if selected_asteroid != null:
 		selected_asteroid = null
 		asteroid_deselected.emit()
+		selection_changed.emit([])
+
+func select_building(building: Node2D):
+	"""Select a building"""
+	# Clear other selections
+	clear_selection()
+	
+	# Select building
+	selected_building = building
+	if building.has_method("set_selected"):
+		building.set_selected(true)
+	building_selected.emit(building)
+	
+	print("SelectionManager: Building selected")
+
+func deselect_building():
+	"""Deselect building"""
+	if selected_building != null:
+		if selected_building.has_method("set_selected"):
+			selected_building.set_selected(false)
+		selected_building = null
+		building_deselected.emit()
 		selection_changed.emit([])
 
 func select_units_by_type(unit_class_name: String):

@@ -5,6 +5,8 @@ extends Node
 @onready var wormhole_info_panel: Panel = null
 @onready var travel_animation: CanvasLayer = null
 @onready var command_ship_panel: Panel = null
+@onready var tech_tree_ui: Control = null
+@onready var builder_drone_panel: Panel = null
 
 func _ready():
 	# Find the asteroid info panel
@@ -38,10 +40,24 @@ func _ready():
 	if not command_ship_panel:
 		push_warning("CommandShipPanel not found in scene")
 	
+	# Find tech tree UI
+	tech_tree_ui = get_tree().root.find_child("TechTreeUI", true, false)
+	
+	if not tech_tree_ui:
+		push_warning("TechTreeUI not found in scene")
+	
+	# Find builder drone panel
+	builder_drone_panel = get_tree().root.find_child("BuilderDronePanel", true, false)
+	
+	if not builder_drone_panel:
+		push_warning("BuilderDronePanel not found in scene")
+	
 	# Connect to selection manager signals
 	SelectionManager.asteroid_selected.connect(_on_asteroid_selected)
 	SelectionManager.asteroid_deselected.connect(_on_asteroid_deselected)
 	SelectionManager.selection_changed.connect(_on_selection_changed)
+	SelectionManager.building_selected.connect(_on_building_selected)
+	SelectionManager.building_deselected.connect(_on_building_deselected)
 	
 	# Connect to wormhole selections
 	connect_wormhole_signals()
@@ -97,9 +113,8 @@ func _on_travel_complete():
 	# Animation system will have switched zones, we just finalize here
 
 func _on_selection_changed(selected_units: Array):
-	"""Handle selection changes - show Command Ship panel if appropriate"""
-	# Panel is permanently positioned but only visible when command ship is selected
-	# Check if single Command Ship selected
+	"""Handle selection changes - show appropriate panel"""
+	# Check if single unit selected
 	if selected_units.size() == 1:
 		var unit = selected_units[0]
 		if is_instance_valid(unit):
@@ -107,8 +122,42 @@ func _on_selection_changed(selected_units: Array):
 			if "is_command_ship" in unit and unit.is_command_ship:
 				if command_ship_panel and command_ship_panel.has_method("show_for_command_ship"):
 					command_ship_panel.show_for_command_ship(unit)
+					hide_builder_panel()
+					return
+			
+			# Check if it's a builder drone
+			if unit is BuilderDrone:
+				if builder_drone_panel and builder_drone_panel.has_method("show_for_builder"):
+					builder_drone_panel.show_for_builder(unit)
+					hide_command_ship_panel()
 					return
 	
-	# Hide panel when command ship is not selected
+	# Hide panels when nothing special is selected
+	hide_command_ship_panel()
+	hide_builder_panel()
+
+func hide_command_ship_panel():
+	"""Hide the command ship panel"""
 	if command_ship_panel:
 		command_ship_panel.visible = false
+
+func hide_builder_panel():
+	"""Hide the builder drone panel"""
+	if builder_drone_panel:
+		builder_drone_panel.visible = false
+
+func _on_building_selected(building: Node2D):
+	"""Handle building selection - show tech tree for Research Buildings"""
+	if not is_instance_valid(building):
+		return
+	
+	# Check if it's a Research Building
+	if building is ResearchBuilding:
+		if tech_tree_ui and tech_tree_ui.has_method("show_for_building"):
+			tech_tree_ui.show_for_building(building)
+			print("UIController: Showing tech tree for Research Building")
+
+func _on_building_deselected():
+	"""Handle building deselection - hide tech tree"""
+	if tech_tree_ui and tech_tree_ui.has_method("hide_tree"):
+		tech_tree_ui.hide_tree()

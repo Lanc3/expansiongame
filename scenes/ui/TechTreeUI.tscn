@@ -1,0 +1,176 @@
+[gd_scene load_steps=3 format=3 uid="uid://c406e3s32md2t"]
+
+[ext_resource type="Script" path="res://scripts/ui/TechTreeUI.gd" id="1_tree"]
+[ext_resource type="Script" path="res://scripts/ui/TechTreeCanvas.gd" id="2_canvas"]
+
+[node name="TechTreeUI" type="Control"]
+layout_mode = 3
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+mouse_filter = 0
+script = ExtResource("1_tree")
+
+[node name="Background" type="ColorRect" parent="."]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+mouse_filter = 0
+color = Color(0.05, 0.05, 0.1, 0.95)
+
+[node name="TopBar" type="Panel" parent="."]
+layout_mode = 1
+anchors_preset = 10
+anchor_right = 1.0
+offset_bottom = 60.0
+grow_horizontal = 2
+mouse_filter = 0
+
+[node name="CloseButton" type="Button" parent="TopBar"]
+layout_mode = 1
+anchors_preset = 1
+anchor_left = 1.0
+anchor_right = 1.0
+offset_left = -100.0
+offset_top = 10.0
+offset_right = -10.0
+offset_bottom = 50.0
+grow_horizontal = 0
+text = "Close [ESC]"
+
+[node name="ResourceDisplay" type="HBoxContainer" parent="TopBar"]
+layout_mode = 1
+anchors_preset = 8
+anchor_left = 0.5
+anchor_top = 0.5
+anchor_right = 0.5
+anchor_bottom = 0.5
+offset_left = -300.0
+offset_top = -20.0
+offset_right = 300.0
+offset_bottom = 20.0
+grow_horizontal = 2
+grow_vertical = 2
+alignment = 1
+
+[node name="LeftSidebar" type="Panel" parent="."]
+layout_mode = 1
+anchors_preset = 9
+anchor_bottom = 1.0
+offset_top = 60.0
+offset_right = 200.0
+grow_vertical = 2
+mouse_filter = 0
+
+[node name="CategoryTabs" type="VBoxContainer" parent="LeftSidebar"]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+offset_left = 10.0
+offset_top = 10.0
+offset_right = -10.0
+offset_bottom = -10.0
+grow_horizontal = 2
+grow_vertical = 2
+
+[node name="RightSidebar" type="Panel" parent="."]
+layout_mode = 1
+anchors_preset = 11
+anchor_left = 1.0
+anchor_right = 1.0
+anchor_bottom = 1.0
+offset_left = -320.0
+offset_top = 60.0
+grow_horizontal = 0
+grow_vertical = 2
+mouse_filter = 0
+
+[node name="DetailsPanel" type="Panel" parent="RightSidebar"]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+offset_left = 10.0
+offset_top = 10.0
+offset_right = -10.0
+offset_bottom = -10.0
+grow_horizontal = 2
+grow_vertical = 2
+
+[node name="VBox" type="VBoxContainer" parent="RightSidebar/DetailsPanel"]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+offset_left = 10.0
+offset_top = 10.0
+offset_right = -10.0
+offset_bottom = -10.0
+grow_horizontal = 2
+grow_vertical = 2
+
+[node name="NameLabel" type="Label" parent="RightSidebar/DetailsPanel/VBox"]
+layout_mode = 2
+text = "Select a Research"
+horizontal_alignment = 1
+
+[node name="Separator1" type="HSeparator" parent="RightSidebar/DetailsPanel/VBox"]
+layout_mode = 2
+
+[node name="DescriptionLabel" type="Label" parent="RightSidebar/DetailsPanel/VBox"]
+layout_mode = 2
+text = "Click on a research node to see details."
+autowrap_mode = 3
+
+[node name="Separator2" type="HSeparator" parent="RightSidebar/DetailsPanel/VBox"]
+layout_mode = 2
+
+[node name="CostLabel" type="Label" parent="RightSidebar/DetailsPanel/VBox"]
+layout_mode = 2
+text = "Cost:"
+
+[node name="CostList" type="VBoxContainer" parent="RightSidebar/DetailsPanel/VBox"]
+layout_mode = 2
+
+[node name="Separator3" type="HSeparator" parent="RightSidebar/DetailsPanel/VBox"]
+layout_mode = 2
+
+[node name="EffectsLabel" type="Label" parent="RightSidebar/DetailsPanel/VBox"]
+layout_mode = 2
+text = "Effects:"
+
+[node name="EffectsList" type="VBoxContainer" parent="RightSidebar/DetailsPanel/VBox"]
+layout_mode = 2
+
+[node name="Spacer" type="Control" parent="RightSidebar/DetailsPanel/VBox"]
+layout_mode = 2
+size_flags_vertical = 3
+
+[node name="ResearchButton" type="Button" parent="RightSidebar/DetailsPanel/VBox"]
+layout_mode = 2
+text = "Research"
+
+[node name="TreeScroll" type="ScrollContainer" parent="."]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+offset_left = 200.0
+offset_top = 60.0
+offset_right = -320.0
+grow_horizontal = 2
+grow_vertical = 2
+mouse_filter = 0
+
+[node name="TreeCanvas" type="Control" parent="TreeScroll"]
+custom_minimum_size = Vector2(4000, 3000)
+layout_mode = 2
+mouse_filter = 2
+script = ExtResource("2_canvas")
+

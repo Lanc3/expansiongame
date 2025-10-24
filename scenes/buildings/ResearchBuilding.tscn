@@ -1,0 +1,89 @@
+[gd_scene load_steps=5 format=3 uid="uid://dqw5n8lap1qwr"]
+
+[ext_resource type="Script" path="res://scripts/buildings/ResearchBuilding.gd" id="1_research"]
+[ext_resource type="Texture2D" uid="uid://bawsn84qgt1ss" path="res://assets/sprites/playerShip3_blue.png" id="2_sprite"]
+
+[sub_resource type="CircleShape2D" id="CircleShape2D_1"]
+radius = 75.0
+
+[sub_resource type="CircleShape2D" id="CircleShape2D_2"]
+radius = 90.0
+
+[node name="ResearchBuilding" type="StaticBody2D"]
+collision_layer = 2
+collision_mask = 0
+script = ExtResource("1_research")
+max_health = 1500.0
+team_id = 0
+zone_id = 1
+
+[node name="Sprite2D" type="Sprite2D" parent="."]
+modulate = Color(0.3, 0.7, 1, 1)
+scale = Vector2(1.2, 1.2)
+texture = ExtResource("2_sprite")
+
+[node name="CoreGlow" type="Sprite2D" parent="."]
+modulate = Color(0.5, 0.9, 1, 0.4)
+scale = Vector2(1.4, 1.4)
+texture = ExtResource("2_sprite")
+z_index = -1
+
+[node name="CollisionShape2D" type="CollisionShape2D" parent="."]
+shape = SubResource("CircleShape2D_1")
+
+[node name="HealthBar" type="ProgressBar" parent="."]
+offset_left = -50.0
+offset_top = -90.0
+offset_right = 50.0
+offset_bottom = -80.0
+value = 100.0
+show_percentage = false
+
+[node name="SelectionIndicator" type="Sprite2D" parent="."]
+visible = false
+modulate = Color(0, 1, 0, 0.3)
+scale = Vector2(1.6, 1.6)
+texture = ExtResource("2_sprite")
+z_index = -2
+
+[node name="SelectionCircle" type="Line2D" parent="SelectionIndicator"]
+width = 3.0
+default_color = Color(0, 1, 0, 0.6)
+
+[node name="ResearchParticles" type="CPUParticles2D" parent="."]
+emitting = false
+amount = 20
+lifetime = 2.0
+speed_scale = 0.5
+explosiveness = 0.1
+randomness = 0.3
+emission_shape = 1
+emission_sphere_radius = 50.0
+direction = Vector2(0, -1)
+spread = 45.0
+gravity = Vector2(0, -20)
+initial_velocity_min = 20.0
+initial_velocity_max = 40.0
+scale_amount_min = 2.0
+scale_amount_max = 4.0
+color = Color(0.5, 0.9, 1, 0.6)
+
+[node name="ConstructionParticles" type="CPUParticles2D" parent="."]
+emitting = false
+amount = 30
+lifetime = 0.5
+speed_scale = 2.0
+explosiveness = 0.3
+randomness = 0.5
+emission_shape = 1
+emission_sphere_radius = 60.0
+direction = Vector2(0, 0)
+spread = 180.0
+gravity = Vector2(0, 50)
+initial_velocity_min = 50.0
+initial_velocity_max = 100.0
+scale_amount_min = 1.0
+scale_amount_max = 3.0
+color = Color(1, 0.7, 0.3, 0.8)
+
+
