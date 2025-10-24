@@ -1,16 +1,21 @@
-[gd_scene load_steps=3 format=3 uid="uid://b8tae4loguihw"]
+[gd_scene load_steps=4 format=3 uid="uid://b8tae4loguihw"]
 
 [ext_resource type="Script" uid="uid://duplljlo6yfnq" path="res://scripts/effects/Projectile.gd" id="1_5e0f8"]
+[ext_resource type="Texture2D" uid="uid://dnu0fva7akj4x" path="res://assets/sprites/Lasers/laserRed01.png" id="2_laser"]
 
 [sub_resource type="CircleShape2D" id="CircleShape2D_ugvjc"]
 radius = 4.0
 
 [node name="Projectile" type="Area2D"]
+rotation = 1.5707964
 collision_layer = 8
 collision_mask = 3
 script = ExtResource("1_5e0f8")
 
 [node name="Sprite2D" type="Sprite2D" parent="."]
+rotation = 1.5707964
+scale = Vector2(0.8, 0.8)
+texture = ExtResource("2_laser")
 
 [node name="CollisionShape2D" type="CollisionShape2D" parent="."]
 shape = SubResource("CircleShape2D_ugvjc")

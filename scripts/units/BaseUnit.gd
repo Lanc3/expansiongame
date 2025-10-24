@@ -80,6 +80,9 @@ func _ready():
 	_create_path_visualizer()
 	_create_group_badge()
 	
+	# Setup health bar
+	_setup_health_bar()
+	
 	# Create and configure flocking behavior
 	_create_flocking_behavior()
 	
@@ -186,7 +189,6 @@ func add_command(cmd_type: int, target_pos: Vector2, target_ent: Node2D = null, 
 		"target_entity": target_ent
 	}
 	
-	print("BaseUnit.add_command: type=", cmd_type, " entity=", target_ent, " queue=", queue, " ai_state=", ai_state)
 	
 	if queue:
 		command_queue.append(cmd)
@@ -203,8 +205,6 @@ func add_command(cmd_type: int, target_pos: Vector2, target_ent: Node2D = null, 
 	if ai_state == AIState.IDLE or not queue:
 		print("BaseUnit.add_command: Calling process_next_command()")
 		process_next_command()
-	else:
-		print("BaseUnit.add_command: NOT calling process_next_command, ai_state=", ai_state)
 
 func clear_commands():
 	command_queue.clear()
@@ -491,10 +491,29 @@ func take_damage(amount: float, attacker: Node2D = null):
 		FeedbackManager.flash_sprite(sprite, Color.RED, 0.2)
 
 func die():
+	# Check if enemy - drop loot
+	if team_id != 0 and LootDropSystem:  # team_id 0 = player
+		LootDropSystem.drop_loot(self)
+	
 	died.emit()
 	EntityManager.unregister_unit(self)
 	FeedbackManager.spawn_explosion(global_position)
 	queue_free()
+
+func _setup_health_bar():
+	"""Initialize health bar appearance and values"""
+	if not health_bar:
+		return
+	
+	health_bar.max_value = max_health
+	health_bar.value = current_health
+	health_bar.show_percentage = false
+	
+	# Make health bar independent of parent's transform
+	health_bar.top_level = true
+	health_bar.size = Vector2(40, 6)
+	
+	update_health_bar()
 
 func set_selected(selected: bool):
 	is_selected = selected
@@ -515,14 +534,46 @@ func set_selected(selected: bool):
 			path_visualizer.hide_path()
 
 func update_health_bar():
-	if health_bar:
-		health_bar.value = (current_health / max_health) * 100
+	"""Update health bar visual based on current health"""
+	if not health_bar:
+		return
+	
+	health_bar.value = current_health
+	
+	# Update color based on health percentage
+	var health_percent = (current_health / max_health) * 100.0
+	var fill_style = StyleBoxFlat.new()
+	
+	if health_percent > 66.0:
+		fill_style.bg_color = Color(0.2, 1.0, 0.2)  # Green
+	elif health_percent > 33.0:
+		fill_style.bg_color = Color(1.0, 0.9, 0.2)  # Yellow
+	else:
+		fill_style.bg_color = Color(1.0, 0.2, 0.2)  # Red
+	
+	health_bar.add_theme_stylebox_override("fill", fill_style)
+	
+	# Show health bar when damaged, fade when full health
+	if health_percent >= 100.0:
+		health_bar.modulate = Color(1, 1, 1, 0.5)  # Fade to 50% when full
+	else:
+		health_bar.modulate = Color(1, 1, 1, 1.0)  # Full opacity when damaged
 
 func update_visual():
 	# Rotate sprite to face movement direction
 	if velocity.length() > 10:
 		var target_rotation = velocity.angle()
 		rotation = lerp_angle(rotation, target_rotation, rotation_speed * get_physics_process_delta_time())
+	
+	# Keep health bar above unit (top_level means it needs manual positioning)
+	if health_bar and health_bar.top_level:
+		# Position health bar above unit in world space (always at top)
+		health_bar.global_position = global_position + Vector2(-20, -35)
+		health_bar.rotation = 0  # Always horizontal
+	
+	# Counter-rotate group badge to keep it upright
+	if group_badge:
+		group_badge.rotation = -rotation
 
 
 # ============================================================================

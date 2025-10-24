@@ -294,3 +294,8 @@ func calculate_zone_value_rating(zone_id: int) -> int:
 	else:
 		return 1  # ★☆☆☆☆
 
+func reset():
+	"""Reset zone manager state for starting a fresh game"""
+	current_zone_id = 1
+	zones_ready = false
+	# Don't clear zones array or zone_layers - they'll be recreated by ZoneSetup

@@ -5,11 +5,15 @@ var mining_effect_scene: PackedScene
 var explosion_effect_scene: PackedScene
 var collection_effect_scene: PackedScene
 var death_effect_scene: PackedScene
+var damage_number_scene: PackedScene
+var event_notification_scene: PackedScene
 
 func _ready():
 	# Preload effect scenes
 	mining_effect_scene = preload("res://scenes/effects/MiningEffect.tscn") if ResourceLoader.exists("res://scenes/effects/MiningEffect.tscn") else null
 	explosion_effect_scene = preload("res://scenes/effects/CombatExplosion.tscn") if ResourceLoader.exists("res://scenes/effects/CombatExplosion.tscn") else null
+	damage_number_scene = preload("res://scenes/ui/DamageNumber.tscn") if ResourceLoader.exists("res://scenes/ui/DamageNumber.tscn") else null
+	event_notification_scene = preload("res://scenes/ui/EventNotification.tscn") if ResourceLoader.exists("res://scenes/ui/EventNotification.tscn") else null
 # Add this function to your existing FeedbackManager.gd:
 
 func spawn_move_indicator(position: Vector2):
@@ -124,3 +128,37 @@ func show_message(message: String, duration: float = 2.0):
 	var tween = create_tween()
 	tween.tween_property(label, "modulate:a", 0.0, duration)
 	tween.tween_callback(label.queue_free)
+
+func spawn_damage_number(position: Vector2, damage: float, is_player_damage: bool = true):
+	"""Spawn floating damage number at position (Diablo-style)"""
+	if not damage_number_scene:
+		return
+	
+	var damage_num = damage_number_scene.instantiate() as DamageNumber
+	if not damage_num:
+		return
+	
+	# Add to current scene
+	get_tree().current_scene.add_child(damage_num)
+	
+	# Setup and animate
+	damage_num.setup(damage, position, is_player_damage)
+
+func show_event_notification(description: String, location: Vector2, warning_time: float):
+	"""Show event warning notification"""
+	if not event_notification_scene:
+		return
+	
+	var notification = event_notification_scene.instantiate() as EventNotification
+	if not notification:
+		return
+	
+	# Add to UI layer (or current scene if no UI layer)
+	var ui_layer = get_tree().root.find_child("UILayer", true, false)
+	if ui_layer:
+		ui_layer.add_child(notification)
+	else:
+		get_tree().current_scene.add_child(notification)
+	
+	# Setup notification
+	notification.setup(description, location, warning_time)

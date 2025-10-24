@@ -12,7 +12,6 @@ func setup_for_zone(p_zone_id: int, zone_bounds: Rect2):
 	"""Setup boundary for a specific zone"""
 	zone_id = p_zone_id
 	boundaries = zone_bounds
-	print("ZoneBoundary: Setup for Zone %d with bounds %s" % [zone_id, boundaries])
 
 func _process(_delta: float):
 	"""Check and clamp all units within zone boundaries"""

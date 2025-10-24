@@ -84,7 +84,6 @@ var unlocked_buildings: Dictionary = {}  # building_name -> true
 
 func _ready():
 	# Initialize with no research
-	print("ResearchManager: Initialized")
 	set_process(true)
 
 func _process(delta: float):
@@ -171,7 +170,6 @@ func complete_research():
 		current_research_id = ""
 		return
 	
-	print("ResearchManager: Completing research on %s - %s" % [current_research_id, research.name])
 	
 	# Mark as unlocked
 	unlocked_research[current_research_id] = true
@@ -190,7 +188,6 @@ func complete_research():
 	# Emit signal (after clearing so can_research works correctly)
 	research_unlocked.emit(completed_id)
 	
-	print("ResearchManager: Research completed and unlocked: %s" % completed_id)
 	
 	# Check for newly available research
 	check_newly_available_research()
@@ -208,7 +205,6 @@ func cancel_research():
 	if not research.is_empty() and ResourceManager:
 		ResourceManager.refund_resources(research.cost)
 	
-	print("ResearchManager: Cancelled research on %s" % current_research_id)
 	
 	current_research_id = ""
 	research_progress = 0.0
@@ -465,4 +461,3 @@ func reset_all_research():
 	unlocked_abilities.clear()
 	unlocked_buildings.clear()
 	recalculate_effects()
-	print("ResearchManager: All research reset")

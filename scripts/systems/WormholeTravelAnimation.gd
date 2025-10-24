@@ -140,7 +140,6 @@ func play_travel_animation(from_zone_id: int, to_zone_id: int):
 	if camera:
 		camera_original_position = camera.global_position
 	
-	print("WormholeTravelAnimation: Starting travel from Zone %d to Zone %d" % [from_zone_id, to_zone_id])
 	
 	# Reset shader parameters
 	reset_shader_parameters()
@@ -152,7 +151,6 @@ func play_travel_animation(from_zone_id: int, to_zone_id: int):
 	
 	# Switch zones at peak of transit (before exit)
 	if ZoneManager:
-		print("WormholeTravelAnimation: Switching to Zone %d" % to_zone_id)
 		ZoneManager.switch_to_zone(to_zone_id)
 		
 		# Move camera to the return wormhole (the one we entered through)
@@ -181,7 +179,6 @@ func play_travel_animation(from_zone_id: int, to_zone_id: int):
 	Engine.time_scale = 1.0  # Ensure time scale is reset
 	travel_complete.emit()
 	
-	print("WormholeTravelAnimation: Travel complete!")
 
 func reset_shader_parameters():
 	"""Reset all shader parameters and spiral to zero"""
@@ -201,7 +198,6 @@ func reset_shader_parameters():
 
 func play_approach_phase() -> void:
 	"""Phase 1: Approach the wormhole"""
-	print("WormholeTravelAnimation: Approach phase")
 	
 	if animation_tween:
 		animation_tween.kill()
@@ -233,7 +229,6 @@ func play_approach_phase() -> void:
 
 func play_enter_phase() -> void:
 	"""Phase 2: Enter wormhole - tunnel effect begins"""
-	print("WormholeTravelAnimation: Enter phase")
 	
 	if animation_tween:
 		animation_tween.kill()
@@ -275,7 +270,6 @@ func play_enter_phase() -> void:
 
 func play_transit_phase() -> void:
 	"""Phase 3: Full wormhole transit - peak of effect"""
-	print("WormholeTravelAnimation: Transit phase")
 	
 	if animation_tween:
 		animation_tween.kill()
@@ -332,7 +326,6 @@ func play_transit_phase() -> void:
 
 func play_exit_phase() -> void:
 	"""Phase 4: Exit wormhole - reverse tunnel effect"""
-	print("WormholeTravelAnimation: Exit phase")
 	
 	if animation_tween:
 		animation_tween.kill()
@@ -372,7 +365,6 @@ func play_exit_phase() -> void:
 
 func play_arrive_phase() -> void:
 	"""Phase 5: Arrival - fade back to normal"""
-	print("WormholeTravelAnimation: Arrive phase")
 	
 	if animation_tween:
 		animation_tween.kill()

@@ -64,17 +64,14 @@ func spawn_resources_for_zone(zone_id: int, zone_data: Dictionary):
 	# Get planets in this zone
 	var planets_container = zone_layer.get_node_or_null("Planets")
 	if not planets_container:
-		print("ResourceSpawner: No Planets container found for Zone %d" % zone_id)
 		return
 	
 	var planets = planets_container.get_children()
 	if planets.is_empty():
-		print("ResourceSpawner: No planets found in Zone %d" % zone_id)
 		return
 	
 	# Check if resources already exist (from save file) - don't recreate them
 	if resources_node.get_child_count() > 0:
-		print("ResourceSpawner: Resources already exist for Zone %d, skipping creation" % zone_id)
 		# Still need to populate the spawned_resources array for existing resources
 		var existing_resources: Array[Node2D] = []
 		for resource in resources_node.get_children():

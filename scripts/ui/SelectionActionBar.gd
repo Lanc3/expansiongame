@@ -66,13 +66,11 @@ func _on_attack_move_pressed():
 	# Set attack-move mode (player clicks where to attack-move)
 	awaiting_command = "attack_move"
 	# TODO: Change cursor, wait for player to click position
-	print("Attack-move mode activated - click to set destination")
 
 func _on_patrol_pressed():
 	# Set patrol mode
 	awaiting_command = "patrol"
 	# TODO: Change cursor, wait for player to set patrol points
-	print("Patrol mode activated - click to set patrol waypoints")
 
 func _on_return_cargo_pressed():
 	var units = SelectionManager.selected_units

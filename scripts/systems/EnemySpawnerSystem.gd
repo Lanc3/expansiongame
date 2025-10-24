@@ -58,7 +58,6 @@ func create_enemy_cluster(zone_id: int, cluster_index: int):
 	spawner.zone_id = zone_id
 	buildings_container.add_child(spawner)
 	
-	print("EnemySpawnerSystem: Created spawner at %s in Zone %d" % [cluster_position, zone_id])
 	
 	# Create turrets around spawner
 	var turret_count = get_turrets_per_cluster(zone_id)
@@ -144,4 +143,3 @@ func create_turret(turret_type: String, position: Vector2, zone_id: int, parent:
 		turret.global_position = position
 		turret.zone_id = zone_id
 		parent.add_child(turret)
-		print("EnemySpawnerSystem: Created %s turret at %s in Zone %d" % [turret_type, position, zone_id])

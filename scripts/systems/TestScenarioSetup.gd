@@ -113,26 +113,20 @@ func _input(event: InputEvent):
 			KEY_R:
 				# Press R to spawn a Research Building at mouse position
 				spawn_test_research_building()
-			KEY_B:
-				# Press B to spawn a Builder Drone at mouse position
-				spawn_test_builder()
 
 func spawn_test_research_building():
 	"""Spawn a Research Building at camera/mouse position for testing"""
 	if not ZoneManager:
-		print("TestScenarioSetup: ZoneManager not available")
 		return
 	
 	var current_zone = ZoneManager.current_zone_id
 	var zone_data = ZoneManager.get_zone(current_zone)
 	
 	if zone_data.is_empty() or not zone_data.layer_node:
-		print("TestScenarioSetup: Zone data not available")
 		return
 	
 	var buildings_node = zone_data.layer_node.get_node_or_null("Entities/Buildings")
 	if not buildings_node:
-		print("TestScenarioSetup: Buildings node not found")
 		return
 	
 	# Get camera position or mouse position

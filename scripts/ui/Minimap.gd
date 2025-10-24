@@ -68,7 +68,6 @@ func update_world_size():
 		if not zone.is_empty():
 			var bounds = zone.boundaries
 			world_size = bounds.size
-			print("Minimap: Updated world size to ", world_size, " for Zone ", current_zone_id)
 
 func draw_entities():
 	# Draw fog of war first (as background)

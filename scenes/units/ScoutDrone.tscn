@@ -7,13 +7,15 @@
 [node name="BaseUnit" instance=ExtResource("1_brxx4")]
 rotation = 1.573536
 script = ExtResource("2_u2r7m")
-vision_range = 500.0
 scan_interval = 2.0
+scan_range = 80.0
+orbit_radius = 120.0
+orbit_speed = 2.0
 
 [node name="Sprite2D" parent="." index="1"]
 visible = false
 
-[node name="Sprite2D2" type="Sprite2D" parent="." index="5"]
+[node name="Sprite2D2" type="Sprite2D" parent="." index="4"]
 rotation = 1.5704368
 scale = Vector2(0.29753596, 0.3516518)
 texture = ExtResource("3_uj44g")

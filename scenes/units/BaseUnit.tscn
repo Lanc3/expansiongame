@@ -15,7 +15,6 @@ bg_color = Color(0, 1, 0, 1)
 [node name="BaseUnit3" type="CharacterBody2D"]
 z_index = 10
 rotation = 1.5928192
-collision_layer = 1
 collision_mask = 2
 script = ExtResource("1_umhv7")
 avoidance_weight = 2.0
@@ -29,13 +28,15 @@ scale = Vector2(0.5, 0.5)
 texture = ExtResource("2_wf76u")
 
 [node name="HealthBar" type="ProgressBar" parent="."]
-visible = false
-offset_top = -30.0
-offset_right = 50.0
-offset_bottom = -3.0
+offset_left = -20.0
+offset_top = -35.0
+offset_right = 20.0
+offset_bottom = -29.0
 theme_override_styles/background = SubResource("StyleBoxFlat_ampot")
 theme_override_styles/fill = SubResource("StyleBoxFlat_8jmq4")
+max_value = 100.0
 value = 100.0
+show_percentage = false
 
 [node name="NavigationAgent2D" type="NavigationAgent2D" parent="."]
 path_desired_distance = 10.0

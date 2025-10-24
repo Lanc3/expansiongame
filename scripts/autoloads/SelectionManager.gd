@@ -120,7 +120,6 @@ func select_building(building: Node2D):
 		building.set_selected(true)
 	building_selected.emit(building)
 	
-	print("SelectionManager: Building selected")
 
 func deselect_building():
 	"""Deselect building"""

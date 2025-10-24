@@ -88,22 +88,16 @@ func initialize(r_id: String, r_data: Dictionary):
 func update_content():
 	"""Update node content from research data"""
 	if research_data.is_empty():
-		print("TechTreeNode: ERROR - research_data is empty!")
 		return
 	
 	# Update name with better formatting
 	if name_label:
 		if "name" in research_data:
 			name_label.text = research_data.name
-			print("TechTreeNode: Set name to '%s'" % research_data.name)
-		else:
-			print("TechTreeNode: ERROR - 'name' not in research_data!")
-		
+
 		name_label.add_theme_font_size_override("font_size", 11)
 		name_label.add_theme_color_override("font_color", Color(1.0, 1.0, 1.0))
-	else:
-		print("TechTreeNode: ERROR - name_label is null!")
-	
+
 	# Update icon - use category-based placeholder
 	if icon_texture:
 		# Create a colored rectangle as placeholder icon
@@ -308,19 +302,13 @@ func on_clicked():
 	
 	# Try to start research if available
 	if node_status == "available" and ResearchManager:
-		print("TechTreeNode: Attempting to start research...")
-		if ResearchManager.start_research(research_id):
-			# Success - research started
-			print("TechTreeNode: Research started!")
-			# Progress bar will be shown by signal handler
-		else:
-			print("TechTreeNode: Failed to start research")
+		pass  # Research can be started from details panel
 	elif node_status == "locked":
-		print("TechTreeNode: Research locked (prerequisites not met)")
+		pass  # Prerequisites not met
 	elif node_status == "researched":
-		print("TechTreeNode: Already researched")
+		pass  # Already researched
 	elif ResearchManager and ResearchManager.is_researching():
-		print("TechTreeNode: Already researching something else")
+		pass  # Already researching something
 
 func play_unlock_animation():
 	"""Play animation when research is unlocked"""
@@ -415,4 +403,3 @@ func _on_research_completed(completed_research_id: String):
 		update_visual_state()
 		
 		print("TechTreeNode: Research completed on %s" % research_data.get("name", research_id))
-

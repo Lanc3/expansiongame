@@ -9,47 +9,37 @@ var last_group_key_pressed: int = -1
 var last_group_key_time: float = 0.0
 const DOUBLE_TAP_THRESHOLD: float = 0.3
 
+# Paint mode state
+var paint_mode_active: bool = false
+var paint_mode_type: String = ""  # "scout", "mining", "combat"
+var paint_target_units: Array = []  # Units to receive queued commands
+var paint_circle_radius: float = 150.0  # Adjustable
+var paint_is_dragging: bool = false
+var paint_queued_targets: Array = []  # Targets collected during drag
+
 func _ready():
 	camera = get_viewport().get_camera_2d()
 	# Find the UI layer
 	ui_layer = get_tree().root.get_node_or_null("Game/UI")
+	
+	# Connect to SelectedUnitsPanel signals
+	await get_tree().process_frame  # Wait for scene tree to be ready
+	var selected_units_panel = get_tree().root.find_child("SelectedUnitsPanel", true, false)
+	if selected_units_panel:
+		if selected_units_panel.has_signal("paint_mode_activated"):
+			selected_units_panel.paint_mode_activated.connect(_on_paint_mode_activated)
+		if selected_units_panel.has_signal("paint_mode_deactivated"):
+			selected_units_panel.paint_mode_deactivated.connect(_on_paint_mode_deactivated)
 
 func _input(event: InputEvent):
+	# Paint mode takes priority
+	if paint_mode_active:
+		handle_paint_mode_input(event)
+		return
+	
 	# Check if mouse is over UI - if so, don't process input
 	if event is InputEventMouseButton:
-		# Use Godot's built-in UI detection first
-		if get_viewport().gui_is_dragging():
-			return
-		
-		# Check if any Control node is under the mouse
-		var control_under_mouse = get_viewport().gui_get_focus_owner()
-		if control_under_mouse and control_under_mouse.get_global_rect().has_point(event.position):
-			return
-		
-		# Check if CommandShipPanel is visible and mouse is over it (now a side panel)
-		var command_ship_panel = get_tree().root.find_child("CommandShipPanel", true, false)
-		if command_ship_panel and command_ship_panel.visible:
-			if command_ship_panel is Control and command_ship_panel.get_global_rect().has_point(event.position):
-				return
-		
-		# Check if BuilderDronePanel is visible and mouse is over it
-		var builder_panel = get_tree().root.find_child("BuilderDronePanel", true, false)
-		if builder_panel and builder_panel.visible:
-			if builder_panel is Control and builder_panel.get_global_rect().has_point(event.position):
-				return
-		
-		# Check if TechTreeUI is visible and mouse is over it
-		var tech_tree = get_tree().root.find_child("TechTreeUI", true, false)
-		if tech_tree and tech_tree.visible:
-			if tech_tree is Control and tech_tree.get_global_rect().has_point(event.position):
-				return
-		# Check if BlueprintBuilderUI is visible and mouse is over it
-		var blueprint_builder = get_tree().root.find_child("BlueprintBuilderUI", true, false)
-		if blueprint_builder and blueprint_builder.visible:
-			if blueprint_builder is Control and blueprint_builder.get_global_rect().has_point(event.position):
-				return
-		
-		# Fallback to our custom detection
+		# Use comprehensive UI detection
 		if is_mouse_over_ui(event.position):
 			return  # Let UI handle it
 		
@@ -75,6 +65,11 @@ func handle_mouse_motion(event: InputEventMouseMotion):
 
 func handle_keyboard(event: InputEventKey):
 	if event.pressed:
+		# DEBUG: J key triggers random event for testing
+		if event.keycode == KEY_J:
+			trigger_debug_event()
+			return
+		
 		# Handle control group assignment (Ctrl+1-9)
 		if event.ctrl_pressed and not event.shift_pressed:
 			var group_num = _get_number_key_pressed(event.keycode)
@@ -364,58 +359,90 @@ func _close_open_panels():
 
 func is_mouse_over_ui(mouse_pos: Vector2) -> bool:
 	"""Check if mouse is over any UI element"""
-	# Get all Control nodes at the mouse position
 	var viewport = get_viewport()
 	if not viewport:
 		return false
 	
-	# Use the Viewport's gui_get_focus_owner or check for UI elements
-	var gui_owner = viewport.gui_get_focus_owner()
+	# Use Godot's built-in UI detection first
+	if viewport.gui_is_dragging():
+		return true
 	
-	# More robust: check if any Control is under the mouse
-	# We'll find all UI panels and check if mouse is within their rect
+	# Check if focus owner contains the mouse
+	var gui_owner = viewport.gui_get_focus_owner()
+	if gui_owner and gui_owner.get_global_rect().has_point(mouse_pos):
+		return true
+	
+	# Check TopInfoBar (top bar with resources)
+	var top_info_bar = get_tree().root.find_child("TopInfoBar", true, false)
+	if top_info_bar and top_info_bar.visible:
+		if top_info_bar is Control and top_info_bar.get_global_rect().has_point(mouse_pos):
+			return true
+	
+	# Check SelectedUnitsPanel
 	var selected_units_panel = get_tree().root.find_child("SelectedUnitsPanel", true, false)
 	if selected_units_panel and selected_units_panel.visible:
 		if selected_units_panel is Control and selected_units_panel.get_global_rect().has_point(mouse_pos):
 			return true
 	
+	# Check BlueprintEditor
 	var blueprint_editor = get_tree().root.find_child("BlueprintEditor", true, false)
 	if blueprint_editor and blueprint_editor.visible:
 		if blueprint_editor is Control and blueprint_editor.get_global_rect().has_point(mouse_pos):
 			return true
 	
+	# Check CommandShipPanel
 	var command_ship_panel = get_tree().root.find_child("CommandShipPanel", true, false)
 	if command_ship_panel and command_ship_panel.visible:
 		if command_ship_panel is Control and command_ship_panel.get_global_rect().has_point(mouse_pos):
 			return true
 	
+	# Check BuilderDronePanel
 	var builder_panel = get_tree().root.find_child("BuilderDronePanel", true, false)
 	if builder_panel and builder_panel.visible:
 		if builder_panel is Control and builder_panel.get_global_rect().has_point(mouse_pos):
 			return true
 	
+	# Check TechTreeUI
 	var tech_tree = get_tree().root.find_child("TechTreeUI", true, false)
 	if tech_tree and tech_tree.visible:
 		if tech_tree is Control and tech_tree.get_global_rect().has_point(mouse_pos):
 			return true
 	
+	# Check BlueprintBuilderUI
+	var blueprint_builder = get_tree().root.find_child("BlueprintBuilderUI", true, false)
+	if blueprint_builder and blueprint_builder.visible:
+		if blueprint_builder is Control and blueprint_builder.get_global_rect().has_point(mouse_pos):
+			return true
+	
+	# Check WormholeInfoPanel
 	var wormhole_info_panel = get_tree().root.find_child("WormholeInfoPanel", true, false)
 	if wormhole_info_panel and wormhole_info_panel.visible:
 		if wormhole_info_panel is Control and wormhole_info_panel.get_global_rect().has_point(mouse_pos):
 			return true
 	
+	# Check AsteroidInfoPanel
 	var asteroid_info_panel = get_tree().root.find_child("AsteroidInfoPanel", true, false)
 	if asteroid_info_panel and asteroid_info_panel.visible:
 		if asteroid_info_panel is Control and asteroid_info_panel.get_global_rect().has_point(mouse_pos):
 			return true
 	
-	var hud = get_tree().root.find_child("HUD", true, false)
-	if hud and hud.visible:
-		if hud is Control:
-			# Check if mouse is over any visible child controls
-			for child in hud.get_children():
-				if child is Control and child.visible and child.get_global_rect().has_point(mouse_pos):
-					return true
+	# Check ResourceInventoryPanel
+	var inventory_panel = get_tree().root.find_child("ResourceInventoryPanel", true, false)
+	if inventory_panel and inventory_panel.visible:
+		if inventory_panel is Control and inventory_panel.get_global_rect().has_point(mouse_pos):
+			return true
+	
+	# Check Minimap
+	var minimap = get_tree().root.find_child("Minimap", true, false)
+	if minimap and minimap.visible:
+		if minimap is Control and minimap.get_global_rect().has_point(mouse_pos):
+			return true
+	
+	# Check ZoneSwitcher
+	var zone_switcher = get_tree().root.find_child("ZoneSwitcher", true, false)
+	if zone_switcher and zone_switcher.visible:
+		if zone_switcher is Control and zone_switcher.get_global_rect().has_point(mouse_pos):
+			return true
 	
 	return false
 
@@ -476,6 +503,187 @@ func _select_control_group(group_num: int):
 		if FeedbackManager:
 			FeedbackManager.show_message("Control Group %d selected (%d units)" % [group_num, group_units.size()])
 
+# Paint Mode Handlers
+func _on_paint_mode_activated(mode: String, units: Array):
+	"""Activate paint mode"""
+	paint_mode_active = true
+	paint_mode_type = mode
+	paint_target_units = units.duplicate()
+	paint_queued_targets.clear()
+	paint_is_dragging = false
+	
+	# Show circle cursor at mouse position
+	var mouse_pos = get_viewport().get_mouse_position()
+	var world_pos = screen_to_world(mouse_pos)
+	PaintModeVisualizer.show_circle(paint_circle_radius, world_pos)
+
+func _on_paint_mode_deactivated():
+	"""Deactivate paint mode"""
+	paint_mode_active = false
+	paint_mode_type = ""
+	paint_target_units.clear()
+	paint_queued_targets.clear()
+	paint_is_dragging = false
+	
+	PaintModeVisualizer.hide_circle()
+	PaintModeVisualizer.clear_highlights()
+
+func handle_paint_mode_input(event: InputEvent):
+	"""Handle input during paint mode"""
+	# Handle mouse wheel for circle radius adjustment (disable camera zoom)
+	if event is InputEventMouseButton:
+		if event.button_index == MOUSE_BUTTON_WHEEL_UP and event.pressed:
+			paint_circle_radius = clampf(paint_circle_radius + 25.0, 50.0, 500.0)
+			PaintModeVisualizer.update_circle_radius(paint_circle_radius)
+			return
+		elif event.button_index == MOUSE_BUTTON_WHEEL_DOWN and event.pressed:
+			paint_circle_radius = clampf(paint_circle_radius - 25.0, 50.0, 500.0)
+			PaintModeVisualizer.update_circle_radius(paint_circle_radius)
+			return
+		
+		# Left-click-drag to paint targets
+		elif event.button_index == MOUSE_BUTTON_LEFT:
+			if event.pressed:
+				# Start painting
+				paint_is_dragging = true
+				paint_queued_targets.clear()
+				PaintModeVisualizer.clear_highlights()
+				_collect_paint_targets(screen_to_world(event.position))
+			else:
+				# Finish painting and issue commands
+				if paint_is_dragging:
+					_finalize_paint_queue()
+	
+	# Update circle position on mouse motion
+	elif event is InputEventMouseMotion:
+		var world_pos = screen_to_world(event.position)
+		PaintModeVisualizer.update_circle_position(world_pos)
+		
+		# Collect targets while dragging
+		if paint_is_dragging:
+			_collect_paint_targets(world_pos)
+	
+	# ESC key to cancel paint mode
+	elif event is InputEventKey:
+		if event.pressed and event.keycode == KEY_ESCAPE:
+			_on_paint_mode_deactivated()
+
+func _collect_paint_targets(world_pos: Vector2):
+	"""Collect targets within paint circle radius"""
+	var space_state = get_tree().root.get_world_2d().direct_space_state
+	
+	# Query for objects in radius
+	var query = PhysicsShapeQueryParameters2D.new()
+	var shape = CircleShape2D.new()
+	shape.radius = paint_circle_radius
+	query.shape = shape
+	query.transform = Transform2D(0, world_pos)
+	query.collide_with_areas = true
+	query.collide_with_bodies = true
+	
+	match paint_mode_type:
+		"scout", "mining":
+			# Collect asteroids (layer 2 - Resources)
+			query.collision_mask = 4  # Resources layer
+			var results = space_state.intersect_shape(query)
+			
+			for result in results:
+				var target = result.collider
+				
+				# Check if it's a resource node (asteroid) and not already queued
+				if target.is_in_group("resources") and target not in paint_queued_targets:
+					# Check if in current zone
+					if ZoneManager and ZoneManager.get_unit_zone(target) == ZoneManager.current_zone_id:
+						paint_queued_targets.append(target)
+						PaintModeVisualizer.highlight_target(target, paint_queued_targets.size())
+		
+		"combat":
+			# Collect enemies (layer 1 - Units)
+			query.collision_mask = 1  # Units layer
+			var results = space_state.intersect_shape(query)
+			
+			for result in results:
+				var target = result.collider
+				
+				# Check if it's an enemy unit and not already queued
+				if "team_id" in target and target.team_id != 0 and target not in paint_queued_targets:
+					# Check if in current zone
+					if ZoneManager and ZoneManager.get_unit_zone(target) == ZoneManager.current_zone_id:
+						paint_queued_targets.append(target)
+						PaintModeVisualizer.highlight_target(target, paint_queued_targets.size())
+
+func _finalize_paint_queue():
+	"""Distribute targets across units and issue commands"""
+	print("Paint: Finalizing queue with %d targets and %d units" % [paint_queued_targets.size(), paint_target_units.size()])
+	
+	if paint_queued_targets.is_empty() or paint_target_units.is_empty():
+		_on_paint_mode_deactivated()
+		return
+	
+	# Remove invalid targets
+	var valid_targets = []
+	for target in paint_queued_targets:
+		if is_instance_valid(target):
+			valid_targets.append(target)
+	
+	if valid_targets.is_empty():
+		_on_paint_mode_deactivated()
+		return
+	
+	# Clear existing commands on all units (paint mode replaces queue)
+	for unit in paint_target_units:
+		if is_instance_valid(unit) and unit.has_method("clear_commands"):
+			unit.clear_commands()
+	
+	# Distribute targets evenly across units
+	var unit_count = paint_target_units.size()
+	var targets_per_unit = ceili(float(valid_targets.size()) / float(unit_count))
+	
+	var target_index = 0
+	for unit in paint_target_units:
+		if not is_instance_valid(unit):
+			continue
+		
+		# Assign targets to this unit
+		var unit_targets = []
+		for i in range(targets_per_unit):
+			if target_index >= valid_targets.size():
+				break
+			unit_targets.append(valid_targets[target_index])
+			target_index += 1
+		
+		# Issue commands via CommandSystem (queue=true to build up the queue)
+		match paint_mode_type:
+			"scout":
+				# Issue scan commands
+				for j in range(unit_targets.size()):
+					var target = unit_targets[j]
+					var should_queue = (j > 0)  # First command replaces, rest queue
+					CommandSystem.issue_scan_command([unit], target, should_queue)
+			"mining":
+				# Issue mine commands
+				for j in range(unit_targets.size()):
+					var target = unit_targets[j]
+					var should_queue = (j > 0)  # First command replaces, rest queue
+					CommandSystem.issue_mine_command([unit], target, should_queue)
+			"combat":
+				# Issue attack commands
+				for j in range(unit_targets.size()):
+					var target = unit_targets[j]
+					var should_queue = (j > 0)  # First command replaces, rest queue
+					CommandSystem.issue_attack_command([unit], target, should_queue)
+	
+	# Feedback
+	if FeedbackManager:
+		FeedbackManager.show_message("Queued %d targets for %d units" % [valid_targets.size(), unit_count])
+	
+	# Play sound
+	if AudioManager:
+		AudioManager.play_sound("button_click")
+	
+	# Deactivate paint mode
+	_on_paint_mode_deactivated()
+
 ## Center camera on a group of units
 func _center_camera_on_units(units: Array):
 	if units.is_empty() or not camera:
@@ -493,3 +701,16 @@ func _center_camera_on_units(units: Array):
 	if valid_count > 0:
 		centroid /= valid_count
 		camera.focus_on_position(centroid, 0.3)
+
+# DEBUG FUNCTION
+func trigger_debug_event():
+	"""DEBUG: Trigger a random event for testing (J key)"""
+	if not EventManager or not ZoneManager:
+		print("EventManager or ZoneManager not available")
+		return
+	
+	var zone_id = ZoneManager.current_zone_id
+	var event_id = EventManager.pick_random_event_for_zone(zone_id)
+	
+	print("DEBUG: Triggering event '%s' in Zone %d (Press J)" % [event_id, zone_id])
+	EventManager.trigger_event(event_id)

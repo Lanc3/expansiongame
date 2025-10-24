@@ -16,7 +16,6 @@ func _ready():
 func start_placement(builder: BuilderDrone, b_type: String, b_data: Dictionary):
 	"""Start building placement mode"""
 	if is_placing:
-		print("PlacementController: Already in placement mode, ignoring new request")
 		return
 	
 	builder_drone = builder
@@ -115,7 +114,6 @@ func _input(event: InputEvent):
 func confirm_placement():
 	"""Confirm building placement at current ghost position"""
 	if not placement_ghost or not is_instance_valid(builder_drone):
-		print("PlacementController: Cannot confirm - ghost or builder invalid")
 		cancel_placement()
 		return
 	
@@ -124,10 +122,8 @@ func confirm_placement():
 	
 	# Validate placement
 	if not BuildingDatabase.is_valid_placement(building_type, placement_pos, zone_id):
-		print("PlacementController: Invalid placement location")
 		return
 	
-	print("PlacementController: Building placed at %s, starting construction" % placement_pos)
 	
 	# Start construction
 	builder_drone.start_construction(building_type, placement_pos)
@@ -160,5 +156,4 @@ func cancel_placement():
 	if was_placing:
 		placement_cancelled.emit()
 	
-	print("PlacementController: Placement cancelled")
 

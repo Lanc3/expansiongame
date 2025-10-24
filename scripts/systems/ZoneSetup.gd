@@ -67,7 +67,6 @@ func setup_zone_layers():
 		zone_layer.name = "Zone%dLayer" % zone_id
 		zone_layer.visible = (zone_id == 1)  # Only Zone 1 visible initially
 		world_layer.add_child(zone_layer)
-		print("ZoneSetup: Created %s, visible=%s" % [zone_layer.name, zone_layer.visible])
 		
 		# Create Planets container (before entities for z-ordering)
 		var planets = Node2D.new()
@@ -113,7 +112,6 @@ func setup_zone_layers():
 		# Create planets for this zone
 		create_planets_for_zone(zone_id)
 		
-		print("ZoneSetup: Created Zone%dLayer with navigation and planets" % zone_id)
 
 func create_navigation_region_for_zone(zone_id: int) -> NavigationRegion2D:
 	"""Create a NavigationRegion2D sized for the zone"""
@@ -173,11 +171,9 @@ func link_existing_zones():
 		var zone_layer = world_layer.get_node_or_null("Zone%dLayer" % zone_id)
 		if zone_layer:
 			ZoneManager.set_zone_layer(zone_id, zone_layer)
-			print("ZoneSetup: Linked existing Zone%dLayer" % zone_id)
 
 func setup_wormholes():
 	"""Create wormholes connecting zones"""
-	print("ZoneSetup: Creating wormholes")
 	
 	# Zone 1: Only forward wormhole (to Zone 2)
 	create_wormhole_for_zone(1, 2, true)
@@ -190,7 +186,6 @@ func setup_wormholes():
 	# Zone 9: Only return wormhole (to Zone 8)
 	create_wormhole_for_zone(9, 8, false)
 	
-	print("ZoneSetup: Completed wormhole creation")
 
 func create_wormhole_for_zone(zone_id: int, target_zone_id: int, is_forward: bool):
 	"""Create a single wormhole in a zone"""
@@ -294,7 +289,6 @@ func create_planets_for_zone(zone_id: int):
 	
 	# Check if planets already exist (from save file) - don't recreate them
 	if planets_container.get_child_count() > 0:
-		print("ZoneSetup: Planets already exist for Zone %d, skipping creation" % zone_id)
 		return
 	
 	# Randomly choose 1 or 2 planets for this zone

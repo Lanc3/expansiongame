@@ -10,6 +10,7 @@ signal spawner_destroyed()
 @export var spawn_interval: float = 30.0  # Seconds between spawns
 @export var zone_id: int = 1
 @export var team_id: int = 1  # Enemy team
+@export var boss_spawn_chance: float = 0.05  # 5% chance to spawn boss
 
 var current_health: float
 var spawn_timer: float = 0.0
@@ -99,15 +100,18 @@ func attempt_spawn():
 		
 		return
 	
+	# Check if spawning a boss
+	var is_boss_spawn = randf() < boss_spawn_chance
+	
 	# Determine which enemy type to spawn
-	var enemy_scene = get_spawn_type_for_zone()
+	var enemy_scene = get_spawn_type_for_zone(is_boss_spawn)
 	if not enemy_scene:
 		return
 	
 	# Spawn the unit
-	spawn_enemy_unit(enemy_scene)
+	spawn_enemy_unit(enemy_scene, is_boss_spawn)
 
-func spawn_enemy_unit(enemy_scene: PackedScene):
+func spawn_enemy_unit(enemy_scene: PackedScene, is_boss: bool = false):
 	"""Spawn an enemy unit at spawner location"""
 	var enemy = enemy_scene.instantiate()
 	
@@ -124,6 +128,11 @@ func spawn_enemy_unit(enemy_scene: PackedScene):
 	
 	# Set zone_id metadata for planet finding
 	enemy.set_meta("zone_id", zone_id)
+	
+	# Mark as boss if appropriate
+	if is_boss:
+		enemy.set_meta("is_boss", true)
+		enemy.scale *= 1.5  # Visually larger
 	
 	# Add to scene tree
 	var zone_layer = ZoneManager.get_zone(zone_id).layer_node
@@ -145,8 +154,18 @@ func spawn_enemy_unit(enemy_scene: PackedScene):
 			unit_spawned.emit(enemy)
 			
 
-func get_spawn_type_for_zone() -> PackedScene:
+func get_spawn_type_for_zone(is_boss: bool = false) -> PackedScene:
 	"""Determine which enemy type to spawn based on zone"""
+	# Boss spawns get upgraded enemy types
+	if is_boss:
+		if zone_id <= 3:
+			return cruiser_scene  # Cruiser boss in early zones
+		elif zone_id <= 6:
+			return bomber_scene  # Bomber boss in mid zones
+		else:
+			return bomber_scene  # Still bomber but with boss stats
+	
+	# Normal spawns
 	if zone_id <= 3:
 		# Zones 2-3: Fighters only
 		return fighter_scene

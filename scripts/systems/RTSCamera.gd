@@ -73,6 +73,11 @@ func handle_edge_scrolling(delta: float):
 		position += movement.normalized() * edge_scroll_speed * delta / zoom.x
 
 func handle_zoom():
+	# Don't zoom if paint mode is active (InputHandler uses wheel for circle radius)
+	var input_handler = get_node_or_null("../Systems/InputHandler")
+	if input_handler and input_handler.paint_mode_active:
+		return
+	
 	var zoom_delta = 0.0
 	
 	if Input.is_action_just_pressed("zoom_in"):
@@ -97,7 +102,6 @@ func clamp_camera_position():
 func set_zone_bounds(bounds: Rect2):
 	"""Update camera bounds based on current zone"""
 	current_zone_bounds = bounds
-	print("RTSCamera: Updated bounds to ", bounds)
 	
 	# Immediately clamp position to new bounds
 	if use_bounds:

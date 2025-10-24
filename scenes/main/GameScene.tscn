@@ -106,10 +106,10 @@ offset_bottom = 400.0
 [node name="DebugOverlay" parent="UILayer" instance=ExtResource("10_3gpyy")]
 
 [node name="ZoneSwitcher" parent="UILayer" instance=ExtResource("14_zoneswitcher")]
-offset_left = 540.0
-offset_top = 630.0
-offset_right = 740.0
-offset_bottom = 710.0
+offset_left = 820.0
+offset_top = 620.0
+offset_right = 1020.0
+offset_bottom = 720.0
 
 [node name="CommandShipPanel" parent="UILayer" instance=ExtResource("7_commandpanel")]
 

@@ -132,7 +132,6 @@ func start_background_music():
 		# Use finished signal to restart
 		if not music_player.finished.is_connected(_on_music_finished):
 			music_player.finished.connect(_on_music_finished)
-		print("AudioManager: Started background music")
 
 func _on_music_finished():
 	"""Restart background music when it finishes (manual looping)"""
@@ -207,6 +206,42 @@ func play_ui_click_sound():
 		ui_player.play()
 		ui_player.finished.connect(func(): ui_player.queue_free())
 
+func play_portal_sound(sound_type: String, world_position: Vector2 = Vector2.ZERO):
+	"""Play portal sound effects with spatial audio"""
+	var sound = null
+	
+	match sound_type:
+		"opening":
+			sound = load("res://assets/audio/portal ambient.mp3")
+		"spawn":
+			sound = load("res://assets/audio/teleport-spwan.mp3")
+		"closing":
+			sound = load("res://assets/audio/portal-close.mp3")
+	
+	print("Playing portal sound: ", sound_type, " at position: ", world_position)
+	
+	if sound:
+		var portal_player = AudioStreamPlayer2D.new()
+		add_child(portal_player)
+		portal_player.stream = sound
+		portal_player.max_distance = 2000.0
+		portal_player.attenuation = 2.0
+		
+		# Set volume - ensure minimum volume even if sfx is muted
+		var effective_sfx_volume = max(sfx_volume, 0.5)  # Minimum 0.5 for portal sounds
+		var base_volume = linear_to_db(effective_sfx_volume)
+		portal_player.volume_db = base_volume
+		
+		# Position at world location (for future spatial audio if needed)
+		if world_position != Vector2.ZERO:
+			portal_player.global_position = world_position
+		
+		print("Portal sound volume: ", portal_player.volume_db, " sfx_volume: ", sfx_volume, " effective: ", effective_sfx_volume)
+		portal_player.play()
+		portal_player.finished.connect(func(): portal_player.queue_free())
+	else:
+		print("ERROR: Could not load portal sound: ", sound_type)
+
 func calculate_spatial_volume(world_position: Vector2, base_volume_db: float) -> float:
 	"""Calculate volume based on distance from camera"""
 	# Get camera
@@ -250,7 +285,6 @@ func save_settings():
 	if file:
 		file.store_string(JSON.stringify(settings, "\t"))
 		file.close()
-		print("AudioManager: Settings saved")
 
 func load_settings():
 	"""Load audio settings from disk"""
@@ -267,8 +301,3 @@ func load_settings():
 					set_master_volume(settings.get("master_volume", 1.0))
 					set_music_volume(settings.get("music_volume", 0.7))
 					set_sfx_volume(settings.get("sfx_volume", 0.8))
-					print("AudioManager: Settings loaded")
-			else:
-				print("AudioManager: Failed to parse settings file")
-	else:
-		print("AudioManager: No settings file found, using defaults")

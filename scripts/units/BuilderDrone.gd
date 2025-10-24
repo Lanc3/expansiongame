@@ -46,40 +46,33 @@ func start_construction(building_type: String, world_pos: Vector2):
 	"""Begin construction of a building at specified position"""
 	# Check if already constructing
 	if build_state != BuildState.IDLE:
-		print("BuilderDrone: Already constructing, ignoring new construction request")
 		return
 	
 	# Validate building type
 	var building_data = BuildingDatabase.get_building_data(building_type)
 	if building_data.is_empty():
-		print("BuilderDrone: Invalid building type: %s" % building_type)
 		return
 	
 	# Check resources
 	if not ResourceManager or not ResourceManager.can_afford_cost(building_data.cost):
-		print("BuilderDrone: Insufficient resources for %s" % building_type)
 		return
 	
 	# Check research requirements
 	if "requires_research" in building_data and building_data.requires_research != "":
 		if not ResearchManager or not ResearchManager.is_unlocked(building_data.requires_research):
-			print("BuilderDrone: Research required: %s" % building_data.requires_research)
 			return
 	
 	# Check zone limit
 	var zone_id = ZoneManager.get_unit_zone(self) if ZoneManager else 1
 	if not BuildingDatabase.can_build_in_zone(building_type, zone_id):
-		print("BuilderDrone: Cannot build more of %s in this zone" % building_type)
 		return
 	
 	# Check placement validity
 	if not BuildingDatabase.is_valid_placement(building_type, world_pos, zone_id):
-		print("BuilderDrone: Invalid placement position")
 		return
 	
 	# Consume resources
 	if not ResourceManager.consume_resources(building_data.cost):
-		print("BuilderDrone: Failed to consume resources")
 		return
 	
 	# Store construction info
@@ -119,10 +112,8 @@ func create_construction_ghost(b_type: String, b_data: Dictionary, pos: Vector2,
 	var zone_layer = zone_data.get("layer_node", null)
 	if zone_layer and is_instance_valid(zone_layer):
 		zone_layer.add_child(construction_ghost)
-		print("BuilderDrone: Construction ghost added to zone %d layer" % z_id)
 	else:
 		get_tree().current_scene.add_child(construction_ghost)
-		print("BuilderDrone: Construction ghost added to current scene")
 	
 	# Wait for _ready() to complete, then initialize
 	await get_tree().process_frame
@@ -143,9 +134,6 @@ func move_to_construction_site(target_pos: Vector2):
 	if navigation_agent:
 		navigation_agent.target_position = target_pos
 		print("BuilderDrone: Moving to construction site at %s (current distance: %.1f)" % [target_pos, global_position.distance_to(target_pos)])
-	else:
-		print("BuilderDrone: ERROR - No navigation_agent available!")
-
 func process_construction(delta: float):
 	"""Process building construction"""
 	# Debug: Print state periodically
@@ -155,7 +143,6 @@ func process_construction(delta: float):
 	
 	if not is_instance_valid(construction_ghost):
 		# Ghost was destroyed, cancel construction
-		print("BuilderDrone: Construction ghost destroyed, cancelling construction")
 		cancel_construction()
 		return
 	
@@ -171,14 +158,12 @@ func process_construction(delta: float):
 	
 	# In range, construct
 	if build_state == BuildState.MOVING_TO_SITE:
-		print("BuilderDrone: Arrived at site, beginning construction of %s" % building_type_to_construct)
 		build_state = BuildState.CONSTRUCTING
 		ai_state = AIState.IDLE
 		
 		# Notify ghost that construction started
 		if is_instance_valid(construction_ghost):
 			construction_ghost.start_construction(self)
-			print("BuilderDrone: Ghost notified, progress bar should be visible")
 	
 	# Apply research speed bonuses
 	var speed_multiplier = 1.0
@@ -198,7 +183,6 @@ func process_construction(delta: float):
 	var progress_percent = int(construction_progress * 100)
 	if progress_percent % 10 == 0 and progress_percent > 0:
 		if not has_meta("last_progress_print") or get_meta("last_progress_print") != progress_percent:
-			print("BuilderDrone: Construction %d%% complete" % progress_percent)
 			set_meta("last_progress_print", progress_percent)
 	
 	# Update ghost
@@ -211,7 +195,6 @@ func process_construction(delta: float):
 
 func complete_construction():
 	"""Complete the construction"""
-	print("BuilderDrone: Construction of %s complete" % building_type_to_construct)
 	
 	# Ghost handles spawning the real building
 	# Just reset builder state
@@ -223,7 +206,6 @@ func complete_construction():
 
 func cancel_construction():
 	"""Cancel ongoing construction"""
-	print("BuilderDrone: Construction cancelled")
 	
 	if is_instance_valid(construction_ghost):
 		construction_ghost.cancel_construction()

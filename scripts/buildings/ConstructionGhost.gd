@@ -37,7 +37,6 @@ func initialize(b_type: String, b_data: Dictionary, z_id: int):
 	building_data = b_data
 	zone_id = z_id
 	
-	print("ConstructionGhost: Initialized with type=%s, zone=%d" % [b_type, z_id])
 	
 	# Update range circle immediately
 	if "collision_radius" in building_data:
@@ -161,7 +160,6 @@ func start_construction(drone: Node2D):
 	if sprite:
 		sprite.modulate = Color(0.8, 0.8, 1.0, 0.5)  # Blue tint for construction
 	
-	print("ConstructionGhost: Construction started at %s" % global_position)
 
 func update_construction_progress(progress: float):
 	"""Update construction progress (0.0 to 1.0)"""
@@ -180,7 +178,6 @@ func update_construction_progress(progress: float):
 
 func complete_construction():
 	"""Finish construction and spawn actual building"""
-	print("ConstructionGhost: Construction complete, spawning building")
 	
 	# Spawn the actual building
 	spawn_real_building()
@@ -191,12 +188,10 @@ func complete_construction():
 func spawn_real_building():
 	"""Spawn the actual building at this location"""
 	if "scene" not in building_data:
-		print("ConstructionGhost: ERROR - No scene path in building data")
 		return
 	
 	var scene_path = building_data.scene
 	if not ResourceLoader.exists(scene_path):
-		print("ConstructionGhost: ERROR - Building scene not found: %s" % scene_path)
 		return
 	
 	var building_scene = load(scene_path)
@@ -221,11 +216,9 @@ func spawn_real_building():
 	if EntityManager:
 		EntityManager.register_building(building)
 	
-	print("ConstructionGhost: Spawned %s at %s" % [building_type, global_position])
 
 func cancel_construction():
 	"""Cancel construction and refund resources"""
-	print("ConstructionGhost: Construction cancelled")
 	
 	# Refund resources
 	if ResourceManager and "cost" in building_data:

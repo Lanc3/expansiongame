@@ -24,6 +24,15 @@ func setup(res_id: int, res_data: Dictionary):
 	# Set background color to resource color
 	color = base_color
 	
+	# Set contrasting text color for readability
+	var text_color = get_contrasting_text_color(base_color)
+	if acronym_label:
+		acronym_label.add_theme_color_override("font_color", text_color)
+	if count_label:
+		count_label.add_theme_color_override("font_color", text_color)
+	if pin_button:
+		pin_button.add_theme_color_override("font_color", text_color)
+	
 	if acronym_label:
 		acronym_label.text = generate_3letter_acronym(res_data.name)
 	
@@ -40,10 +49,7 @@ func update_count(count: int):
 	current_count = count
 	
 	if count_label:
-		if count > 999:
-			count_label.text = "999+"
-		else:
-			count_label.text = str(count)
+		count_label.text = format_compact_number(count)
 	
 	# Dim if zero, full color if has resources
 	if count == 0:
@@ -55,10 +61,8 @@ func update_pin_display():
 	if pin_button:
 		if ResourcePinManager and ResourcePinManager.is_pinned(resource_id):
 			pin_button.text = "⭐"
-			pin_button.modulate = Color(1, 1, 0.5, 1)
 		else:
 			pin_button.text = "☆"
-			pin_button.modulate = Color(1, 1, 1, 0.8)
 
 func _on_pin_pressed():
 	if ResourcePinManager:
@@ -79,3 +83,29 @@ func generate_3letter_acronym(name: String) -> String:
 		result = name.substr(0, min(3, name.length()))
 	
 	return result.to_upper()
+
+func get_contrasting_text_color(bg_color: Color) -> Color:
+	# Calculate perceived luminance (0.0 to 1.0)
+	var luminance = (0.299 * bg_color.r) + (0.587 * bg_color.g) + (0.114 * bg_color.b)
+	# Return black for bright backgrounds, white for dark backgrounds
+	if luminance > 0.5:
+		return Color.BLACK
+	else:
+		return Color.WHITE
+
+func format_compact_number(n: int) -> String:
+	var value := float(n)
+	var suffix := ""
+	if n >= 1000000000:
+		value = value / 1000000000.0
+		suffix = "b"
+	elif n >= 1000000:
+		value = value / 1000000.0
+		suffix = "m"
+	elif n >= 1000:
+		value = value / 1000.0
+		suffix = "k"
+	var s := ("%.1f" % value) if suffix != "" else str(n)
+	if s.ends_with(".0"):
+		s = s.substr(0, s.length() - 2)
+	return s + suffix

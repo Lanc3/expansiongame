@@ -39,9 +39,26 @@ func toggle_pause():
 		pause_game()
 
 func reset_game():
+	"""Reset all game state for starting fresh"""
 	game_time = 0.0
 	game_paused_bool = false
 	get_tree().paused = false
+	
+	# Clear SaveLoadManager flag
+	if SaveLoadManager:
+		SaveLoadManager.is_loading_save = false
+	
+	# Clear EntityManager registrations
+	if EntityManager:
+		EntityManager.clear_all()
+	
+	# Clear SelectionManager
+	if SelectionManager:
+		SelectionManager.clear_selection()
+	
+	# Clear ZoneManager state
+	if ZoneManager:
+		ZoneManager.reset()
 func get_game_time_formatted() -> String:
 	var minutes = int(game_time / 60)
 	var seconds = int(game_time) % 60

@@ -90,7 +90,6 @@ func process_production(delta: float):
 func add_to_queue(unit_type: String) -> bool:
 	"""Add a unit to the production queue"""
 	if production_queue.size() >= MAX_QUEUE_SIZE:
-		print("CommandShip: Queue full!")
 		return false
 	
 	var cost = calculate_production_cost(unit_type)
@@ -98,7 +97,6 @@ func add_to_queue(unit_type: String) -> bool:
 	
 	# Check if resources available
 	if not ResourceManager.can_afford_cost(cost):
-		print("CommandShip: Cannot afford %s" % unit_type)
 		return false
 	
 	# Deduct resources
@@ -135,7 +133,6 @@ func start_next_production():
 	is_producing = true
 	
 	production_started.emit(current_production.unit_type)
-	print("CommandShip: Started building %s" % current_production.unit_type)
 
 func complete_production():
 	"""Complete current production and spawn unit"""
@@ -145,7 +142,6 @@ func complete_production():
 	spawn_unit(unit_type)
 	
 	production_completed.emit(unit_type)
-	print("CommandShip: Completed %s" % unit_type)
 	
 	# Start next in queue
 	start_next_production()
@@ -156,7 +152,6 @@ func cancel_production(index: int):
 		if not current_production.is_empty():
 			# Refund resources
 			ResourceManager.refund_resources(current_production.resource_cost)
-			print("CommandShip: Cancelled current production, refunded resources")
 			
 			production_cancelled.emit(-1)
 			start_next_production()
@@ -166,7 +161,6 @@ func cancel_production(index: int):
 			ResourceManager.refund_resources(order.resource_cost)
 			production_queue.remove_at(index)
 			
-			print("CommandShip: Cancelled queue item %d, refunded resources" % index)
 			production_cancelled.emit(index)
 			queue_updated.emit()
 
@@ -201,7 +195,6 @@ func spawn_unit(unit_type: String):
 		if EntityManager.has_method("register_unit"):
 			EntityManager.register_unit(unit, zone_id)
 		
-		print("CommandShip: Spawned %s at %s" % [unit_type, unit.global_position])
 
 func calculate_production_cost(unit_type: String) -> Dictionary:
 	"""Calculate production cost with scaling based on existing units"""

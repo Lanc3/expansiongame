@@ -3,8 +3,8 @@ extends Panel
 
 signal building_selected(building_type: String)
 
-@onready var building_buttons_container: HBoxContainer = $VBox/BuildButtonsRow/ButtonScroll/BuildingButtons if has_node("VBox/BuildButtonsRow/ButtonScroll/BuildingButtons") else null
-@onready var status_label: Label = $VBox/InfoRow/StatusLabel if has_node("VBox/InfoRow/StatusLabel") else null
+@onready var building_buttons_container: HBoxContainer = $VBox/ButtonRow/ButtonScroll/BuildingButtons if has_node("VBox/ButtonRow/ButtonScroll/BuildingButtons") else null
+@onready var status_label: Label = $VBox/TopRow/StatusLabel if has_node("VBox/TopRow/StatusLabel") else null
 
 var selected_builder: BuilderDrone = null
 var is_placement_active: bool = false
@@ -15,7 +15,6 @@ func _ready():
 	# Ensure panel blocks input to game world
 	mouse_filter = Control.MOUSE_FILTER_STOP
 	
-	print("BuilderDronePanel: Ready")
 
 func show_for_builder(builder: BuilderDrone):
 	"""Display panel for the selected builder drone"""
@@ -50,48 +49,60 @@ func clear_buttons():
 		child.queue_free()
 
 func create_building_button(building_type: String):
-	"""Create a compact button for a building type"""
+	"""Create a larger, more clickable button for a building type"""
 	var building_data = BuildingDatabase.get_building_data(building_type)
 	if building_data.is_empty():
 		return
 	
-	# Create button similar to CompactProductionButton
+	# Create button with better minimum size for easier clicking
 	var button = Button.new()
-	button.custom_minimum_size = Vector2(100, 0)
+	button.custom_minimum_size = Vector2(85, 72)  # Wider and taller for easier clicking
 	button.mouse_filter = Control.MOUSE_FILTER_STOP
 	
 	# Create vertical layout for button content
 	var vbox = VBoxContainer.new()
 	vbox.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	vbox.alignment = BoxContainer.ALIGNMENT_CENTER
+	vbox.set_anchors_preset(Control.PRESET_FULL_RECT)
 	button.add_child(vbox)
 	
-	# Building name (shortened)
+	# Building icon/emoji (add visual distinction)
+	var icon_label = Label.new()
+	icon_label.text = _get_building_icon(building_type)
+	icon_label.add_theme_font_size_override("font_size", 20)
+	icon_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	icon_label.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
+	icon_label.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	vbox.add_child(icon_label)
+	
+	# Building name (shortened to fit)
 	var name_label = Label.new()
-	name_label.text = building_data.display_name
-	name_label.add_theme_font_size_override("font_size", 10)
+	var display_name = building_data.display_name
+	# Shorten long names
+	if display_name == "Research Building":
+		display_name = "Research"
+	elif display_name.length() > 12:
+		display_name = display_name.substr(0, 10) + ".."
+	name_label.text = display_name
+	name_label.add_theme_font_size_override("font_size", 9)
 	name_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	name_label.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
 	name_label.autowrap_mode = TextServer.AUTOWRAP_OFF
+	name_label.text_overrun_behavior = TextServer.OVERRUN_TRIM_ELLIPSIS
 	name_label.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	vbox.add_child(name_label)
 	
-	# Build time
-	var time_label = Label.new()
-	time_label.text = BuildingDatabase.get_build_time_text(building_type)
-	time_label.add_theme_font_size_override("font_size", 8)
-	time_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	time_label.modulate = Color(0.7, 0.7, 0.7)
-	time_label.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	vbox.add_child(time_label)
-	
-	# Cost indicator (just show if affordable)
+	# Cost indicator with time (combined for space)
 	var can_afford = ResourceManager.can_afford_cost(building_data.cost) if ResourceManager else false
-	var cost_label = Label.new()
-	cost_label.text = "✓" if can_afford else "✗"
-	cost_label.add_theme_font_size_override("font_size", 12)
-	cost_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	cost_label.modulate = Color(0.5, 1.0, 0.5) if can_afford else Color(1.0, 0.5, 0.5)
-	cost_label.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	vbox.add_child(cost_label)
+	var info_label = Label.new()
+	var time_text = BuildingDatabase.get_build_time_text(building_type)
+	info_label.text = ("✓ %s" % time_text) if can_afford else ("✗ %s" % time_text)
+	info_label.add_theme_font_size_override("font_size", 8)
+	info_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	info_label.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
+	info_label.modulate = Color(0.5, 1.0, 0.5) if can_afford else Color(1.0, 0.5, 0.5)
+	info_label.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	vbox.add_child(info_label)
 	
 	# Check zone limit
 	var zone_id = ZoneManager.get_unit_zone(selected_builder) if ZoneManager and selected_builder else 1
@@ -112,10 +123,8 @@ func create_building_button(building_type: String):
 func _on_building_button_pressed(building_type: String):
 	"""Handle building button press - enter placement mode"""
 	if is_placement_active:
-		print("BuilderDronePanel: Placement already active, ignoring button press")
 		return
 	
-	print("BuilderDronePanel: Building selected: %s" % building_type)
 	
 	update_status("Click to place building (Right-click to cancel)")
 	
@@ -135,14 +144,12 @@ func start_building_placement(building_type: String):
 	
 	# Check resources
 	if not ResourceManager or not ResourceManager.can_afford_cost(building_data.cost):
-		print("BuilderDronePanel: Insufficient resources")
 		update_status("Insufficient resources!")
 		return
 	
 	# Check zone limit
 	var zone_id = ZoneManager.get_unit_zone(selected_builder) if ZoneManager else 1
 	if not BuildingDatabase.can_build_in_zone(building_type, zone_id):
-		print("BuilderDronePanel: Cannot build more in this zone")
 		update_status("Zone limit reached!")
 		return
 	
@@ -166,7 +173,6 @@ func start_building_placement(building_type: String):
 		placement_controller.start_placement(selected_builder, building_type, building_data)
 	else:
 		# Fallback: place at builder location
-		print("BuilderDronePanel: PlacementController not found, placing at builder location")
 		selected_builder.start_construction(building_type, selected_builder.global_position + Vector2(150, 0))
 		update_status("Building construction started")
 		is_placement_active = false
@@ -185,12 +191,30 @@ func hide_panel():
 
 func _on_placement_completed():
 	"""Handle placement completed signal"""
-	print("BuilderDronePanel: Placement completed, resetting state")
 	is_placement_active = false
 	update_status("Construction in progress...")
 
 func _on_placement_cancelled_signal():
 	"""Handle placement cancelled signal"""
-	print("BuilderDronePanel: Placement cancelled, resetting state")
 	is_placement_active = false
 	update_status("Select a building to construct")
+
+func _get_building_icon(building_type: String) -> String:
+	"""Get icon emoji for building type"""
+	match building_type:
+		"ResearchBuilding":
+			return "🔬"
+		"BulletTurret":
+			return "🔫"
+		"LaserTurret":
+			return "⚡"
+		"MissileTurret":
+			return "🚀"
+		"ShieldGenerator":
+			return "🛡"
+		"ResourceExtractor":
+			return "⛏"
+		"PowerPlant":
+			return "⚙"
+		_:
+			return "🏭"  # Default factory icon

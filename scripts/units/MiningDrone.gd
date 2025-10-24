@@ -49,6 +49,10 @@ func _ready():
 	# Load and create cargo indicator
 	cargo_indicator_scene = preload("res://scenes/ui/CargoIndicator.tscn")
 	create_cargo_indicator()
+	
+	# Connect to loot system for auto-collection
+	if LootDropSystem:
+		LootDropSystem.loot_dropped.connect(_on_loot_dropped)
 
 func _process(_delta: float):
 	update_cargo_bar()
@@ -125,7 +129,7 @@ func process_gathering_state(delta: float):
 		hide_mining_laser()
 		return
 	
-	# Mine resource
+			# Mine resource
 	mining_timer += delta
 	if mining_timer >= 0.5:  # Mine every 0.5 seconds
 		mining_timer = 0.0
@@ -147,6 +151,10 @@ func process_gathering_state(delta: float):
 				
 				carrying_resources += total_extracted
 				last_mined_resource = target_entity
+				
+				# Notify event system for activity tracking
+				if EventManager:
+					EventManager.on_asteroid_mined()
 				
 				# Spawn mining effect
 				FeedbackManager.spawn_mining_effect(target_entity.global_position)
@@ -376,3 +384,100 @@ func create_cargo_indicator():
 		var ui_layer = get_tree().root.find_child("UILayer", true, false)
 		if ui_layer:
 			ui_layer.add_child(cargo_indicator)
+
+## Loot Collection Methods
+
+func _on_loot_dropped(position: Vector2, resources: Dictionary):
+	"""When loot drops nearby, check if we should collect it"""
+	# Only collect if we're idle or close enough
+	var distance = global_position.distance_to(position)
+	
+	# Check if we have cargo space
+	if carrying_resources >= max_cargo:
+		return  # Cargo full
+	
+	# Auto-collect if close enough (500 units) and not busy
+	if distance < 500.0 and (ai_state == AIState.IDLE or ai_state == AIState.RETURNING):
+		# Scan for loot orbs near this position
+		scan_for_loot_orbs()
+
+func scan_for_loot_orbs():
+	"""Scan for nearby loot orbs and collect them"""
+	var loot_orbs = get_tree().get_nodes_in_group("loot")
+	var closest_loot = null
+	var closest_dist = 300.0  # Scan range
+	
+	for orb in loot_orbs:
+		if not is_instance_valid(orb):
+			continue
+		
+		# Check if it's in our zone
+		var orb_zone = orb.get_meta("zone_id", 1)
+		var my_zone = get_meta("zone_id", 1)
+		if orb_zone != my_zone:
+			continue
+		
+		var dist = global_position.distance_to(orb.global_position)
+		if dist < closest_dist:
+			closest_loot = orb
+			closest_dist = dist
+	
+	if closest_loot:
+		# Collect loot directly if close
+		if closest_dist < 30.0:
+			collect_loot_orb(closest_loot)
+		# Otherwise move towards it if idle
+		elif ai_state == AIState.IDLE:
+			target_position = closest_loot.global_position
+			ai_state = AIState.MOVING
+
+func _physics_process(delta: float):
+	super._physics_process(delta)
+	
+	# Check for nearby loot while moving or idle
+	if ai_state == AIState.IDLE or ai_state == AIState.MOVING:
+		check_for_nearby_loot()
+
+func check_for_nearby_loot():
+	"""Check if we're near any loot orbs"""
+	if carrying_resources >= max_cargo:
+		return  # Cargo full
+	
+	var loot_orbs = get_tree().get_nodes_in_group("loot")
+	for orb in loot_orbs:
+		if not is_instance_valid(orb):
+			continue
+		
+		# Check if it's in our zone
+		var orb_zone = orb.get_meta("zone_id", 1)
+		var my_zone = get_meta("zone_id", 1)
+		if orb_zone != my_zone:
+			continue
+		
+		var dist = global_position.distance_to(orb.global_position)
+		if dist < 30.0:  # Collection range
+			collect_loot_orb(orb)
+			break  # Only collect one per frame
+
+func collect_loot_orb(orb: Node2D):
+	"""Collect a loot orb"""
+	if not is_instance_valid(orb):
+		return
+	
+	# Get resource data
+	var resource_id = orb.get_meta("resource_id", 0)
+	var amount = orb.get_meta("amount", 0)
+	
+	# Call orb's collect method if it has one
+	if orb.has_method("collect"):
+		orb.collect()
+	else:
+		# Fallback: add resources directly and remove orb
+		if ResourceManager:
+			ResourceManager.add_resource(resource_id, amount)
+		
+		# Audio feedback
+		if AudioManager:
+			AudioManager.play_sound("loot_pickup")
+		
+		orb.queue_free()

@@ -62,7 +62,6 @@ func _ready():
 	# Connect to wormhole selections
 	connect_wormhole_signals()
 	
-	print("UIController ready - connected to SelectionManager")
 
 func _on_asteroid_selected(asteroid: ResourceNode):
 	"""Show asteroid info panel when asteroid selected"""
@@ -86,14 +85,12 @@ func connect_wormhole_signals():
 
 func _on_wormhole_selected(wormhole):
 	"""Show wormhole info panel when wormhole selected"""
-	print("UIController: Wormhole selected")
 	
 	if wormhole_info_panel and wormhole_info_panel.has_method("show_for_wormhole"):
 		wormhole_info_panel.show_for_wormhole(wormhole)
 
 func _on_wormhole_travel_requested(target_zone_id: int):
 	"""Handle travel button press - start cinematic travel"""
-	print("UIController: Travel requested to Zone %d" % target_zone_id)
 	
 	if not travel_animation or not travel_animation.has_method("play_travel_animation"):
 		push_error("Travel animation not available")
@@ -109,7 +106,6 @@ func _on_wormhole_travel_requested(target_zone_id: int):
 
 func _on_travel_complete():
 	"""Handle travel animation completion"""
-	print("UIController: Travel animation complete")
 	# Animation system will have switched zones, we just finalize here
 
 func _on_selection_changed(selected_units: Array):
@@ -155,7 +151,6 @@ func _on_building_selected(building: Node2D):
 	if building is ResearchBuilding:
 		if tech_tree_ui and tech_tree_ui.has_method("show_for_building"):
 			tech_tree_ui.show_for_building(building)
-			print("UIController: Showing tech tree for Research Building")
 
 func _on_building_deselected():
 	"""Handle building deselection - hide tech tree"""

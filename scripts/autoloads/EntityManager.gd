@@ -157,7 +157,6 @@ func register_building(building: Node2D, zone_id: int = -1):
 			if building not in buildings_by_zone[zone_id]:
 				buildings_by_zone[zone_id].append(building)
 		
-		print("EntityManager: Registered building in zone %d" % zone_id)
 
 func unregister_building(building: Node2D):
 	"""Unregister a building from tracking"""
@@ -223,3 +222,18 @@ func update_unit_zone(unit: Node2D, old_zone_id: int, new_zone_id: int):
 	if new_zone_id in units_by_zone:
 		if unit not in units_by_zone[new_zone_id]:
 			units_by_zone[new_zone_id].append(unit)
+
+func clear_all():
+	"""Clear all entity registrations"""
+	units.clear()
+	buildings.clear()
+	resources.clear()
+	projectiles.clear()
+	
+	# Clear zone tracking
+	for zone_id in units_by_zone:
+		units_by_zone[zone_id].clear()
+	for zone_id in resources_by_zone:
+		resources_by_zone[zone_id].clear()
+	for zone_id in buildings_by_zone:
+		buildings_by_zone[zone_id].clear()

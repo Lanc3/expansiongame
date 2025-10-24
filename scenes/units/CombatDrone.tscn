@@ -25,5 +25,5 @@ rotation = 1.5707964
 scale = Vector2(0.37355998, 0.4539439)
 texture = ExtResource("2_rgsfu")
 
-[node name="Node" type="Node" parent="." index="6"]
+[node name="WeaponComponent" type="Node" parent="." index="6"]
 script = ExtResource("4_0join")

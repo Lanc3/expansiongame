@@ -57,8 +57,6 @@ func _ready():
 		var arrow = "→" if is_forward else "←"
 		label.text = "%s ZONE %d" % [arrow, target_zone_id]
 	
-	print("Wormhole created: Zone %d ↔ Zone %d at %s" % [source_zone_id, target_zone_id, global_position])
-	print("Wormhole details: input_pickable=%s, visible=%s, sprite_texture=%s" % [input_pickable, visible, sprite.texture if sprite else "null"])
 
 func setup_visual():
 	"""Setup wormhole visuals"""
@@ -157,7 +155,6 @@ func select_wormhole():
 	"""Select this wormhole and emit signal"""
 	is_selected = true
 	wormhole_selected.emit(self)
-	print("Wormhole selected: Zone %d → Zone %d" % [source_zone_id, target_zone_id])
 
 func deselect_wormhole():
 	"""Deselect this wormhole"""
@@ -166,14 +163,12 @@ func deselect_wormhole():
 
 func _on_mouse_entered():
 	"""Handle mouse hover"""
-	print("Wormhole: Mouse ENTERED - hover active")
 	is_hovered = true
 	if sprite and not is_selected:
 		sprite.modulate = base_modulate * 1.5
 
 func _on_mouse_exited():
 	"""Handle mouse exit"""
-	print("Wormhole: Mouse EXITED - hover inactive")
 	is_hovered = false
 	if sprite and not is_selected:
 		sprite.modulate = base_modulate
@@ -185,11 +180,9 @@ func can_travel() -> bool:
 func travel_units(units: Array):
 	"""Issue move commands to units to travel to wormhole (they'll teleport when in range)"""
 	if not can_travel():
-		print("Wormhole: Cannot travel - inactive or invalid target")
 		return
 	
 	if units.is_empty():
-		print("Wormhole: No units to transfer")
 		return
 	
 	# Command units to move to wormhole position
@@ -208,7 +201,6 @@ func teleport_unit(unit: Node2D):
 	# Get corresponding wormhole in target zone
 	var target_zone = ZoneManager.get_zone(target_zone_id)
 	if target_zone.is_empty() or target_zone.wormholes.size() == 0:
-		print("Wormhole: No wormholes in target zone")
 		return
 	
 	# Find the return wormhole (the one that points back to our source zone)
@@ -221,7 +213,6 @@ func teleport_unit(unit: Node2D):
 	# Fallback to first wormhole if no return wormhole found
 	if not target_wormhole:
 		target_wormhole = target_zone.wormholes[0]
-		print("Wormhole: No return wormhole found, using first available")
 	
 	var target_position = target_wormhole.global_position
 	
@@ -253,7 +244,6 @@ func teleport_unit(unit: Node2D):
 			nav_agent.target_position = unit.global_position
 			nav_agent.set_velocity(Vector2.ZERO)
 			
-			print("Wormhole: Reset navigation for %s at position %s" % [unit.name, unit.global_position])
 	
 	# Spawn arrival effect at target
 	if is_instance_valid(target_wormhole):
@@ -261,7 +251,6 @@ func teleport_unit(unit: Node2D):
 	
 	units_traveled.emit([unit], target_zone_id)
 	
-	print("Wormhole: Unit %s teleported from Zone %d to Zone %d" % [unit.name, source_zone_id, target_zone_id])
 
 func spawn_travel_effect():
 	"""Visual effect when units depart through wormhole"""

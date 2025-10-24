@@ -54,7 +54,6 @@ func _ready():
 	if ZoneManager:
 		zone_id = ZoneManager.get_unit_zone(self)
 	
-	print("ResearchBuilding: Initialized in zone %d" % zone_id)
 
 func _input(event: InputEvent):
 	# Handle click on building
@@ -79,7 +78,6 @@ func on_clicked():
 		SelectionManager.select_building(self)
 	
 	building_selected.emit()
-	print("ResearchBuilding: Selected")
 
 func set_selected(selected: bool):
 	"""Set selection state"""
@@ -130,7 +128,6 @@ func destroy():
 	# Remove from scene
 	queue_free()
 	
-	print("ResearchBuilding: Destroyed")
 
 func create_destruction_effect():
 	"""Create explosion effect on destruction"""
@@ -210,7 +207,6 @@ func complete_construction():
 	construction_progress = 1.0
 	update_visual_state()
 	
-	print("ResearchBuilding: Construction complete")
 
 func get_building_info() -> Dictionary:
 	"""Get building information for UI display"""

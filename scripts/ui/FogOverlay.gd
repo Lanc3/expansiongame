@@ -105,7 +105,6 @@ func update_fog_texture():
 func _on_zone_switched(from_zone_id: int, to_zone_id: int):
 	"""Handle zone switch - load new zone's fog"""
 	current_zone_id = to_zone_id
-	print("FogOverlay: Switching from Zone %d to Zone %d" % [from_zone_id, to_zone_id])
 	update_fog_texture()
 	
 	# Immediately update shader uniforms for new zone

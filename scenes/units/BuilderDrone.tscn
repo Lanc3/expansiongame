@@ -6,17 +6,15 @@
 
 [node name="BaseUnit" instance=ExtResource("1_base")]
 script = ExtResource("2_builder")
-unit_name = "Builder Drone"
-max_health = 100.0
-move_speed = 120.0
 build_range = 60.0
 build_speed = 1.0
+unit_name = "Builder Drone"
+move_speed = 120.0
 
 [node name="Sprite2D" parent="." index="1"]
 visible = false
 
-[node name="BuilderSprite" type="Sprite2D" parent="." index="5"]
+[node name="BuilderSprite" type="Sprite2D" parent="." index="4"]
 rotation = 1.5707964
 scale = Vector2(0.4, 0.4)
 texture = ExtResource("3_sprite")
-

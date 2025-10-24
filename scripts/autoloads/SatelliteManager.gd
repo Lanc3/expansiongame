@@ -34,7 +34,6 @@ func _ready():
 	for zone_id in range(1, 10):
 		satellites_by_zone[zone_id] = []
 	
-	print("SatelliteManager: Initialized")
 
 func can_deploy_satellite() -> bool:
 	"""Check if player has unlocked satellite deployment"""
@@ -48,17 +47,14 @@ func deploy_satellite(world_pos: Vector2, zone_id: int, is_combat: bool = false)
 	"""Deploy a satellite at the specified position"""
 	# Check research
 	if not can_deploy_satellite():
-		print("SatelliteManager: Satellite deployment not researched")
 		return null
 	
 	if is_combat and not can_deploy_combat_satellite():
-		print("SatelliteManager: Combat satellites not researched")
 		return null
 	
 	# Check resources
 	var cost = COMBAT_SATELLITE_DEPLOY_COST if is_combat else SATELLITE_DEPLOY_COST
 	if not ResourceManager or not ResourceManager.can_afford_cost(cost):
-		print("SatelliteManager: Insufficient resources for satellite")
 		return null
 	
 	# Consume resources
@@ -79,7 +75,6 @@ func deploy_satellite(world_pos: Vector2, zone_id: int, is_combat: bool = false)
 	# Emit signal
 	satellite_deployed.emit(satellite, zone_id)
 	
-	print("SatelliteManager: Deployed %s satellite in zone %d" % ["combat" if is_combat else "reconnaissance", zone_id])
 	
 	return satellite
 
@@ -289,7 +284,6 @@ func destroy_satellite(satellite: Node2D):
 	# Remove from scene
 	satellite.queue_free()
 	
-	print("SatelliteManager: Satellite destroyed in zone %d" % zone_id)
 
 func get_satellites_in_zone(zone_id: int) -> Array:
 	"""Get all satellites in a specific zone"""

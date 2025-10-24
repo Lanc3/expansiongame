@@ -10,6 +10,7 @@ var age: float = 0.0
 var weapon_type: int
 var homing_target: Node2D = null
 var owner_unit: Node2D = null
+var owner_team_id: int = 0
 
 @onready var sprite: Sprite2D = $Sprite2D
 @onready var trail: Line2D = $Trail if has_node("Trail") else null
@@ -27,15 +28,25 @@ func setup(wep_type: int, dmg: float, start_pos: Vector2, target_pos: Vector2, s
 	homing_target = homing
 	owner_unit = owner
 	
-	# Set sprite/color based on weapon type
+	# Store owner's team_id for friendly fire prevention
+	if owner and "team_id" in owner:
+		owner_team_id = owner.team_id
+	
+	# Set sprite texture and color based on weapon type
 	if sprite:
 		match weapon_type:
-			0: # LASER
-				sprite.modulate = Color.RED
+			0: # LASER (Bullets)
+				sprite.texture = load("res://assets/sprites/Lasers/laserRed01.png")
+				sprite.modulate = Color(1.0, 0.3, 0.3, 1.0)  # Red
+				sprite.scale = Vector2(0.8, 0.8)
 			1: # PLASMA
-				sprite.modulate = Color.CYAN
+				sprite.texture = load("res://assets/sprites/Lasers/laserBlue01.png")
+				sprite.modulate = Color(0.3, 0.8, 1.0, 1.0)  # Cyan
+				sprite.scale = Vector2(0.9, 0.9)
 			2: # MISSILE
-				sprite.modulate = Color.ORANGE
+				sprite.texture = load("res://assets/sprites/Lasers/laserGreen01.png")
+				sprite.modulate = Color(1.0, 0.7, 0.2, 1.0)  # Orange
+				sprite.scale = Vector2(1.0, 1.0)
 
 func _ready():
 	body_entered.connect(_on_body_entered)
@@ -79,8 +90,21 @@ func _on_body_entered(body: Node2D):
 	if body == owner_unit:
 		return  # Don't hit self
 	
+	# FRIENDLY FIRE CHECK - pass through allies
+	if "team_id" in body:
+		if body.team_id == owner_team_id:
+			return  # Ignore allies completely (no collision, no damage)
+	
+	# Only damage enemies
 	if body.has_method("take_damage"):
-		body.take_damage(damage, owner_unit)
+		# Pass valid owner_unit reference or null if it's been freed
+		var attacker = owner_unit if is_instance_valid(owner_unit) else null
+		body.take_damage(damage, attacker)
+		
+		# Spawn damage number
+		if FeedbackManager and FeedbackManager.has_method("spawn_damage_number"):
+			var is_player_damage = (owner_team_id == 0)  # Player is team 0
+			FeedbackManager.spawn_damage_number(global_position, damage, is_player_damage)
 	
 	# Create impact effect
 	FeedbackManager.spawn_explosion(global_position)

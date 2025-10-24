@@ -169,7 +169,6 @@ func generate_composition():
 	for comp in resource_composition:
 		total_resources += comp.amount
 	
-	print("Asteroid #%d generated with %d resources: %.1f total units" % [asteroid_id, num_types, total_resources])
 
 func extract_resource(amount: float) -> Dictionary:
 	"""Extract resources proportionally from composition. Returns dict of extracted amounts by type_id"""
@@ -247,7 +246,6 @@ func complete_scan():
 	# Update visual to show resource count
 	update_visual()
 	
-	print("Asteroid #%d scan complete!" % asteroid_id)
 
 func cancel_scan():
 	"""Cancel ongoing scan"""
@@ -361,7 +359,6 @@ func update_visual():
 
 func on_depleted():
 	"""Called when asteroid is fully mined - EPIC DESTRUCTION!"""
-	print("Asteroid #%d depleted - triggering break-apart sequence" % asteroid_id)
 	
 	# 1. Warning shake
 	await create_shake_effect(0.2)

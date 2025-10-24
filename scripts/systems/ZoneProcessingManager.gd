@@ -9,7 +9,6 @@ const INACTIVE_UPDATE_INTERVAL: int = 60  # 1 FPS at 60 FPS (background simulati
 
 func _ready():
 	process_mode = Node.PROCESS_MODE_ALWAYS
-	print("ZoneProcessingManager: Initialized")
 
 func _process(delta: float):
 	# Update inactive zones at reduced frequency (1 FPS)
@@ -23,7 +22,6 @@ func set_active_zone(zone_id: int):
 	if zone_id == active_zone_id:
 		return
 	
-	print("ZoneProcessingManager: Switching from Zone %d to Zone %d" % [active_zone_id, zone_id])
 	
 	# Move old active zone entities to inactive state
 	move_entities_to_inactive(active_zone_id)

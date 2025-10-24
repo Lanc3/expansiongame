@@ -64,10 +64,8 @@ func passive_scan_area():
 func start_scanning(asteroid: ResourceNode):
 	"""Begin scanning an asteroid for composition"""
 	if not is_instance_valid(asteroid):
-		print("Scout: Invalid asteroid target")
 		return
 	
-	print("Scout: Starting scan of Asteroid #%d" % asteroid.asteroid_id)
 	target_asteroid = asteroid
 	target_entity = asteroid  # CRITICAL: Set BaseUnit's target_entity!
 	scout_state = ScoutState.SCANNING
@@ -84,14 +82,11 @@ func start_scanning(asteroid: ResourceNode):
 			navigation_agent.target_position = target_position
 	else:
 		# Already in range, start scanning and circling
-		print("Scout: In range, beginning scan")
 		if asteroid.start_scan(self):
 			ai_state = AIState.SCANNING
 			# Initialize orbit angle based on current position
 			var to_scout = global_position - asteroid.global_position
 			orbit_angle = atan2(to_scout.y, to_scout.x)
-		else:
-			print("Scout: Asteroid already scanned or being scanned")
 
 func process_scanning_state(delta: float):
 	"""Process active scanning behavior"""
@@ -103,14 +98,12 @@ func process_scanning_state(delta: float):
 	if target_asteroid.scanning_unit == null:
 		var distance = global_position.distance_to(target_asteroid.global_position)
 		if distance <= scan_range:
-			print("Scout: Arrived in range, initiating scan")
 			if target_asteroid.start_scan(self):
 				ai_state = AIState.SCANNING
 				# Initialize orbit angle based on current position
 				var to_scout = global_position - target_asteroid.global_position
 				orbit_angle = atan2(to_scout.y, to_scout.x)
 			else:
-				print("Scout: Failed to start scan")
 				complete_scan()
 		return  # Wait until next frame to start circling
 	
@@ -133,7 +126,10 @@ func process_scanning_state(delta: float):
 
 func complete_scan():
 	"""Scanning complete"""
-	print("Scout completed scan of Asteroid #%d" % target_asteroid.asteroid_id)
+	# Notify event system for activity tracking
+	if EventManager:
+		EventManager.on_object_scanned()
+	
 	target_asteroid = null
 	scout_state = ScoutState.IDLE
 	orbit_angle = 0.0  # Reset orbit angle
@@ -169,24 +165,17 @@ func process_next_command():
 	print("ScoutDrone.process_next_command: current_index=", current_command_index, " queue_size=", command_queue.size())
 	
 	if current_command_index >= command_queue.size():
-		print("ScoutDrone.process_next_command: No commands, going IDLE")
 		ai_state = AIState.IDLE
 		velocity = Vector2.ZERO
 		return
 	
 	var cmd = command_queue[current_command_index]
-	print("ScoutDrone.process_next_command: Processing command type: ", cmd.type)
 	
 	# Check if it's a SCAN command
 	if cmd.type == 7:  # SCAN (CommandSystem.CommandType.SCAN)
-		print("ScoutDrone.process_next_command: SCAN command detected!")
 		if cmd.target_entity and cmd.target_entity is ResourceNode:
-			print("ScoutDrone.process_next_command: Starting scan on: ", cmd.target_entity)
 			start_scanning(cmd.target_entity)
-		else:
-			print("ScoutDrone.process_next_command: Invalid target entity: ", cmd.target_entity)
 		return
 	
 	# Let base class handle other commands
-	print("ScoutDrone.process_next_command: Delegating to BaseUnit")
 	super.process_next_command()

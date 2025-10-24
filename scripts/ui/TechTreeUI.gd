@@ -60,7 +60,6 @@ func _ready():
 	if ResearchManager:
 		ResearchManager.research_unlocked.connect(_on_research_unlocked)
 	
-	print("TechTreeUI: Ready")
 
 func show_for_building(building: Node2D):
 	"""Show tech tree for a research building"""
@@ -75,7 +74,6 @@ func show_for_building(building: Node2D):
 	# Show UI
 	visible = true
 	
-	print("TechTreeUI: Opened for research building")
 
 func hide_tree():
 	"""Hide the tech tree"""
@@ -218,7 +216,6 @@ func _on_node_clicked(research_id: String):
 			new_node.set_node_selected(true)
 	
 	update_details_panel(research_id)
-	print("TechTreeUI: Node clicked, showing details for %s" % research_id)
 
 func _on_node_hovered(research_id: String, research_data: Dictionary):
 	"""Handle node hover - just visual feedback, no details change"""
@@ -354,7 +351,6 @@ func _on_research_button_pressed():
 
 func _on_research_unlocked(research_id: String):
 	"""Handle research unlock signal"""
-	print("TechTreeUI: Research unlocked: %s, updating all nodes" % research_id)
 	
 	# Update ALL node visuals (some may have become available)
 	for node_id in tech_nodes:

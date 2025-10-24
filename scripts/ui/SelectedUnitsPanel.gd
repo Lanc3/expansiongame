@@ -3,8 +3,14 @@ extends Panel
 
 enum DisplayMode {COMPACT, GROUPED}
 
+# Signals
+signal paint_mode_activated(mode: String, units: Array)
+signal paint_mode_deactivated()
+
 # UI References
-@onready var filter_dropdown: OptionButton = $VBoxContainer/TopBar/FilterDropdown
+@onready var paint_scout_btn: Button = $VBoxContainer/TopBar/PaintButtons/PaintScoutBtn
+@onready var paint_mining_btn: Button = $VBoxContainer/TopBar/PaintButtons/PaintMiningBtn
+@onready var paint_combat_btn: Button = $VBoxContainer/TopBar/PaintButtons/PaintCombatBtn
 @onready var scroll_container: ScrollContainer = $VBoxContainer/ScrollContainer
 @onready var content_container: HBoxContainer = $VBoxContainer/ScrollContainer/ContentContainer
 
@@ -26,7 +32,6 @@ var compact_icon_scene: PackedScene
 
 # State
 var current_mode: DisplayMode = DisplayMode.COMPACT
-var current_filter: String = "all"
 var selected_units_cache: Array = []
 
 # Object pooling
@@ -49,17 +54,17 @@ func _ready():
 		SelectionManager.selection_changed.disconnect(_on_selection_changed)
 	SelectionManager.selection_changed.connect(_on_selection_changed)
 	
-	# Setup filter dropdown
-	if filter_dropdown:
-		filter_dropdown.item_selected.connect(_on_filter_selected)
+	# Setup paint mode buttons
+	if paint_scout_btn:
+		paint_scout_btn.pressed.connect(_on_paint_scout_pressed)
+	if paint_mining_btn:
+		paint_mining_btn.pressed.connect(_on_paint_mining_pressed)
+	if paint_combat_btn:
+		paint_combat_btn.pressed.connect(_on_paint_combat_pressed)
 	
 	# Setup action bar buttons
 	if action_stop_btn:
 		action_stop_btn.pressed.connect(_on_action_stop)
-	if action_attack_move_btn:
-		action_attack_move_btn.pressed.connect(_on_action_attack_move)
-	if action_patrol_btn:
-		action_patrol_btn.pressed.connect(_on_action_patrol)
 	if action_return_btn:
 		action_return_btn.pressed.connect(_on_action_return_cargo)
 	
@@ -84,7 +89,6 @@ func _ready():
 	# Initially hidden
 	visible = false
 	
-	print("SelectedUnitsPanel ready - compact 100px mode")
 
 func _on_selection_changed(selected_units: Array):
 	# Calculate hash to detect actual changes
@@ -122,43 +126,21 @@ func auto_select_mode(unit_count: int):
 func rebuild_ui():
 	rebuild_queued = false
 	
-	var filtered_units = get_filtered_units()
-	
 	# Clear existing display
 	clear_display()
 	
 	# Build appropriate display
 	match current_mode:
 		DisplayMode.COMPACT:
-			build_compact_view(filtered_units)
+			build_compact_view(selected_units_cache)
 		DisplayMode.GROUPED:
-			build_grouped_view(filtered_units)
+			build_grouped_view(selected_units_cache)
 	
 	# Update action bar button states
 	update_action_bar_states()
-
-func get_filtered_units() -> Array:
-	"""Apply current filter to selected units"""
-	var filtered = []
 	
-	for unit in selected_units_cache:
-		if not is_instance_valid(unit):
-			continue
-		
-		match current_filter:
-			"all":
-				filtered.append(unit)
-			"combat":
-				if unit.can_attack():
-					filtered.append(unit)
-			"economy":
-				if unit.can_mine():
-					filtered.append(unit)
-			"support":
-				if unit is ScoutDrone or ("is_command_ship" in unit and unit.is_command_ship):
-					filtered.append(unit)
-	
-	return filtered
+	# Update paint button states
+	update_paint_button_states()
 
 func build_compact_view(units: Array):
 	"""Show compact horizontal row with scrolling"""
@@ -286,33 +268,90 @@ func clear_display():
 	for child in content_container.get_children():
 		child.queue_free()
 
-func _on_filter_selected(index: int):
-	"""Handle filter dropdown selection"""
-	match index:
-		0:
-			current_filter = "all"
-		1:
-			current_filter = "combat"
-		2:
-			current_filter = "economy"
-		3:
-			current_filter = "support"
+# Paint Mode Handlers
+func _on_paint_scout_pressed():
+	"""Activate paint mode for scout drones"""
+	var scout_units = _get_units_of_type("scout")
+	if scout_units.is_empty():
+		return
 	
-	rebuild_queued = true
-	rebuild_ui.call_deferred()
+	paint_mode_activated.emit("scout", scout_units)
+	AudioManager.play_sound("button_click")
+
+func _on_paint_mining_pressed():
+	"""Activate paint mode for mining drones"""
+	var mining_units = _get_units_of_type("mining")
+	if mining_units.is_empty():
+		return
+	
+	paint_mode_activated.emit("mining", mining_units)
+	AudioManager.play_sound("button_click")
+
+func _on_paint_combat_pressed():
+	"""Activate paint mode for combat drones"""
+	var combat_units = _get_units_of_type("combat")
+	if combat_units.is_empty():
+		return
+	
+	paint_mode_activated.emit("combat", combat_units)
+	AudioManager.play_sound("button_click")
+
+func _get_units_of_type(type: String) -> Array:
+	"""Get selected units of a specific type"""
+	var units = []
+	
+	for unit in selected_units_cache:
+		if not is_instance_valid(unit):
+			continue
+		
+		match type:
+			"scout":
+				if unit is ScoutDrone:
+					units.append(unit)
+			"mining":
+				if unit is MiningDrone:
+					units.append(unit)
+			"combat":
+				if unit.has_method("can_attack") and unit.can_attack():
+					units.append(unit)
+	
+	return units
+
+func update_paint_button_states():
+	"""Enable/disable paint buttons based on selection"""
+	if not visible:
+		return
+	
+	# Count unit types in selection
+	var has_scouts = false
+	var has_miners = false
+	var has_combat = false
+	
+	for unit in selected_units_cache:
+		if not is_instance_valid(unit):
+			continue
+		
+		if unit is ScoutDrone:
+			has_scouts = true
+		if unit is MiningDrone:
+			has_miners = true
+		if unit.has_method("can_attack") and unit.can_attack():
+			has_combat = true
+	
+	# Enable/disable buttons
+	if paint_scout_btn:
+		paint_scout_btn.disabled = not has_scouts
+	if paint_mining_btn:
+		paint_mining_btn.disabled = not has_miners
+	if paint_combat_btn:
+		paint_combat_btn.disabled = not has_combat
 
 # Action Bar Handlers
 func _on_action_stop():
 	CommandSystem.issue_hold_command(selected_units_cache)
 	AudioManager.play_sound("button_click")
 
-func _on_action_attack_move():
-	# TODO: Implement attack-move mode
-	print("Attack-move: Click position to attack-move selected units")
-
-func _on_action_patrol():
 	# TODO: Implement patrol mode
-	print("Patrol: Click to set patrol waypoints")
 
 func _on_action_return_cargo():
 	CommandSystem.issue_return_command(selected_units_cache)

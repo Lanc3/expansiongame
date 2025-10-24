@@ -26,6 +26,9 @@ func _ready():
 	super._ready()
 	team_id = 1  # Enemy team
 	
+	# Apply zone-based scaling BEFORE anything else
+	apply_zone_scaling()
+	
 	# Find nearest planet to patrol around
 	find_nearest_planet_for_patrol()
 	patrol_angle = randf() * TAU  # Random starting angle
@@ -65,11 +68,49 @@ func find_nearest_planet_for_patrol():
 		patrol_orbital_radius = zone_size * randf_range(0.25, 0.4)
 		patrol_radius = patrol_orbital_radius
 		
-		print("%s: Patrolling around planet at radius %.0f" % [unit_name, patrol_radius])
 	else:
 		# No planet found, use spawn position
 		patrol_center = global_position
 		patrol_radius = 300.0
+
+func apply_zone_scaling():
+	"""Scale enemy stats based on zone difficulty"""
+	var zone = get_meta("zone_id", 1)
+	var is_boss = get_meta("is_boss", false)
+	
+	# Health scaling: +30% per zone
+	# Zone 1: 1.0x, Zone 5: 2.2x, Zone 9: 3.4x
+	var health_multiplier = 1.0 + (zone - 1) * 0.3
+	
+	# Boss multiplier: 3-5x stats
+	if is_boss:
+		health_multiplier *= randf_range(3.0, 5.0)
+	
+	max_health *= health_multiplier
+	current_health = max_health
+	
+	# Damage scaling: +20% per zone (less aggressive than health)
+	# Zone 1: 1.0x, Zone 5: 1.8x, Zone 9: 2.6x
+	var damage_multiplier = 1.0 + (zone - 1) * 0.2
+	if is_boss:
+		damage_multiplier *= randf_range(3.0, 5.0)
+	
+	# Apply to weapon component if it exists
+	if has_node("WeaponComponent"):
+		var weapon = get_node("WeaponComponent")
+		if "damage" in weapon:
+			weapon.damage *= damage_multiplier
+	
+	# Speed scaling: +5% per zone (subtle)
+	var speed_multiplier = 1.0 + (zone - 1) * 0.05
+	if is_boss:
+		speed_multiplier *= 0.9  # Bosses are slightly slower
+	
+	move_speed *= speed_multiplier
+
+func is_boss() -> bool:
+	"""Check if this enemy is a boss variant"""
+	return get_meta("is_boss", false)
 
 func _physics_process(delta: float):
 	# Skip if in reduced processing
@@ -167,7 +208,6 @@ func auto_scan_for_targets():
 			# Found target, attack it
 			print("%s detected player at distance %.0f (range: %.0f)" % [unit_name, distance, detection_range])
 			if ai_state == AIState.IDLE or (ai_state == AIState.MOVING and command_queue.is_empty()):
-				print("%s engaging target!" % unit_name)
 				start_attack(nearest_player)
 				# Switch to aggressive mode when engaging
 				become_aggressive()
@@ -187,7 +227,6 @@ func become_aggressive():
 	if ai_mode != AIMode.AGGRESSIVE:
 		ai_mode = AIMode.AGGRESSIVE
 		aggro_timer = aggro_duration
-		print("%s became AGGRESSIVE" % unit_name)
 
 func return_to_patrol():
 	"""Return to patrol AI mode"""
@@ -209,7 +248,6 @@ func return_to_patrol():
 	else:
 		ai_state = AIState.IDLE
 	
-	print("%s returned to PATROL" % unit_name)
 
 func alert_nearby_allies():
 	"""Alert nearby enemy units to become aggressive"""
@@ -247,6 +285,5 @@ func process_reduced_update(delta: float):
 
 func die():
 	"""Override to handle enemy death"""
-	print("%s destroyed!" % unit_name)
 	# Explosion effect will be added later
 	queue_free()

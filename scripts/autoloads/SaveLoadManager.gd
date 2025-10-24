@@ -17,7 +17,6 @@ func _ready():
 
 func save_game() -> bool:
 	"""Save the current game state to disk"""
-	print("SaveLoadManager: Starting save process...")
 	
 	var save_data = {
 		"version": "2.1",  # Updated for research system
@@ -49,13 +48,11 @@ func save_game() -> bool:
 	file.store_string(json_string)
 	file.close()
 	
-	print("SaveLoadManager: Game saved successfully!")
 	save_completed.emit(true)
 	return true
 
 func load_game() -> bool:
 	"""Load game state from disk"""
-	print("SaveLoadManager: Starting load process...")
 	
 	var file_path = SAVE_DIR + SAVE_FILE
 	if not FileAccess.file_exists(file_path):
@@ -85,7 +82,6 @@ func load_game() -> bool:
 	is_loading_save = true
 	
 	# Load the game scene fresh
-	print("SaveLoadManager: Reloading game scene...")
 	GameManager.reset_game()
 	get_tree().paused = false
 	get_tree().change_scene_to_file("res://scenes/main/GameScene.tscn")
@@ -100,7 +96,6 @@ func load_game() -> bool:
 	# Clear flag after loading completes
 	is_loading_save = false
 	
-	print("SaveLoadManager: Game loaded successfully!")
 	load_completed.emit(true)
 	return true
 
@@ -155,7 +150,6 @@ func _save_units_by_zone() -> Dictionary:
 		if units_data.size() > 0:
 			units_by_zone[str(zone_id)] = units_data
 	
-	print("SaveLoadManager: Saved units across all zones")
 	return units_by_zone
 
 func _save_buildings_by_zone() -> Dictionary:
@@ -234,7 +228,6 @@ func _save_camera_position() -> Dictionary:
 
 func _load_game_state(save_data: Dictionary):
 	"""Restore game state from save data"""
-	print("SaveLoadManager: Restoring game state...")
 	
 	# Wait for zones to be fully set up
 	await get_tree().create_timer(0.7).timeout
@@ -297,7 +290,6 @@ func _load_game_state(save_data: Dictionary):
 	if save_data.has("asteroid_orbits"):
 		_load_asteroid_orbits(save_data["asteroid_orbits"])
 	
-	print("SaveLoadManager: State restoration complete")
 
 func _load_resources(resources_data: Dictionary):
 	"""Restore resource inventory"""
@@ -364,7 +356,6 @@ func _load_units(units_data: Array):
 			if EntityManager.has_method("register_unit"):
 				EntityManager.register_unit(unit)
 	
-	print("SaveLoadManager: Units loaded")
 
 func _load_camera_position(camera_data: Dictionary):
 	"""Restore camera position"""
@@ -436,7 +427,6 @@ func _save_resource_nodes_by_zone() -> Dictionary:
 		if resources_data.size() > 0:
 			resources_by_zone[str(zone_id)] = resources_data
 	
-	print("SaveLoadManager: Saved resource nodes across all zones")
 	return resources_by_zone
 
 func _save_wormhole_positions() -> Dictionary:
@@ -540,11 +530,9 @@ func _load_resource_nodes(resources_data: Array):
 			if has_orbital_data and OrbitalManager:
 				OrbitalManager.restore_asteroid_orbit(resource, orbital_planet_pos, orbital_radius, orbital_angle)
 	
-	print("SaveLoadManager: Resource nodes loaded")
 
 func _clear_existing_entities():
 	"""Clear all existing units and resources before loading"""
-	print("SaveLoadManager: Clearing existing entities...")
 	
 	# Clear units
 	if EntityManager and "units" in EntityManager:
@@ -563,7 +551,6 @@ func _clear_existing_entities():
 	# Wait a frame for queue_free to process
 	await get_tree().process_frame
 	
-	print("SaveLoadManager: Entities cleared")
 
 func has_save_file() -> bool:
 	"""Check if a save file exists"""
@@ -603,7 +590,6 @@ func get_save_info() -> Dictionary:
 
 func _load_units_by_zone(units_by_zone: Dictionary):
 	"""Restore units to their respective zones"""
-	print("SaveLoadManager: Loading units by zone...")
 	
 	for zone_id_str in units_by_zone.keys():
 		var zone_id = int(zone_id_str)
@@ -611,12 +597,10 @@ func _load_units_by_zone(units_by_zone: Dictionary):
 		
 		var zone = ZoneManager.get_zone(zone_id)
 		if zone.is_empty() or not zone.layer_node:
-			print("SaveLoadManager: Zone %d not ready, skipping units" % zone_id)
 			continue
 		
 		var units_container = zone.layer_node.get_node_or_null("Entities/Units")
 		if not units_container:
-			print("SaveLoadManager: Units container not found in Zone %d" % zone_id)
 			continue
 		
 		for unit_data in units_data:
@@ -655,11 +639,9 @@ func _load_units_by_zone(units_by_zone: Dictionary):
 			if EntityManager.has_method("register_unit"):
 				EntityManager.register_unit(unit, zone_id)
 	
-	print("SaveLoadManager: Units loaded by zone")
 
 func _load_buildings_by_zone(buildings_by_zone: Dictionary):
 	"""Restore buildings to their respective zones"""
-	print("SaveLoadManager: Loading buildings by zone...")
 	
 	for zone_id_str in buildings_by_zone.keys():
 		var zone_id = int(zone_id_str)
@@ -667,12 +649,10 @@ func _load_buildings_by_zone(buildings_by_zone: Dictionary):
 		
 		var zone = ZoneManager.get_zone(zone_id)
 		if zone.is_empty() or not zone.layer_node:
-			print("SaveLoadManager: Zone %d not ready, skipping buildings" % zone_id)
 			continue
 		
 		var buildings_container = zone.layer_node.get_node_or_null("Entities/Buildings")
 		if not buildings_container:
-			print("SaveLoadManager: Buildings container not found in Zone %d" % zone_id)
 			continue
 		
 		for building_data in buildings_data:
@@ -684,7 +664,6 @@ func _load_buildings_by_zone(buildings_by_zone: Dictionary):
 			# Get building scene from BuildingDatabase
 			var building_info = BuildingDatabase.get_building_data(building_type)
 			if building_info.is_empty() or not building_info.has("scene"):
-				print("SaveLoadManager: Building type not found in database: %s" % building_type)
 				continue
 			
 			var building_scene = load(building_info["scene"])
@@ -723,13 +702,10 @@ func _load_buildings_by_zone(buildings_by_zone: Dictionary):
 			if EntityManager.has_method("register_building"):
 				EntityManager.register_building(building)
 			
-			print("SaveLoadManager: Restored %s in Zone %d" % [building_type, zone_id])
 	
-	print("SaveLoadManager: Buildings loaded by zone")
 
 func _load_resource_nodes_by_zone(resources_by_zone: Dictionary):
 	"""Restore resource nodes to their respective zones"""
-	print("SaveLoadManager: Loading resource nodes by zone...")
 	
 	for zone_id_str in resources_by_zone.keys():
 		var zone_id = int(zone_id_str)
@@ -737,12 +713,10 @@ func _load_resource_nodes_by_zone(resources_by_zone: Dictionary):
 		
 		var zone = ZoneManager.get_zone(zone_id)
 		if zone.is_empty() or not zone.layer_node:
-			print("SaveLoadManager: Zone %d not ready, skipping resources" % zone_id)
 			continue
 		
 		var resources_container = zone.layer_node.get_node_or_null("Entities/Resources")
 		if not resources_container:
-			print("SaveLoadManager: Resources container not found in Zone %d" % zone_id)
 			continue
 		
 		for resource_data in resources_data:
@@ -790,7 +764,6 @@ func _load_resource_nodes_by_zone(resources_by_zone: Dictionary):
 			if EntityManager.has_method("register_resource"):
 				EntityManager.register_resource(resource, zone_id)
 	
-	print("SaveLoadManager: Resource nodes loaded by zone")
 
 func _save_planets() -> Dictionary:
 	"""Save all planet data"""
@@ -857,7 +830,6 @@ func _save_asteroid_orbits() -> Dictionary:
 
 func _load_planets(planets_data: Dictionary):
 	"""Load planet data and recreate planets"""
-	print("SaveLoadManager: Loading planets...")
 	
 	for zone_id_str in planets_data.keys():
 		var zone_id = int(zone_id_str)
@@ -901,7 +873,6 @@ func _load_planets(planets_data: Dictionary):
 
 func _load_asteroid_orbits(orbits_data: Dictionary):
 	"""Load asteroid orbital data and restore orbits"""
-	print("SaveLoadManager: Loading asteroid orbits...")
 	
 	for zone_id_str in orbits_data.keys():
 		var zone_id = int(zone_id_str)
@@ -947,7 +918,6 @@ func _load_research(data: Dictionary):
 		return
 	
 	ResearchManager.load_save_data(data)
-	print("SaveLoadManager: Research data loaded")
 
 # ============================================================================
 # SATELLITE SYSTEM SAVE/LOAD
@@ -966,4 +936,3 @@ func _load_satellites(data: Dictionary):
 		return
 	
 	SatelliteManager.load_save_data(data)
-	print("SaveLoadManager: Satellite data loaded")
