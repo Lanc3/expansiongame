@@ -1,7 +1,7 @@
 extends Panel
 ## Information panel for wormhole destinations
 
-signal travel_requested(target_zone_id: int)
+signal travel_requested(target_zone_id: String)
 
 @onready var zone_title: Label = $VBoxContainer/ZoneTitle
 @onready var zone_info: Label = $VBoxContainer/ZoneInfo
@@ -19,7 +19,7 @@ signal travel_requested(target_zone_id: int)
 @onready var travel_button: Button = $VBoxContainer/TravelButton
 @onready var close_button: Button = $VBoxContainer/CloseButton
 
-var current_zone_id: int = -1
+var current_zone_id: String = ""
 var tween: Tween
 
 func _ready():
@@ -53,13 +53,15 @@ func show_for_wormhole(wormhole: Node2D):
 	tween = create_tween()
 	tween.set_ease(Tween.EASE_OUT)
 	tween.set_trans(Tween.TRANS_CUBIC)
+	scale = Vector2(0.95, 0.95)
 	tween.tween_property(self, "modulate:a", 1.0, 0.3)
+	tween.parallel().tween_property(self, "scale", Vector2.ONE, 0.3)
 
 func update_display(stats: Dictionary):
 	"""Update all UI elements with zone statistics"""
 	# Title
 	if zone_title:
-		zone_title.text = "★ ZONE %d: DEEP SPACE ★" % stats.zone_id
+		zone_title.text = "★ ZONE %s: DEEP SPACE ★" % stats.zone_id
 	
 	# Info line
 	if zone_info:
@@ -101,11 +103,11 @@ func update_display(stats: Dictionary):
 	
 	# Travel button
 	if travel_button:
-		travel_button.text = "✦ TRAVEL TO ZONE %d ✦" % stats.zone_id
+		travel_button.text = "✦ TRAVEL TO ZONE %s ✦" % stats.zone_id
 
 func _on_travel_button_pressed():
 	"""Handle travel button click"""
-	if current_zone_id > 0:
+	if not current_zone_id.is_empty():
 		travel_requested.emit(current_zone_id)
 		hide_panel()
 
@@ -121,6 +123,7 @@ func hide_panel():
 	tween.set_ease(Tween.EASE_IN)
 	tween.set_trans(Tween.TRANS_CUBIC)
 	tween.tween_property(self, "modulate:a", 0.0, 0.2)
+	tween.parallel().tween_property(self, "scale", Vector2(0.95, 0.95), 0.2)
 	await tween.finished
 	hide()
-
+	scale = Vector2.ONE

@@ -27,6 +27,7 @@ ResearchManager="*res://scripts/autoloads/ResearchManager.gd"
 BlueprintManager="*res://scripts/autoloads/BlueprintManager.gd"
 SatelliteManager="*res://scripts/autoloads/SatelliteManager.gd"
 ZoneManager="*res://scripts/autoloads/ZoneManager.gd"
+ZoneDiscoveryManager="*res://scripts/autoloads/ZoneDiscoveryManager.gd"
 ZoneProcessingManager="*res://scripts/systems/ZoneProcessingManager.gd"
 ResourceManager="*res://scripts/autoloads/ResourceManager.gd"
 ResourcePinManager="*res://scripts/systems/ResourcePinManager.gd"
@@ -44,6 +45,8 @@ FogOfWarManager="*res://scripts/systems/FogOfWarManager.gd"
 PaintModeVisualizer="*res://scripts/autoloads/PaintModeVisualizer.gd"
 LootDropSystem="*res://scripts/systems/LootDropSystem.gd"
 EventManager="*res://scripts/systems/EventManager.gd"
+BlueprintPaths="*res://scripts/autoloads/BlueprintPaths.gd"
+ProjectilePool="*res://scripts/autoloads/ProjectilePool.gd"
 
 [display]
 

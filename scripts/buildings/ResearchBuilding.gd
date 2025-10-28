@@ -9,7 +9,7 @@ signal building_destroyed()
 # Building properties
 @export var max_health: float = 1500.0
 @export var team_id: int = 0  # Player team
-@export var zone_id: int = 1
+@export var zone_id: String = ""
 
 var current_health: float
 var is_selected: bool = false

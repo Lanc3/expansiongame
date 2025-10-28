@@ -1,4 +1,4 @@
-[gd_scene load_steps=24 format=3 uid="uid://d4ctkd3skn51s"]
+[gd_scene load_steps=25 format=3 uid="uid://d4ctkd3skn51s"]
 
 [ext_resource type="Script" uid="uid://dwno35l11vbbt" path="res://scripts/systems/RTSCamera.gd" id="1_e8dj1"]
 [ext_resource type="Script" uid="uid://csbhet7jxu3sx" path="res://scripts/systems/InputHandler.gd" id="2_ax44u"]
@@ -26,6 +26,8 @@
 [ext_resource type="PackedScene" uid="uid://c406e3s32md2t" path="res://scenes/ui/TechTreeUI.tscn" id="18_techtree"]
 [ext_resource type="PackedScene" uid="uid://bi064hdimhw6h" path="res://scenes/ui/BuilderDronePanel.tscn" id="19_builderpanel"]
 [ext_resource type="Script" path="res://scripts/systems/PlacementController.gd" id="20_placement"]
+[ext_resource type="Script" uid="uid://d3e7f9g1h5j8k" path="res://scripts/ui/BottomHUD.gd" id="21_bottomhud"]
+[ext_resource type="PackedScene" uid="uid://c8jq5r7x4m2vb" path="res://scenes/ui/GalaxyMap.tscn" id="22_galaxymap"]
 
 [sub_resource type="Environment" id="Environment_space"]
 background_mode = 3
@@ -73,16 +75,28 @@ offset_top = 1.0
 offset_right = -1.0
 offset_bottom = 51.0
 
+[node name="BottomHUD" type="Panel" parent="UILayer"]
+custom_minimum_size = Vector2(0, 100)
+anchors_preset = 12
+anchor_top = 1.0
+anchor_right = 1.0
+anchor_bottom = 1.0
+offset_top = -100.0
+grow_horizontal = 2
+grow_vertical = 0
+mouse_filter = 2
+script = ExtResource("21_bottomhud")
+
 [node name="SelectedUnitsPanel" parent="UILayer" instance=ExtResource("6_2u0ke")]
-offset_left = 1.0
+offset_left = 0.0
 offset_top = 620.0
-offset_right = 401.0
+offset_right = 505.0
 offset_bottom = 720.0
 
 [node name="Minimap" parent="UILayer" instance=ExtResource("7_kgcmi")]
-offset_left = 1020.0
+offset_left = 1015.0
 offset_top = 520.0
-offset_right = 1280.0
+offset_right = 1275.0
 offset_bottom = 720.0
 
 [node name="BlueprintEditorLayer" type="CanvasLayer" parent="UILayer"]
@@ -106,12 +120,13 @@ offset_bottom = 400.0
 [node name="DebugOverlay" parent="UILayer" instance=ExtResource("10_3gpyy")]
 
 [node name="ZoneSwitcher" parent="UILayer" instance=ExtResource("14_zoneswitcher")]
-offset_left = 820.0
-offset_top = 620.0
-offset_right = 1020.0
-offset_bottom = 720.0
+offset_left = 1015.0
+offset_top = 455.0
+offset_right = 1275.0
+offset_bottom = 515.0
 
 [node name="CommandShipPanel" parent="UILayer" instance=ExtResource("7_commandpanel")]
+visible = false
 
 [node name="BuilderDronePanel" parent="UILayer" instance=ExtResource("19_builderpanel")]
 visible = false
@@ -172,6 +187,11 @@ layer = 92
 
 [node name="BlueprintBuilderUI" parent="BlueprintBuilderLayer" instance=ExtResource("21_blueprintbuilder")]
 visible = false
+
+[node name="GalaxyMapLayer" type="CanvasLayer" parent="."]
+layer = 95
+
+[node name="GalaxyMapUI" parent="GalaxyMapLayer" instance=ExtResource("22_galaxymap")]
 
 [node name="PauseMenuLayer" type="CanvasLayer" parent="."]
 layer = 100

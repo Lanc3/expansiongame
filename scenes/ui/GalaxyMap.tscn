@@ -1,0 +1,204 @@
+[gd_scene load_steps=2 format=3 uid="uid://c8jq5r7x4m2vb"]
+
+[ext_resource type="Script" path="res://scripts/ui/GalaxyMapUI.gd" id="1_galaxy_map"]
+
+[node name="GalaxyMapUI" type="Control"]
+process_mode = 3
+layout_mode = 3
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+mouse_filter = 2
+script = ExtResource("1_galaxy_map")
+
+[node name="Background" type="ColorRect" parent="."]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+mouse_filter = 2
+color = Color(0.05, 0.05, 0.1, 1)
+
+[node name="GalaxyShader" type="ColorRect" parent="Background"]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+mouse_filter = 2
+
+[node name="InfoPanel" type="PanelContainer" parent="."]
+z_index = 10
+layout_mode = 1
+anchors_preset = 1
+anchor_left = 1.0
+anchor_right = 1.0
+offset_left = -300.0
+offset_top = 20.0
+offset_right = -20.0
+offset_bottom = 200.0
+grow_horizontal = 0
+
+[node name="MarginContainer" type="MarginContainer" parent="InfoPanel"]
+layout_mode = 2
+theme_override_constants/margin_left = 10
+theme_override_constants/margin_top = 10
+theme_override_constants/margin_right = 10
+theme_override_constants/margin_bottom = 10
+
+[node name="InfoLabel" type="RichTextLabel" parent="InfoPanel/MarginContainer"]
+layout_mode = 2
+bbcode_enabled = true
+fit_content = true
+
+[node name="TitlePanel" type="PanelContainer" parent="."]
+z_index = 10
+layout_mode = 1
+anchors_preset = 5
+anchor_left = 0.5
+anchor_right = 0.5
+offset_left = -200.0
+offset_top = 20.0
+offset_right = 200.0
+offset_bottom = 80.0
+grow_horizontal = 2
+
+[node name="VBox" type="VBoxContainer" parent="TitlePanel"]
+layout_mode = 2
+
+[node name="Title" type="Label" parent="TitlePanel/VBox"]
+layout_mode = 2
+theme_override_colors/font_color = Color(1, 1, 0.6, 1)
+theme_override_font_sizes/font_size = 32
+text = "GALAXY MAP"
+horizontal_alignment = 1
+
+[node name="Subtitle" type="Label" parent="TitlePanel/VBox"]
+layout_mode = 2
+theme_override_colors/font_color = Color(0.7, 0.7, 0.7, 1)
+theme_override_font_sizes/font_size = 14
+text = "Press M or ESC to close"
+horizontal_alignment = 1
+
+[node name="LegendPanel" type="PanelContainer" parent="."]
+z_index = 10
+layout_mode = 1
+anchors_preset = 2
+anchor_top = 1.0
+anchor_bottom = 1.0
+offset_left = 20.0
+offset_top = -180.0
+offset_right = 280.0
+offset_bottom = -20.0
+grow_vertical = 0
+
+[node name="MarginContainer" type="MarginContainer" parent="LegendPanel"]
+layout_mode = 2
+theme_override_constants/margin_left = 10
+theme_override_constants/margin_top = 10
+theme_override_constants/margin_right = 10
+theme_override_constants/margin_bottom = 10
+
+[node name="VBox" type="VBoxContainer" parent="LegendPanel/MarginContainer"]
+layout_mode = 2
+
+[node name="LegendTitle" type="Label" parent="LegendPanel/MarginContainer/VBox"]
+layout_mode = 2
+theme_override_colors/font_color = Color(1, 1, 0.6, 1)
+theme_override_font_sizes/font_size = 18
+text = "Legend"
+
+[node name="HSeparator" type="HSeparator" parent="LegendPanel/MarginContainer/VBox"]
+layout_mode = 2
+
+[node name="DifficultyLabel" type="Label" parent="LegendPanel/MarginContainer/VBox"]
+layout_mode = 2
+theme_override_font_sizes/font_size = 14
+text = "Zone Difficulty:"
+
+[node name="Easy" type="Label" parent="LegendPanel/MarginContainer/VBox"]
+layout_mode = 2
+theme_override_colors/font_color = Color(0.3, 1, 0.3, 1)
+theme_override_font_sizes/font_size = 12
+text = "● Easy (1-3) - Outer Ring"
+
+[node name="Medium" type="Label" parent="LegendPanel/MarginContainer/VBox"]
+layout_mode = 2
+theme_override_colors/font_color = Color(1, 0.6, 0, 1)
+theme_override_font_sizes/font_size = 12
+text = "● Medium (4-6) - Mid Ring"
+
+[node name="Hard" type="Label" parent="LegendPanel/MarginContainer/VBox"]
+layout_mode = 2
+theme_override_colors/font_color = Color(1, 0.2, 0.2, 1)
+theme_override_font_sizes/font_size = 12
+text = "● Hard (7-9) - Inner Ring"
+
+[node name="HSeparator2" type="HSeparator" parent="LegendPanel/MarginContainer/VBox"]
+layout_mode = 2
+
+[node name="CurrentZone" type="Label" parent="LegendPanel/MarginContainer/VBox"]
+layout_mode = 2
+theme_override_colors/font_color = Color(1, 1, 0, 1)
+theme_override_font_sizes/font_size = 12
+text = "◆ Current Location"
+
+[node name="Undiscovered" type="Label" parent="LegendPanel/MarginContainer/VBox"]
+layout_mode = 2
+theme_override_colors/font_color = Color(0.5, 0.5, 0.5, 1)
+theme_override_font_sizes/font_size = 12
+text = "??? Undiscovered"
+
+[node name="ReturnButton" type="Button" parent="."]
+z_index = 10
+layout_mode = 1
+anchors_preset = 1
+anchor_left = 1.0
+anchor_right = 1.0
+offset_left = -280.0
+offset_top = 20.0
+offset_right = -140.0
+offset_bottom = 65.0
+grow_horizontal = 0
+theme_override_font_sizes/font_size = 16
+text = "⟲ Return"
+
+[node name="CloseButton" type="Button" parent="."]
+z_index = 10
+layout_mode = 1
+anchors_preset = 1
+anchor_left = 1.0
+anchor_right = 1.0
+offset_left = -120.0
+offset_top = 20.0
+offset_right = -20.0
+offset_bottom = 65.0
+grow_horizontal = 0
+theme_override_font_sizes/font_size = 18
+text = "✕ Close (M)"
+
+[node name="ZoneContainer" type="Control" parent="."]
+z_index = 1
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+mouse_filter = 1
+
+[node name="ConnectionLines" type="Control" parent="."]
+z_index = 0
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+mouse_filter = 1
+

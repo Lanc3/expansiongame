@@ -6,7 +6,7 @@ extends Control
 @onready var next_button: Button = $Panel/VBoxContainer/HBoxContainer/NextButton
 @onready var unit_indicators: HBoxContainer = $Panel/VBoxContainer/UnitIndicators
 
-var current_zone_id: int = 1
+var current_zone_id: String = ""
 
 func _ready():
 	# Connect to ZoneManager signals
@@ -21,50 +21,60 @@ func _ready():
 	# Initialize UI
 	update_ui()
 
-func _on_zone_switched(from_zone_id: int, to_zone_id: int):
+func _on_zone_switched(from_zone_id: String, to_zone_id: String):
 	"""Handle zone switch"""
 	current_zone_id = to_zone_id
 	update_ui()
 
 func _on_prev_pressed():
-	"""Switch to previous zone"""
-	if current_zone_id > 1:
-		ZoneManager.switch_to_zone(current_zone_id - 1)
+	"""Switch to previous zone - TODO: Redesign for multi-zone system"""
+	# For now, disable since we have multiple zones per difficulty
+	pass
 
 func _on_next_pressed():
-	"""Switch to next zone"""
-	if current_zone_id < 9:
-		ZoneManager.switch_to_zone(current_zone_id + 1)
+	"""Switch to next zone - TODO: Redesign for multi-zone system"""
+	# For now, disable since we have multiple zones per difficulty
+	pass
 
 func update_ui():
 	"""Update UI elements"""
 	# Update zone label
-	if zone_label:
+	if zone_label and ZoneManager:
 		var zone = ZoneManager.get_zone(current_zone_id)
 		if not zone.is_empty():
-			zone_label.text = "Zone %d" % current_zone_id
+			zone_label.text = "%s (D%d)" % [zone.procedural_name, zone.difficulty]
 	
-	# Update button states
+	# Disable buttons for now - TODO: Implement zone list navigation
 	if prev_button:
-		prev_button.disabled = (current_zone_id <= 1)
+		prev_button.disabled = true
 	
 	if next_button:
-		next_button.disabled = (current_zone_id >= 9)
+		next_button.disabled = true
 	
 	# Update unit indicators
 	update_unit_indicators()
 
 func update_unit_indicators():
 	"""Show which zones have player units"""
-	if not unit_indicators:
+	if not unit_indicators or not ZoneManager:
 		return
 	
 	# Clear existing indicators
 	for child in unit_indicators.get_children():
 		child.queue_free()
 	
-	# Create indicators for each zone
-	for zone_id in range(1, 10):
+	# Create indicators for each discovered zone (sorted by difficulty)
+	var discovered_zones = ZoneManager.get_discovered_zones()
+	
+	# Sort by difficulty
+	var sorted_zones = discovered_zones.duplicate()
+	sorted_zones.sort_custom(func(a, b):
+		var zone_a = ZoneManager.get_zone(a)
+		var zone_b = ZoneManager.get_zone(b)
+		return zone_a.difficulty < zone_b.difficulty
+	)
+	
+	for zone_id in sorted_zones:
 		var indicator = Panel.new()
 		indicator.custom_minimum_size = Vector2(8, 8)
 		

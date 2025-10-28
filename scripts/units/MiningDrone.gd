@@ -28,7 +28,7 @@ func _ready():
 	super._ready()
 	unit_name = "Mining Drone"
 	max_health = 50.0
-	vision_range = 300.0  # Mining drones have limited vision
+	vision_range = 600.0  # Mining drones have limited vision (doubled from 300)
 	current_health = max_health
 	move_speed = 120.0
 	
@@ -228,7 +228,12 @@ func find_nearest_scanned_resource(max_distance: float) -> Node2D:
 	var nearest: Node2D = null
 	var min_dist = max_distance
 	
-	for resource in EntityManager.resources:
+	# Get current zone
+	var current_zone = ZoneManager.get_unit_zone(self) if ZoneManager else 1
+	
+	# Only search resources in current zone
+	var zone_resources = EntityManager.get_resources_in_zone(current_zone) if EntityManager else []
+	for resource in zone_resources:
 		if not is_instance_valid(resource):
 			continue
 		
@@ -242,8 +247,11 @@ func find_nearest_scanned_resource(max_distance: float) -> Node2D:
 	return nearest
 
 func find_deposit_target() -> Node2D:
-	# Look for command ship or base with deposit capability
-	for unit in EntityManager.units:
+	# Look for command ship or base with deposit capability in same zone
+	var current_zone = ZoneManager.get_unit_zone(self) if ZoneManager else 1
+	var zone_units = EntityManager.get_units_in_zone(current_zone) if EntityManager else []
+	
+	for unit in zone_units:
 		if not is_instance_valid(unit) or unit == self:
 			continue
 		
@@ -412,9 +420,13 @@ func scan_for_loot_orbs():
 			continue
 		
 		# Check if it's in our zone
-		var orb_zone = orb.get_meta("zone_id", 1)
-		var my_zone = get_meta("zone_id", 1)
-		if orb_zone != my_zone:
+		var orb_zone = orb.get_meta("zone_id", "")
+		if orb_zone.is_empty() and ZoneManager:
+			orb_zone = ZoneManager.get_unit_zone(orb)
+		
+		var my_zone = ZoneManager.get_unit_zone(self) if ZoneManager else ""
+		
+		if orb_zone != my_zone or my_zone.is_empty():
 			continue
 		
 		var dist = global_position.distance_to(orb.global_position)
@@ -449,9 +461,13 @@ func check_for_nearby_loot():
 			continue
 		
 		# Check if it's in our zone
-		var orb_zone = orb.get_meta("zone_id", 1)
-		var my_zone = get_meta("zone_id", 1)
-		if orb_zone != my_zone:
+		var orb_zone = orb.get_meta("zone_id", "")
+		if orb_zone.is_empty() and ZoneManager:
+			orb_zone = ZoneManager.get_unit_zone(orb)
+		
+		var my_zone = ZoneManager.get_unit_zone(self) if ZoneManager else ""
+		
+		if orb_zone != my_zone or my_zone.is_empty():
 			continue
 		
 		var dist = global_position.distance_to(orb.global_position)

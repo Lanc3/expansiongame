@@ -59,6 +59,10 @@ func reset_game():
 	# Clear ZoneManager state
 	if ZoneManager:
 		ZoneManager.reset()
+	
+	# Clear FogOfWarManager state
+	if FogOfWarManager:
+		FogOfWarManager.reset()
 func get_game_time_formatted() -> String:
 	var minutes = int(game_time / 60)
 	var seconds = int(game_time) % 60

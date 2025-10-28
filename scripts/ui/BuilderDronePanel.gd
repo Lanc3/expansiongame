@@ -117,14 +117,37 @@ func create_building_button(building_type: String):
 	# Connect button
 	button.pressed.connect(_on_building_button_pressed.bind(building_type))
 	
+	# Add hover effects
+	button.mouse_entered.connect(_on_building_button_hover.bind(button))
+	button.mouse_exited.connect(_on_building_button_unhover.bind(button))
+	
 	# Add to container
 	building_buttons_container.add_child(button)
+
+func _on_building_button_hover(btn: Button):
+	"""Hover effect for building buttons"""
+	if btn.disabled:
+		return
+	var tween = create_tween()
+	tween.set_ease(Tween.EASE_OUT)
+	tween.set_trans(Tween.TRANS_CUBIC)
+	tween.tween_property(btn, "scale", Vector2(1.05, 1.05), 0.15)
+
+func _on_building_button_unhover(btn: Button):
+	"""Remove hover effect"""
+	var tween = create_tween()
+	tween.set_ease(Tween.EASE_OUT)
+	tween.set_trans(Tween.TRANS_CUBIC)
+	tween.tween_property(btn, "scale", Vector2.ONE, 0.15)
 
 func _on_building_button_pressed(building_type: String):
 	"""Handle building button press - enter placement mode"""
 	if is_placement_active:
 		return
 	
+	# Play click sound
+	if AudioManager and AudioManager.has_method("play_sound"):
+		AudioManager.play_sound("button_click")
 	
 	update_status("Click to place building (Right-click to cancel)")
 	

@@ -20,7 +20,7 @@ func _ready():
 	max_health = 100.0
 	current_health = max_health
 	move_speed = 120.0  # Slower than scouts
-	vision_range = 350.0  # Builder drones have moderate vision
+	vision_range = 700.0  # Builder drones have moderate vision (doubled from 350)
 	
 	# Apply research effects on spawn
 	if ResearchManager:
@@ -94,7 +94,7 @@ func start_construction(building_type: String, world_pos: Vector2):
 	
 	print("BuilderDrone: Starting construction of %s at %s (distance: %.1f)" % [building_type, world_pos, global_position.distance_to(world_pos)])
 
-func create_construction_ghost(b_type: String, b_data: Dictionary, pos: Vector2, z_id: int):
+func create_construction_ghost(b_type: String, b_data: Dictionary, pos: Vector2, z_id: String):
 	"""Create visual ghost preview of building"""
 	var ghost_scene = preload("res://scripts/buildings/ConstructionGhost.gd")
 	construction_ghost = Node2D.new()

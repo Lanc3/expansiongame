@@ -8,7 +8,7 @@ signal spawner_destroyed()
 # Spawner properties
 @export var max_health: float = 500.0
 @export var spawn_interval: float = 30.0  # Seconds between spawns
-@export var zone_id: int = 1
+@export var zone_id: String = ""
 @export var team_id: int = 1  # Enemy team
 @export var boss_spawn_chance: float = 0.05  # 5% chance to spawn boss
 
@@ -156,27 +156,34 @@ func spawn_enemy_unit(enemy_scene: PackedScene, is_boss: bool = false):
 
 func get_spawn_type_for_zone(is_boss: bool = false) -> PackedScene:
 	"""Determine which enemy type to spawn based on zone"""
+	# Get zone difficulty
+	var difficulty = 1
+	if ZoneManager and not zone_id.is_empty():
+		var zone = ZoneManager.get_zone(zone_id)
+		if not zone.is_empty():
+			difficulty = zone.difficulty
+	
 	# Boss spawns get upgraded enemy types
 	if is_boss:
-		if zone_id <= 3:
+		if difficulty <= 3:
 			return cruiser_scene  # Cruiser boss in early zones
-		elif zone_id <= 6:
+		elif difficulty <= 6:
 			return bomber_scene  # Bomber boss in mid zones
 		else:
 			return bomber_scene  # Still bomber but with boss stats
 	
 	# Normal spawns
-	if zone_id <= 3:
-		# Zones 2-3: Fighters only
+	if difficulty <= 3:
+		# Difficulty 2-3: Fighters only
 		return fighter_scene
-	elif zone_id <= 5:
-		# Zones 4-5: Fighters + Cruisers
+	elif difficulty <= 5:
+		# Difficulty 4-5: Fighters + Cruisers
 		if randf() < 0.6:
 			return fighter_scene
 		else:
 			return cruiser_scene
 	else:
-		# Zones 6-9: All types
+		# Difficulty 6-9: All types
 		var roll = randf()
 		if roll < 0.4:
 			return fighter_scene
@@ -187,7 +194,13 @@ func get_spawn_type_for_zone(is_boss: bool = false) -> PackedScene:
 
 func get_max_units_for_zone() -> int:
 	"""Calculate max units this spawner can have active"""
-	return zone_id * 5  # Zone 2 = 10, Zone 3 = 15, etc.
+	# Get zone difficulty
+	var difficulty = 1
+	if ZoneManager and not zone_id.is_empty():
+		var zone = ZoneManager.get_zone(zone_id)
+		if not zone.is_empty():
+			difficulty = zone.difficulty
+	return difficulty * 5  # Difficulty 2 = 10, Difficulty 3 = 15, etc.
 
 func count_active_units() -> int:
 	"""Count how many spawned units are still alive"""

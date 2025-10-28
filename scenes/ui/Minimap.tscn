@@ -1,18 +1,51 @@
-[gd_scene load_steps=2 format=3 uid="uid://cp1g0caexukmo"]
+[gd_scene load_steps=4 format=3 uid="uid://cp1g0caexukmo"]
 
 [ext_resource type="Script" uid="uid://dm5wrambifduc" path="res://scripts/ui/Minimap.gd" id="1_s30ul"]
+[ext_resource type="Theme" uid="uid://bh3pao1yls74n" path="res://resources/themes/main_theme.tres" id="2_theme"]
+
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_minimap"]
+bg_color = Color(0.039, 0.059, 0.118, 0.9)
+border_width_left = 2
+border_width_top = 2
+border_width_right = 2
+border_width_bottom = 2
+border_color = Color(0, 0.898, 1, 0.9)
+corner_radius_top_left = 8
+corner_radius_top_right = 8
+corner_radius_bottom_right = 8
+corner_radius_bottom_left = 8
+shadow_color = Color(0, 0.898, 1, 0.4)
+shadow_size = 6
 
 [node name="Minimap" type="Panel"]
+custom_minimum_size = Vector2(260, 200)
+theme = ExtResource("2_theme")
+theme_override_styles/panel = SubResource("StyleBoxFlat_minimap")
 script = ExtResource("1_s30ul")
 
-[node name="MinimapRect" type="ColorRect" parent="."]
+[node name="MarginContainer" type="MarginContainer" parent="."]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+theme_override_constants/margin_left = 4
+theme_override_constants/margin_top = 4
+theme_override_constants/margin_right = 4
+theme_override_constants/margin_bottom = 4
+mouse_filter = 2
+
+[node name="MinimapRect" type="ColorRect" parent="MarginContainer"]
 visible = false
-layout_mode = 0
-offset_right = 40.0
-offset_bottom = 40.0
+layout_mode = 2
+mouse_filter = 2
 
 [node name="ViewportIndicator" type="ColorRect" parent="."]
 visible = false
 layout_mode = 0
-offset_right = 40.0
-offset_bottom = 40.0
+offset_left = 4.0
+offset_top = 4.0
+offset_right = 44.0
+offset_bottom = 44.0
+mouse_filter = 2

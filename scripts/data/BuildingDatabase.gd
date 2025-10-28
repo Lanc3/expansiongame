@@ -196,6 +196,19 @@ const BUILDINGS = {
 		icon_path = "res://assets/ui/Grey/panel_beveledGrey.png",
 		health = 3000.0,
 		requires_research = "building_superweapon"
+	},
+	
+	"Shipyard": {
+		scene = "res://scenes/buildings/Shipyard.tscn",
+		build_time = 120.0,
+		cost = {0: 500, 1: 300, 2: 200, 10: 150},  # Iron, Carbon, Silicon, Copper
+		max_per_zone = 1,
+		collision_radius = 100.0,
+		display_name = "Shipyard",
+		description = "Constructs ships from saved blueprints. Build custom vessels for your fleet.",
+		icon_path = "res://assets/ui/Grey/panel_beveledGrey.png",
+		health = 1500.0,
+		requires_research = ""  # Available from start
 	}
 }
 
@@ -222,7 +235,7 @@ func get_buildable_buildings() -> Array:
 	
 	return buildable
 
-func can_build_in_zone(building_type: String, zone_id: int) -> bool:
+func can_build_in_zone(building_type: String, zone_id: String) -> bool:
 	"""Check if building can be built in zone (zone limit check)"""
 	var data = get_building_data(building_type)
 	if data.is_empty():
@@ -236,7 +249,7 @@ func can_build_in_zone(building_type: String, zone_id: int) -> bool:
 	var count = get_building_count_in_zone(building_type, zone_id)
 	return count < max_per_zone
 
-func get_building_count_in_zone(building_type: String, zone_id: int) -> int:
+func get_building_count_in_zone(building_type: String, zone_id: String) -> int:
 	"""Count how many buildings of this type exist in zone"""
 	if not EntityManager:
 		return 0
@@ -254,7 +267,7 @@ func get_building_count_in_zone(building_type: String, zone_id: int) -> int:
 	
 	return count
 
-func is_valid_placement(building_type: String, world_pos: Vector2, zone_id: int) -> bool:
+func is_valid_placement(building_type: String, world_pos: Vector2, zone_id: String) -> bool:
 	"""Check if building can be placed at position"""
 	var data = get_building_data(building_type)
 	if data.is_empty():
@@ -313,5 +326,3 @@ func get_build_time_text(building_type: String) -> String:
 		var minutes = int(time / 60)
 		var seconds = int(time) % 60
 		return "%dm %ds" % [minutes, seconds]
-
-

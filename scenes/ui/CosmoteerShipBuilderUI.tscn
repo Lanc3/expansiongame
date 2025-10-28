@@ -1,0 +1,223 @@
+[gd_scene load_steps=3 format=3 uid="uid://bp2ej8fq6blwq"]
+
+[ext_resource type="Script" path="res://scripts/ui/CosmoteerShipBuilderUI.gd" id="1_builder"]
+[ext_resource type="Script" path="res://scripts/ui/CosmoteerShipGrid.gd" id="2_grid"]
+
+[node name="CosmoteerShipBuilderUI" type="Control"]
+layout_mode = 3
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+mouse_filter = 2
+script = ExtResource("1_builder")
+
+[node name="Background" type="ColorRect" parent="."]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+color = Color(0.1, 0.1, 0.1, 0.95)
+
+[node name="LeftPanel" type="PanelContainer" parent="."]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 0.25
+anchor_bottom = 1.0
+grow_vertical = 2
+
+[node name="VBox" type="VBoxContainer" parent="LeftPanel"]
+layout_mode = 2
+
+[node name="Title" type="Label" parent="LeftPanel/VBox"]
+layout_mode = 2
+text = "Hull & Components"
+horizontal_alignment = 1
+
+[node name="HSeparator" type="HSeparator" parent="LeftPanel/VBox"]
+layout_mode = 2
+
+[node name="HullLabel" type="Label" parent="LeftPanel/VBox"]
+layout_mode = 2
+text = "Hull Armor:"
+
+[node name="HullButtons" type="HBoxContainer" parent="LeftPanel/VBox"]
+layout_mode = 2
+
+[node name="LightBtn" type="Button" parent="LeftPanel/VBox/HullButtons"]
+custom_minimum_size = Vector2(60, 40)
+layout_mode = 2
+text = "Light"
+
+[node name="MediumBtn" type="Button" parent="LeftPanel/VBox/HullButtons"]
+custom_minimum_size = Vector2(60, 40)
+layout_mode = 2
+text = "Medium"
+
+[node name="HeavyBtn" type="Button" parent="LeftPanel/VBox/HullButtons"]
+custom_minimum_size = Vector2(60, 40)
+layout_mode = 2
+text = "Heavy"
+
+[node name="EraserBtn" type="Button" parent="LeftPanel/VBox/HullButtons"]
+custom_minimum_size = Vector2(60, 40)
+layout_mode = 2
+text = "Erase"
+
+[node name="HSeparator2" type="HSeparator" parent="LeftPanel/VBox"]
+layout_mode = 2
+
+[node name="ComponentLabel" type="Label" parent="LeftPanel/VBox"]
+layout_mode = 2
+text = "Components:"
+
+[node name="ComponentScroll" type="ScrollContainer" parent="LeftPanel/VBox"]
+layout_mode = 2
+size_flags_vertical = 3
+
+[node name="ComponentList" type="VBoxContainer" parent="LeftPanel/VBox/ComponentScroll"]
+layout_mode = 2
+size_flags_horizontal = 3
+
+[node name="CenterPanel" type="PanelContainer" parent="."]
+layout_mode = 1
+anchors_preset = 15
+anchor_left = 0.25
+anchor_right = 0.75
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+
+[node name="MarginContainer" type="MarginContainer" parent="CenterPanel"]
+layout_mode = 2
+theme_override_constants/margin_left = 20
+theme_override_constants/margin_top = 20
+theme_override_constants/margin_right = 20
+theme_override_constants/margin_bottom = 20
+
+[node name="VBox" type="VBoxContainer" parent="CenterPanel/MarginContainer"]
+layout_mode = 2
+
+[node name="GridTitle" type="Label" parent="CenterPanel/MarginContainer/VBox"]
+layout_mode = 2
+text = "Ship Design Grid (20x20)"
+horizontal_alignment = 1
+
+[node name="GridContainer" type="CenterContainer" parent="CenterPanel/MarginContainer/VBox"]
+layout_mode = 2
+size_flags_vertical = 3
+
+[node name="ShipGrid" type="Control" parent="CenterPanel/MarginContainer/VBox/GridContainer"]
+layout_mode = 2
+mouse_filter = 1
+script = ExtResource("2_grid")
+
+[node name="RightPanel" type="PanelContainer" parent="."]
+layout_mode = 1
+anchors_preset = 15
+anchor_left = 0.75
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 0
+grow_vertical = 2
+
+[node name="VBox" type="VBoxContainer" parent="RightPanel"]
+layout_mode = 2
+
+[node name="StatsTitle" type="Label" parent="RightPanel/VBox"]
+layout_mode = 2
+text = "Ship Stats"
+horizontal_alignment = 1
+
+[node name="HSeparator" type="HSeparator" parent="RightPanel/VBox"]
+layout_mode = 2
+
+[node name="PowerLabel" type="Label" parent="RightPanel/VBox"]
+layout_mode = 2
+text = "Power: 0/0"
+
+[node name="PowerBar" type="ProgressBar" parent="RightPanel/VBox"]
+layout_mode = 2
+max_value = 1.0
+value = 1.0
+show_percentage = false
+
+[node name="ThrustLabel" type="Label" parent="RightPanel/VBox"]
+layout_mode = 2
+text = "Thrust: 0/0"
+
+[node name="ThrustBar" type="ProgressBar" parent="RightPanel/VBox"]
+layout_mode = 2
+max_value = 1.0
+value = 1.0
+show_percentage = false
+
+[node name="WeightLabel" type="Label" parent="RightPanel/VBox"]
+layout_mode = 2
+text = "Weight: 0"
+
+[node name="SpeedLabel" type="Label" parent="RightPanel/VBox"]
+layout_mode = 2
+text = "Speed: 0"
+
+[node name="CostLabel" type="Label" parent="RightPanel/VBox"]
+layout_mode = 2
+text = "Cost: Free"
+
+[node name="HSeparator2" type="HSeparator" parent="RightPanel/VBox"]
+layout_mode = 2
+
+[node name="ValidationLabel" type="Label" parent="RightPanel/VBox"]
+layout_mode = 2
+text = "Status: No errors"
+autowrap_mode = 3
+
+[node name="HSeparator3" type="HSeparator" parent="RightPanel/VBox"]
+layout_mode = 2
+
+[node name="ActionButtons" type="VBoxContainer" parent="RightPanel/VBox"]
+layout_mode = 2
+
+[node name="SaveBtn" type="Button" parent="RightPanel/VBox/ActionButtons"]
+layout_mode = 2
+text = "Save Blueprint"
+
+[node name="LoadBtn" type="Button" parent="RightPanel/VBox/ActionButtons"]
+layout_mode = 2
+text = "Load Blueprint"
+
+[node name="ClearBtn" type="Button" parent="RightPanel/VBox/ActionButtons"]
+layout_mode = 2
+text = "Clear Grid"
+
+[node name="UndoBtn" type="Button" parent="RightPanel/VBox/ActionButtons"]
+layout_mode = 2
+text = "Undo"
+
+[node name="RedoBtn" type="Button" parent="RightPanel/VBox/ActionButtons"]
+layout_mode = 2
+text = "Redo"
+
+[node name="ExitBtn" type="Button" parent="RightPanel/VBox/ActionButtons"]
+layout_mode = 2
+text = "Exit Builder"
+
+[node name="SaveDialog" type="FileDialog" parent="."]
+title = "Save Blueprint"
+initial_position = 2
+size = Vector2i(600, 400)
+ok_button_text = "Save"
+file_mode = 4
+access = 2
+
+[node name="LoadDialog" type="FileDialog" parent="."]
+title = "Load Blueprint"
+initial_position = 2
+size = Vector2i(600, 400)
+ok_button_text = "Load"
+access = 2
+filters = PackedStringArray("*.tres ; Ship Blueprint")
+

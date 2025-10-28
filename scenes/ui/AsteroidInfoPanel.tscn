@@ -1,12 +1,29 @@
-[gd_scene load_steps=2 format=3 uid="uid://ctfb6m8n2ykw3"]
+[gd_scene load_steps=4 format=3 uid="uid://ctfb6m8n2ykw3"]
 
 [ext_resource type="Script" path="res://scripts/ui/AsteroidInfoPanel.gd" id="1_asteroid"]
+[ext_resource type="Theme" uid="uid://bh3pao1yls74n" path="res://resources/themes/main_theme.tres" id="2_theme"]
+
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_asteroid"]
+bg_color = Color(0.039, 0.059, 0.118, 0.95)
+border_width_left = 2
+border_width_top = 2
+border_width_right = 2
+border_width_bottom = 2
+border_color = Color(1, 0.596, 0, 1)
+corner_radius_top_left = 8
+corner_radius_top_right = 8
+corner_radius_bottom_right = 8
+corner_radius_bottom_left = 8
+shadow_color = Color(0, 0, 0, 0.6)
+shadow_size = 10
 
 [node name="AsteroidInfoPanel" type="PanelContainer"]
 custom_minimum_size = Vector2(300, 200)
 offset_right = 300.0
 offset_bottom = 200.0
 mouse_filter = 0
+theme = ExtResource("2_theme")
+theme_override_styles/panel = SubResource("StyleBoxFlat_asteroid")
 script = ExtResource("1_asteroid")
 
 [node name="VBox" type="VBoxContainer" parent="."]
@@ -17,11 +34,14 @@ layout_mode = 2
 
 [node name="NameLabel" type="Label" parent="VBox/Header"]
 layout_mode = 2
+theme_override_colors/font_color = Color(1, 0.596, 0, 1)
+theme_override_font_sizes/font_size = 16
 text = "Asteroid #0000"
 horizontal_alignment = 1
 
 [node name="TotalLabel" type="Label" parent="VBox/Header"]
 layout_mode = 2
+theme_override_font_sizes/font_size = 12
 text = "Total: 0 units"
 horizontal_alignment = 1
 

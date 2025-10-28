@@ -181,15 +181,22 @@ func get_weighted_random_resource() -> int:
 	# Then, get a random resource from that tier
 	return get_random_resource_by_tier(tier)
 
-func get_weighted_random_resource_for_zone(zone_id: int) -> int:
+func get_weighted_random_resource_for_zone(zone_id: String) -> int:
 	"""Get a random resource ID for a specific zone (cumulative tiers)
-	Zone 1 = Tier 0 only
-	Zone 2 = Tiers 0-1
-	Zone 3 = Tiers 0-2
+	Difficulty 1 = Tier 0 only
+	Difficulty 2 = Tiers 0-1
+	Difficulty 3 = Tiers 0-2
 	...
-	Zone 9 = Tiers 0-8
+	Difficulty 9 = Tiers 0-8
 	"""
-	var max_tier = zone_id - 1  # Zone 1 = max tier 0, Zone 2 = max tier 1, etc.
+	# Get zone difficulty from ZoneManager
+	var difficulty = 1  # Default
+	if ZoneManager:
+		var zone = ZoneManager.get_zone(zone_id)
+		if not zone.is_empty():
+			difficulty = zone.difficulty
+	
+	var max_tier = difficulty - 1  # Difficulty 1 = max tier 0, Difficulty 2 = max tier 1, etc.
 	max_tier = clamp(max_tier, 0, 9)
 	
 	# Select tier using weighted distribution, but only from available tiers

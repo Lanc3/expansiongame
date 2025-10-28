@@ -108,35 +108,41 @@ func issue_scan_command(units: Array, asteroid: Node2D, queue: bool = false):
 func issue_wormhole_travel_command(units: Array, wormhole: Node2D):
 	"""Issue wormhole travel command - immediately transfers units"""
 	if not wormhole or not wormhole.has_method("travel_units"):
-		
 		return
-	
 	
 	wormhole.travel_units(units)
 
 func get_command_at_position(world_pos: Vector2) -> Command:
 	var cmd = Command.new()
 	
+	# Get current zone for filtering
+	var current_zone = ZoneManager.current_zone_id if ZoneManager else 1
+	
 	# Check for wormholes first (highest priority)
 	var wormhole = get_nearest_wormhole(world_pos, 80.0)
 	if wormhole:
 		cmd.type = CommandType.TRAVEL_WORMHOLE
 		cmd.target_entity = wormhole
+		cmd.target_position = wormhole.global_position
 		return cmd
 	
-	# Check for enemy units
+	# Check for enemy units in current zone only
 	var enemy = EntityManager.get_nearest_unit(world_pos, 1, null)  # team_id 1 = enemy
 	if enemy and world_pos.distance_to(enemy.global_position) < 50:
-		cmd.type = CommandType.ATTACK
-		cmd.target_entity = enemy
-		return cmd
+		# Verify enemy is in current zone
+		if ZoneManager.get_unit_zone(enemy) == current_zone:
+			cmd.type = CommandType.ATTACK
+			cmd.target_entity = enemy
+			return cmd
 	
-	# Check for resource nodes
+	# Check for resource nodes in current zone only
 	var resource = EntityManager.get_nearest_resource(world_pos)
 	if resource and world_pos.distance_to(resource.global_position) < 50:
-		cmd.type = CommandType.MINE
-		cmd.target_entity = resource
-		return cmd
+		# Verify resource is in current zone
+		if ZoneManager.get_unit_zone(resource) == current_zone:
+			cmd.type = CommandType.MINE
+			cmd.target_entity = resource
+			return cmd
 	
 	# Default to move
 	cmd.type = CommandType.MOVE

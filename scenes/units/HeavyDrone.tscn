@@ -10,7 +10,7 @@ script = ExtResource("2_heavy")
 unit_name = "Heavy Drone"
 max_health = 200.0
 move_speed = 100.0
-vision_range = 250.0
+vision_range = 700.0
 attack_range = 180.0
 armor_bonus = 0.5
 

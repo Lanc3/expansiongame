@@ -1,0 +1,63 @@
+[gd_scene load_steps=2 format=3 uid="uid://byrcswjmy3wmx"]
+
+[ext_resource type="Script" path="res://scripts/ui/ShipyardPanel.gd" id="1"]
+
+[node name="ShipyardPanel" type="PanelContainer"]
+custom_minimum_size = Vector2(400, 500)
+offset_left = 820.0
+offset_top = 100.0
+offset_right = 1220.0
+offset_bottom = 600.0
+z_index = 100
+script = ExtResource("1")
+
+[node name="VBox" type="VBoxContainer" parent="."]
+layout_mode = 2
+
+[node name="TitleLabel" type="Label" parent="VBox"]
+layout_mode = 2
+text = "Shipyard - Ship Construction"
+horizontal_alignment = 1
+
+[node name="SelectBlueprintBtn" type="Button" parent="VBox"]
+layout_mode = 2
+text = "Select Blueprint"
+custom_minimum_size = Vector2(0, 40)
+
+[node name="Separator1" type="HSeparator" parent="VBox"]
+layout_mode = 2
+
+[node name="ProgressLabel" type="Label" parent="VBox"]
+layout_mode = 2
+text = "Idle"
+horizontal_alignment = 1
+
+[node name="ProductionProgress" type="ProgressBar" parent="VBox"]
+layout_mode = 2
+max_value = 100.0
+show_percentage = false
+custom_minimum_size = Vector2(0, 20)
+
+[node name="Separator2" type="HSeparator" parent="VBox"]
+layout_mode = 2
+
+[node name="QueueLabel" type="Label" parent="VBox"]
+layout_mode = 2
+text = "Production Queue:"
+
+[node name="QueueScroll" type="ScrollContainer" parent="VBox"]
+layout_mode = 2
+size_flags_vertical = Control.SIZE_EXPAND_FILL
+custom_minimum_size = Vector2(0, 300)
+
+[node name="QueueList" type="VBoxContainer" parent="VBox/QueueScroll"]
+layout_mode = 2
+size_flags_horizontal = Control.SIZE_EXPAND_FILL
+
+[node name="Separator3" type="HSeparator" parent="VBox"]
+layout_mode = 2
+
+[node name="CloseBtn" type="Button" parent="VBox"]
+layout_mode = 2
+text = "Close"
+custom_minimum_size = Vector2(0, 40)

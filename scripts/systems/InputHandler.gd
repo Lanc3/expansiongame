@@ -70,6 +70,19 @@ func handle_keyboard(event: InputEventKey):
 			trigger_debug_event()
 			return
 		
+		# DEBUG: K key spawns blueprint ship for testing
+		if event.keycode == KEY_K:
+			spawn_debug_blueprint_ship()
+			return
+		
+		# DEBUG: F key reveals fog at camera position (for testing)
+		if event.keycode == KEY_F:
+			if camera and FogOfWarManager and ZoneManager:
+				var zone_id = ZoneManager.current_zone_id
+				FogOfWarManager.reveal_position(zone_id, camera.global_position, 1000.0)
+				print("DEBUG: Revealed fog at camera position in Zone %d: %s" % [zone_id, camera.global_position])
+			return
+		
 		# Handle control group assignment (Ctrl+1-9)
 		if event.ctrl_pressed and not event.shift_pressed:
 			var group_num = _get_number_key_pressed(event.keycode)
@@ -98,6 +111,9 @@ func handle_keyboard(event: InputEventKey):
 				# Finally, toggle pause menu if nothing is selected
 				else:
 					toggle_pause_menu()
+			KEY_M:
+				# Toggle galaxy map
+				toggle_galaxy_map()
 			KEY_P:
 				_toggle_blueprint_builder()
 			KEY_H:
@@ -164,10 +180,12 @@ func single_unit_selection(screen_pos: Vector2):
 	
 	if result.size() > 0:
 		var unit = result[0].collider
+		# Only select units in current zone
 		if unit is BaseUnit and unit.team_id == 0:
-			var add_to_selection = Input.is_action_pressed("add_to_selection")
-			SelectionManager.select_unit(unit, add_to_selection)
-			return
+			if ZoneManager and ZoneManager.get_unit_zone(unit) == ZoneManager.current_zone_id:
+				var add_to_selection = Input.is_action_pressed("add_to_selection")
+				SelectionManager.select_unit(unit, add_to_selection)
+				return
 	
 	# Check for buildings (layer 2)
 	query.collision_mask = 2  # Buildings layer
@@ -175,10 +193,11 @@ func single_unit_selection(screen_pos: Vector2):
 	
 	if result.size() > 0:
 		var building = result[0].collider
-		# Check if it's a player building
+		# Check if it's a player building in current zone
 		if "team_id" in building and building.team_id == 0:
-			SelectionManager.select_building(building)
-			return
+			if ZoneManager and ZoneManager.get_unit_zone(building) == ZoneManager.current_zone_id:
+				SelectionManager.select_building(building)
+				return
 	
 	# If no unit or building found, check for asteroids (layer 4)
 	query.collision_mask = 4  # Resources layer
@@ -186,8 +205,10 @@ func single_unit_selection(screen_pos: Vector2):
 	
 	if result.size() > 0:
 		var asteroid = result[0].collider
+		# Only select asteroids in current zone
 		if asteroid is ResourceNode:
-			SelectionManager.select_unit(asteroid, false)  # Asteroids are single-select only
+			if ZoneManager and ZoneManager.get_unit_zone(asteroid) == ZoneManager.current_zone_id:
+				SelectionManager.select_unit(asteroid, false)  # Asteroids are single-select only
 
 func check_for_wormhole_at_position(world_pos: Vector2) -> Node2D:
 	"""Check if there's a wormhole at the clicked position"""
@@ -302,6 +323,18 @@ func toggle_resource_inventory():
 		else:
 			inventory.show_panel()
 
+func toggle_galaxy_map():
+	"""Toggle the galaxy map"""
+	var galaxy_map = get_tree().root.find_child("GalaxyMapUI", true, false)
+	if galaxy_map:
+		print("InputHandler: Found GalaxyMapUI, toggling (currently visible: %s)" % galaxy_map.visible)
+		if galaxy_map.visible:
+			galaxy_map.close_map()
+		else:
+			galaxy_map.open_map()
+	else:
+		print("InputHandler: ERROR - GalaxyMapUI not found!")
+
 func toggle_pause_menu():
 	"""Toggle the pause menu"""
 	var pause_menu = get_tree().root.find_child("PauseMenu", true, false)
@@ -335,6 +368,10 @@ func _any_panel_open() -> bool:
 	if wormhole_panel and wormhole_panel.visible:
 		return true
 	
+	var galaxy_map = get_tree().root.find_child("GalaxyMapUI", true, false)
+	if galaxy_map and galaxy_map.visible:
+		return true
+	
 	return false
 
 func _close_open_panels():
@@ -356,6 +393,11 @@ func _close_open_panels():
 	var wormhole_panel = get_tree().root.find_child("WormholeInfoPanel", true, false)
 	if wormhole_panel and wormhole_panel.visible:
 		wormhole_panel.visible = false
+	
+	# Close galaxy map if open
+	var galaxy_map = get_tree().root.find_child("GalaxyMapUI", true, false)
+	if galaxy_map and galaxy_map.visible:
+		galaxy_map.close_map()
 
 func is_mouse_over_ui(mouse_pos: Vector2) -> bool:
 	"""Check if mouse is over any UI element"""
@@ -442,6 +484,12 @@ func is_mouse_over_ui(mouse_pos: Vector2) -> bool:
 	var zone_switcher = get_tree().root.find_child("ZoneSwitcher", true, false)
 	if zone_switcher and zone_switcher.visible:
 		if zone_switcher is Control and zone_switcher.get_global_rect().has_point(mouse_pos):
+			return true
+	
+	# Check GalaxyMapUI
+	var galaxy_map = get_tree().root.find_child("GalaxyMapUI", true, false)
+	if galaxy_map and galaxy_map.visible:
+		if galaxy_map is Control and galaxy_map.get_global_rect().has_point(mouse_pos):
 			return true
 	
 	return false
@@ -702,7 +750,7 @@ func _center_camera_on_units(units: Array):
 		centroid /= valid_count
 		camera.focus_on_position(centroid, 0.3)
 
-# DEBUG FUNCTION
+# DEBUG FUNCTIONS
 func trigger_debug_event():
 	"""DEBUG: Trigger a random event for testing (J key)"""
 	if not EventManager or not ZoneManager:
@@ -714,3 +762,54 @@ func trigger_debug_event():
 	
 	print("DEBUG: Triggering event '%s' in Zone %d (Press J)" % [event_id, zone_id])
 	EventManager.trigger_event(event_id)
+
+func spawn_debug_blueprint_ship():
+	"""DEBUG: Spawn a blueprint ship at camera position (K key)"""
+	# Get all blueprint files using centralized system
+	var blueprint_files = BlueprintPaths.get_all_blueprint_files()
+	
+	if blueprint_files.is_empty():
+		print("DEBUG: No blueprint files found")
+		return
+	
+	# Load the last blueprint (most recent save)
+	var blueprint_path = blueprint_files.back()
+	var blueprint = BlueprintPaths.load_blueprint(blueprint_path)
+	
+	if not blueprint:
+		print("DEBUG: Invalid blueprint file")
+		return
+	
+	print("DEBUG: Spawning blueprint ship '%s' (Press K)" % blueprint.blueprint_name)
+	
+	# Get camera position
+	var camera = get_tree().root.get_camera_2d()
+	var spawn_pos = camera.global_position if camera else Vector2.ZERO
+	
+	# Instantiate CustomShip
+	var ship_scene = load("res://scenes/units/CustomShip.tscn")
+	if not ship_scene:
+		print("DEBUG: Could not load CustomShip scene")
+		return
+	
+	var ship = ship_scene.instantiate()
+	ship.global_position = spawn_pos
+	ship.team_id = 0  # Player team
+	
+	# Initialize from Cosmoteer blueprint
+	if ship.has_method("initialize_from_cosmoteer_blueprint"):
+		ship.initialize_from_cosmoteer_blueprint(blueprint)
+	
+	# Add to current zone
+	var zone_id = ZoneManager.current_zone_id if ZoneManager else 1
+	var zone_layer = ZoneManager.get_zone(zone_id).layer_node if ZoneManager else null
+	
+	if zone_layer:
+		var units_container = zone_layer.get_node_or_null("Entities/Units")
+		if units_container:
+			units_container.add_child(ship)
+			
+			if EntityManager:
+				EntityManager.register_unit(ship, zone_id)
+			
+			print("DEBUG: Blueprint ship spawned at ", spawn_pos)

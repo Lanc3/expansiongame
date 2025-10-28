@@ -12,10 +12,10 @@ enum WeaponType {LASER, PLASMA, MISSILE}
 @export var homing: bool = false  # For missiles
 
 var cooldown_timer: float = 0.0
-var projectile_scene: PackedScene
 
 func _ready():
-	projectile_scene = preload("res://scenes/effects/Projectile.tscn")
+	# Don't need to preload scene anymore - ProjectilePool handles it
+	pass
 
 func _process(delta: float):
 	if cooldown_timer > 0:
@@ -37,8 +37,17 @@ func fire_at(target: Node2D, from_position: Vector2):
 	if AudioManager:
 		AudioManager.play_weapon_sound(from_position)
 	
-	# Create projectile
-	var projectile = projectile_scene.instantiate()
+	# OPTIMIZATION: Get projectile from pool instead of instantiating
+	var projectile: Projectile
+	if ProjectilePool:
+		projectile = ProjectilePool.get_projectile()
+		# Pooled projectiles stay as children of ProjectilePool (already in tree)
+	else:
+		# Fallback if pool not available
+		var projectile_scene = preload("res://scenes/effects/Projectile.tscn")
+		projectile = projectile_scene.instantiate()
+		get_tree().root.add_child(projectile)
+	
 	projectile.setup(
 		weapon_type,
 		damage,
@@ -48,4 +57,3 @@ func fire_at(target: Node2D, from_position: Vector2):
 		target if homing else null,
 		get_parent()  # Owner (the unit firing)
 	)
-	get_tree().root.add_child(projectile)

@@ -1,0 +1,40 @@
+[gd_scene load_steps=3 format=3 uid="uid://c7k3nan2pqw5r"]
+
+[ext_resource type="Script" path="res://scripts/ui/BottomHUD.gd" id="1_bottomhud"]
+[ext_resource type="Theme" uid="uid://bh3pao1yls74n" path="res://resources/themes/main_theme.tres" id="2_theme"]
+
+[node name="BottomHUD" type="Panel"]
+custom_minimum_size = Vector2(0, 100)
+anchors_preset = 12
+anchor_top = 1.0
+anchor_right = 1.0
+anchor_bottom = 1.0
+offset_top = -100.0
+grow_horizontal = 2
+grow_vertical = 0
+mouse_filter = 2
+theme = ExtResource("2_theme")
+script = ExtResource("1_bottomhud")
+
+[node name="HBox" type="HBoxContainer" parent="."]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+theme_override_constants/separation = 5
+alignment = 1
+
+[node name="LeftZone" type="Control" parent="HBox"]
+custom_minimum_size = Vector2(505, 0)
+layout_mode = 2
+
+[node name="CenterZone" type="Control" parent="HBox"]
+custom_minimum_size = Vector2(505, 0)
+layout_mode = 2
+
+[node name="RightZone" type="Control" parent="HBox"]
+custom_minimum_size = Vector2(5, 0)
+layout_mode = 2
+

@@ -18,7 +18,7 @@ enum ProcessingState { FULL, REDUCED, PAUSED }
 @export var separation_distance: float = 50.0
 
 # Fog of war vision
-var vision_range: float = 400.0  # Default vision range, overridden by unit types
+var vision_range: float = 800.0  # Default vision range (doubled from 400), overridden by unit types
 
 var current_health: float
 var ai_state: AIState = AIState.IDLE
@@ -174,6 +174,9 @@ func check_movement_transitions():
 	
 	# For wormhole travel, check when in range and teleport
 	elif cmd.type == 8:  # TRAVEL_WORMHOLE command
+		if not is_instance_valid(target_entity):
+			return
+		
 		var distance = global_position.distance_to(target_entity.global_position)
 		if distance <= 100.0:  # Within wormhole range
 			# Trigger teleport
@@ -423,8 +426,11 @@ func start_mining(resource: Node2D):
 
 func start_returning():
 	ai_state = AIState.RETURNING
-	# Find nearest command ship or base
-	var command_ship = EntityManager.get_nearest_unit(global_position, team_id, self)
+	# Find nearest command ship or base in the same zone
+	var my_zone_id = ZoneManager.get_unit_zone(self) if ZoneManager else ""
+	var command_ship = null
+	if not my_zone_id.is_empty():
+		command_ship = EntityManager.get_nearest_unit_in_zone(global_position, team_id, my_zone_id, self)
 	if command_ship:
 		target_position = command_ship.global_position
 		ai_state = AIState.MOVING

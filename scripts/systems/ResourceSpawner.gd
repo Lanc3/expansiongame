@@ -33,14 +33,28 @@ func _ready():
 	spawn_all_zones()
 
 func spawn_all_zones():
-	"""Spawn resources for all 9 zones"""
+	"""Spawn resources for all discovered zones"""
+	if not ZoneManager:
+		return
 	
-	for zone_id in range(1, 10):
+	# Connect to zone discovery to spawn resources in new zones
+	ZoneManager.zone_discovered.connect(_on_zone_discovered)
+	
+	# Spawn resources for all currently discovered zones
+	for zone_id in ZoneManager.zones_by_id.keys():
 		var zone = ZoneManager.get_zone(zone_id)
 		if zone.is_empty():
-			
 			continue
 		
+		spawn_resources_for_zone(zone_id, zone)
+
+func _on_zone_discovered(zone_id: String):
+	"""Spawn resources when a new zone is discovered"""
+	if not ZoneManager:
+		return
+	
+	var zone = ZoneManager.get_zone(zone_id)
+	if not zone.is_empty():
 		spawn_resources_for_zone(zone_id, zone)
 	
 
@@ -51,7 +65,7 @@ func get_total_spawned_count() -> int:
 		total += zone_resources.size()
 	return total
 
-func spawn_resources_for_zone(zone_id: int, zone_data: Dictionary):
+func spawn_resources_for_zone(zone_id: String, zone_data: Dictionary):
 	"""Spawn resources for a specific zone in orbital positions around planets"""
 	var zone_layer = zone_data.layer_node
 	if not zone_layer:
@@ -120,7 +134,7 @@ func spawn_resources_for_zone(zone_id: int, zone_data: Dictionary):
 	
 	print("ResourceSpawner: Spawned %d asteroids in Zone %d around %d planet(s)" % [spawned_resources.size(), zone_id, planets.size()])
 
-func generate_zone_composition(asteroid: ResourceNode, zone_id: int):
+func generate_zone_composition(asteroid: ResourceNode, zone_id: String):
 	"""Generate zone-appropriate resource composition for asteroid"""
 	var total = randf_range(500.0, 2000.0)
 	var num_types = randi_range(1, 5)

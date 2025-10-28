@@ -12,7 +12,7 @@ func _ready():
 	move_speed = 120.0
 	
 	# Combat stats
-	vision_range = 280.0
+	vision_range = 560.0  # Doubled from 280
 	patrol_speed = 50.0
 
 func can_attack() -> bool:

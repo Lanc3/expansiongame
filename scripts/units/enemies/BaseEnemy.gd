@@ -58,9 +58,11 @@ func find_nearest_planet_for_patrol():
 		patrol_center = nearest_planet.global_position
 		
 		# Get zone size to match asteroid orbital radius
-		var zone_id = 1
+		var zone_id = ""
 		if has_meta("zone_id"):
 			zone_id = get_meta("zone_id")
+		elif ZoneManager:
+			zone_id = ZoneManager.current_zone_id
 		var zone = ZoneManager.get_zone(zone_id) if ZoneManager else {}
 		var zone_size = zone.spawn_area_size if not zone.is_empty() else 3000.0
 		
@@ -75,12 +77,19 @@ func find_nearest_planet_for_patrol():
 
 func apply_zone_scaling():
 	"""Scale enemy stats based on zone difficulty"""
-	var zone = get_meta("zone_id", 1)
+	var zone_id = get_meta("zone_id", "")
 	var is_boss = get_meta("is_boss", false)
 	
-	# Health scaling: +30% per zone
-	# Zone 1: 1.0x, Zone 5: 2.2x, Zone 9: 3.4x
-	var health_multiplier = 1.0 + (zone - 1) * 0.3
+	# Get zone difficulty for scaling
+	var difficulty = 1
+	if not zone_id.is_empty() and ZoneManager:
+		var zone_data = ZoneManager.get_zone(zone_id)
+		if not zone_data.is_empty():
+			difficulty = zone_data.difficulty
+	
+	# Health scaling: +30% per difficulty
+	# Difficulty 1: 1.0x, Difficulty 5: 2.2x, Difficulty 9: 3.4x
+	var health_multiplier = 1.0 + (difficulty - 1) * 0.3
 	
 	# Boss multiplier: 3-5x stats
 	if is_boss:
@@ -89,9 +98,9 @@ func apply_zone_scaling():
 	max_health *= health_multiplier
 	current_health = max_health
 	
-	# Damage scaling: +20% per zone (less aggressive than health)
-	# Zone 1: 1.0x, Zone 5: 1.8x, Zone 9: 2.6x
-	var damage_multiplier = 1.0 + (zone - 1) * 0.2
+	# Damage scaling: +20% per difficulty (less aggressive than health)
+	# Difficulty 1: 1.0x, Difficulty 5: 1.8x, Difficulty 9: 2.6x
+	var damage_multiplier = 1.0 + (difficulty - 1) * 0.2
 	if is_boss:
 		damage_multiplier *= randf_range(3.0, 5.0)
 	
@@ -101,8 +110,8 @@ func apply_zone_scaling():
 		if "damage" in weapon:
 			weapon.damage *= damage_multiplier
 	
-	# Speed scaling: +5% per zone (subtle)
-	var speed_multiplier = 1.0 + (zone - 1) * 0.05
+	# Speed scaling: +5% per difficulty (subtle)
+	var speed_multiplier = 1.0 + (difficulty - 1) * 0.05
 	if is_boss:
 		speed_multiplier *= 0.9  # Bosses are slightly slower
 	
@@ -194,19 +203,24 @@ func aggressive_behavior(delta: float):
 
 func auto_scan_for_targets():
 	"""Scan for player units to attack"""
-	# Find nearest player unit (team_id 0)
+	# Get enemy's current zone
+	var enemy_zone_id = ZoneManager.get_unit_zone(self) if ZoneManager else ""
+	if enemy_zone_id.is_empty():
+		return  # Can't find targets if we don't know our zone
+	
+	# Find nearest player unit (team_id 0) IN THE SAME ZONE
 	var detection_range = vision_range  # Use class property (set in child classes)
 	if ai_mode == AIMode.AGGRESSIVE:
 		detection_range = vision_range * 1.5  # Extended vision when aggressive
 	
-	var nearest_player = EntityManager.get_nearest_unit(global_position, 0, self)
+	var nearest_player = EntityManager.get_nearest_unit_in_zone(global_position, 0, enemy_zone_id, self)
 	
 	if nearest_player and is_instance_valid(nearest_player):
 		var distance = global_position.distance_to(nearest_player.global_position)
 		
 		if distance <= detection_range:
 			# Found target, attack it
-			print("%s detected player at distance %.0f (range: %.0f)" % [unit_name, distance, detection_range])
+			print("%s detected player at distance %.0f (range: %.0f) in zone %s" % [unit_name, distance, detection_range, enemy_zone_id])
 			if ai_state == AIState.IDLE or (ai_state == AIState.MOVING and command_queue.is_empty()):
 				start_attack(nearest_player)
 				# Switch to aggressive mode when engaging
@@ -250,18 +264,20 @@ func return_to_patrol():
 	
 
 func alert_nearby_allies():
-	"""Alert nearby enemy units to become aggressive"""
+	"""Alert nearby enemy units in the same zone to become aggressive"""
 	var alert_radius = 400.0
-	var nearby_enemies = get_tree().get_nodes_in_group("enemies")
+	var my_zone_id = ZoneManager.get_unit_zone(self) if ZoneManager else ""
+	if my_zone_id.is_empty():
+		return  # Can't alert if we don't know our zone
+	
+	var nearby_enemies = EntityManager.get_units_in_radius_zone(global_position, alert_radius, 1, my_zone_id)
 	
 	for enemy in nearby_enemies:
 		if enemy == self or not is_instance_valid(enemy):
 			continue
 		
-		var distance = global_position.distance_to(enemy.global_position)
-		if distance <= alert_radius:
-			if enemy.has_method("become_aggressive"):
-				enemy.become_aggressive()
+		if enemy.has_method("become_aggressive"):
+			enemy.become_aggressive()
 
 func perform_ai_update():
 	"""Staggered AI update - expensive operations (targeting, decisions)"""

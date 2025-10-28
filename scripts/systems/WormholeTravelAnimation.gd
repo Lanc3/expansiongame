@@ -126,7 +126,7 @@ func setup_particles():
 		gradient.add_point(1.0, Color(1, 1, 1, 0.0))
 		particles.color_ramp = gradient
 
-func play_travel_animation(from_zone_id: int, to_zone_id: int):
+func play_travel_animation(from_zone_id: String, to_zone_id: String):
 	"""Play full travel animation sequence"""
 	if is_animating:
 		return
@@ -155,20 +155,24 @@ func play_travel_animation(from_zone_id: int, to_zone_id: int):
 		
 		# Move camera to the return wormhole (the one we entered through)
 		var target_zone = ZoneManager.get_zone(to_zone_id)
-		if not target_zone.is_empty() and target_zone.wormholes.size() > 0:
+		if not target_zone.is_empty():
 			if camera:
 				# Find the wormhole that connects back to our source zone
 				var return_wormhole = null
-				for wormhole in target_zone.wormholes:
-					if wormhole.target_zone_id == from_zone_id:
+				
+				# Check both lateral and depth wormholes
+				var all_wormholes = target_zone.lateral_wormholes + target_zone.depth_wormholes
+				
+				for wormhole in all_wormholes:
+					if is_instance_valid(wormhole) and wormhole.target_zone_id == from_zone_id:
 						return_wormhole = wormhole
 						break
 				
 				# Position at return wormhole, or fallback to first wormhole
 				if return_wormhole:
 					camera.global_position = return_wormhole.global_position
-				else:
-					camera.global_position = target_zone.wormholes[0].global_position
+				elif all_wormholes.size() > 0:
+					camera.global_position = all_wormholes[0].global_position
 	
 	await play_exit_phase()
 	await play_arrive_phase()
@@ -446,4 +450,3 @@ func start_camera_shake(duration: float, intensity: float):
 	# Reset offset after duration
 	await get_tree().create_timer(duration, false).timeout
 	camera.offset = Vector2.ZERO
-

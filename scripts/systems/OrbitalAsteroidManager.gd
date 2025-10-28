@@ -1,7 +1,7 @@
 extends Node
 ## Manages orbital motion of asteroids around planets
 
-# Orbital data structure: { asteroid: { planet: Node2D, radius: float, angle: float, zone_id: int } }
+# Orbital data structure: { asteroid: { planet: Node2D, radius: float, angle: float, zone_id: String } }
 var orbital_data: Dictionary = {}
 
 # Very slow rotation: ~20-30 minutes per full rotation
@@ -25,7 +25,7 @@ func _process(delta: float):
 	update_timer = 0.0
 	
 	# Get current active zone for optimization
-	var current_zone_id = ZoneManager.current_zone_id if ZoneManager else 1
+	var current_zone_id = ZoneManager.current_zone_id if ZoneManager else ""
 	
 	# Only update asteroids in current zone + adjacent zones
 	for asteroid in orbital_data.keys():
@@ -36,11 +36,9 @@ func _process(delta: float):
 		var data = orbital_data[asteroid]
 		
 		# Skip asteroids not in visible zones (major optimization)
+		# Only process asteroids in the current zone
 		if data.zone_id != current_zone_id:
-			# Optionally update adjacent zones (for smooth transitions)
-			var is_adjacent = abs(data.zone_id - current_zone_id) <= 1
-			if not is_adjacent:
-				continue
+			continue
 		
 		var planet = data.planet
 		
@@ -72,16 +70,19 @@ func register_asteroid(asteroid: Node2D, planet: Node2D, orbit_radius: float, st
 		return
 	
 	# Determine zone_id from asteroid metadata or planet
-	var zone_id = 1
+	var zone_id = ""
 	if asteroid.has_meta("zone_id"):
 		zone_id = asteroid.get_meta("zone_id")
 	elif ZoneManager:
 		# Try to determine from planet position
-		for z_id in range(1, 10):
+		for z_id in ZoneManager.zones_by_id.keys():
 			var zone = ZoneManager.get_zone(z_id)
 			if not zone.is_empty() and zone.boundaries.has_point(planet.global_position):
 				zone_id = z_id
 				break
+		# Fallback to current zone if not found
+		if zone_id.is_empty():
+			zone_id = ZoneManager.current_zone_id
 	
 	orbital_data[asteroid] = {
 		"planet": planet,

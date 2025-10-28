@@ -15,7 +15,7 @@ func _ready():
 	max_health = 200.0  # Double the health of combat drones
 	current_health = max_health
 	move_speed = 100.0  # Slower than other drones
-	vision_range = 350.0  # Heavy drones have decent vision
+	vision_range = 700.0  # Heavy drones have decent vision (doubled from 350)
 	
 func can_attack() -> bool:
 	return true

@@ -1,14 +1,14 @@
 extends Node2D
 ## Hard boundary system to prevent units from crossing zones without wormholes
 
-var zone_id: int = 1
+var zone_id: String = ""
 var boundaries: Rect2 = Rect2()
 var boundary_thickness: float = 50.0
 
 func _ready():
 	pass
 
-func setup_for_zone(p_zone_id: int, zone_bounds: Rect2):
+func setup_for_zone(p_zone_id: String, zone_bounds: Rect2):
 	"""Setup boundary for a specific zone"""
 	zone_id = p_zone_id
 	boundaries = zone_bounds

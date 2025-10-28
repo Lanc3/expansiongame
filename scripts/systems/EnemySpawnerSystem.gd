@@ -16,27 +16,38 @@ func _ready():
 	# Wait for zones to initialize
 	await ZoneManager.zones_initialized
 	
+	# Connect to zone discovery to spawn enemies in new zones
+	if ZoneManager:
+		ZoneManager.zone_discovered.connect(_on_zone_discovered)
 	
-	
-	# Setup enemies for zones 2-9
-	for zone_id in range(2, 10):
-		setup_zone_enemies(zone_id)
+	# Setup enemies for starting zone (if difficulty > 1)
+	if ZoneManager and not ZoneManager.current_zone_id.is_empty():
+		setup_zone_enemies(ZoneManager.current_zone_id)
+
+func _on_zone_discovered(zone_id: String):
+	"""Spawn enemies when a new zone is discovered"""
+	setup_zone_enemies(zone_id)
 	
 	
 
-func setup_zone_enemies(zone_id: int):
+func setup_zone_enemies(zone_id: String):
 	"""Create enemy clusters for a zone"""
-	if zone_id == 1:
-		return  # Zone 1 has no enemies
+	# Get zone difficulty
+	var difficulty = 1
+	if ZoneManager:
+		var zone = ZoneManager.get_zone(zone_id)
+		if not zone.is_empty():
+			difficulty = zone.difficulty
 	
-	var cluster_count = zone_id - 1  # Zone 2=1, Zone 3=2, etc.
+	if difficulty == 1:
+		return  # Difficulty 1 zones have no enemies
 	
-	
+	var cluster_count = difficulty - 1  # Difficulty 2=1 cluster, Difficulty 3=2 clusters, etc.
 	
 	for i in range(cluster_count):
 		create_enemy_cluster(zone_id, i)
 
-func create_enemy_cluster(zone_id: int, cluster_index: int):
+func create_enemy_cluster(zone_id: String, cluster_index: int):
 	"""Create a spawner with surrounding turrets"""
 	var zone = ZoneManager.get_zone(zone_id)
 	if zone.is_empty() or not zone.layer_node:
@@ -70,17 +81,18 @@ func create_enemy_cluster(zone_id: int, cluster_index: int):
 		
 		create_turret(turret_type, turret_position, zone_id, buildings_container)
 
-func get_cluster_position(zone_id: int, cluster_index: int) -> Vector2:
+func get_cluster_position(zone_id: String, cluster_index: int) -> Vector2:
 	"""Calculate position for enemy cluster at zone edge"""
 	var zone = ZoneManager.get_zone(zone_id)
 	if zone.is_empty():
 		return Vector2.ZERO
 	
 	var bounds = zone.boundaries
-	var cluster_count = zone_id - 1
+	var difficulty = zone.difficulty
+	var cluster_count = difficulty - 1
 	
 	# Divide the zone perimeter into sections for clusters
-	var angle_step = TAU / cluster_count
+	var angle_step = TAU / cluster_count if cluster_count > 0 else TAU
 	var base_angle = angle_step * cluster_index
 	
 	# Add some randomness to angle
@@ -97,22 +109,34 @@ func get_cluster_position(zone_id: int, cluster_index: int) -> Vector2:
 	
 	return position
 
-func get_turrets_per_cluster(zone_id: int) -> int:
+func get_turrets_per_cluster(zone_id: String) -> int:
 	"""Calculate how many turrets per cluster"""
-	return clamp(zone_id - 1, 1, 4)  # 1-4 turrets per cluster
+	var difficulty = 1
+	if ZoneManager:
+		var zone = ZoneManager.get_zone(zone_id)
+		if not zone.is_empty():
+			difficulty = zone.difficulty
+	return clamp(difficulty - 1, 1, 4)  # 1-4 turrets per cluster
 
-func get_turret_types_for_zone(zone_id: int) -> Array:
+func get_turret_types_for_zone(zone_id: String) -> Array:
 	"""Determine which turret types are available in this zone"""
 	var types = []
 	
-	if zone_id <= 3:
-		# Zones 2-3: Bullet turrets only
+	# Get zone difficulty
+	var difficulty = 1
+	if ZoneManager:
+		var zone = ZoneManager.get_zone(zone_id)
+		if not zone.is_empty():
+			difficulty = zone.difficulty
+	
+	if difficulty <= 3:
+		# Difficulty 2-3: Bullet turrets only
 		types = ["bullet", "bullet"]
-	elif zone_id <= 6:
-		# Zones 4-6: Bullet + Laser
+	elif difficulty <= 6:
+		# Difficulty 4-6: Bullet + Laser
 		types = ["bullet", "laser", "bullet"]
 	else:
-		# Zones 7-9: All types
+		# Difficulty 7-9: All types
 		types = ["bullet", "laser", "missile", "bullet"]
 	
 	return types
@@ -127,7 +151,7 @@ func get_turret_offset(turret_index: int, total_turrets: int) -> Vector2:
 		sin(angle) * distance
 	)
 
-func create_turret(turret_type: String, position: Vector2, zone_id: int, parent: Node):
+func create_turret(turret_type: String, position: Vector2, zone_id: String, parent: Node):
 	"""Instantiate a turret at the given position"""
 	var turret: Node2D = null
 	

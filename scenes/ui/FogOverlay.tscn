@@ -1,8 +1,8 @@
 [gd_scene load_steps=2 format=3 uid="uid://b5gtwwtgu7u36"]
 
-[ext_resource type="Script" path="res://scripts/ui/FogOverlayDirect.gd" id="1_fog"]
+[ext_resource type="Script" path="res://scripts/ui/FogOverlay.gd" id="1_fog"]
 
-[node name="FogOverlay" type="Control"]
+[node name="FogOverlay" type="ColorRect"]
 anchors_preset = 15
 anchor_right = 1.0
 anchor_bottom = 1.0

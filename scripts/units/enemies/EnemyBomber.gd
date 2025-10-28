@@ -12,7 +12,7 @@ func _ready():
 	move_speed = 80.0
 	
 	# Combat stats
-	vision_range = 320.0
+	vision_range = 640.0  # Doubled from 320
 	patrol_speed = 35.0
 	patrol_radius = 250.0  # Shorter patrol radius (slower)
 

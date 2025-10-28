@@ -14,7 +14,7 @@ signal turret_destroyed()
 @export var fire_rate: float = 2.0  # Shots per second
 @export var projectile_speed: float = 600.0
 @export var weapon_type: int = 0  # 0=Bullet, 1=Laser, 2=Missile
-@export var zone_id: int = 1
+@export var zone_id: String = ""
 @export var team_id: int = 1  # Enemy team
 
 var current_health: float
@@ -100,13 +100,21 @@ func _process(delta: float):
 
 func scan_for_targets():
 	"""Scan for player units within attack range"""
-	# Find nearest player unit (team_id 0)
-	var nearest_player = EntityManager.get_nearest_unit(global_position, 0, self)
+	# OPTIMIZATION: Use zone-aware targeting (only check units in current zone)
+	var current_zone_id = ZoneManager.get_unit_zone(self)
+	var nearest_player: Node2D = null
+	var attack_range_sq = attack_range * attack_range  # Use squared for faster comparison
+	
+	# Only search in the same zone - turrets should not attack across zones
+	if not current_zone_id.is_empty() and EntityManager.has_method("get_nearest_unit_in_zone"):
+		nearest_player = EntityManager.get_nearest_unit_in_zone(global_position, 0, current_zone_id, self)  # team_id 0 = player
+	# No fallback - turrets should only attack units in their zone
 	
 	if nearest_player and is_instance_valid(nearest_player):
-		var distance = global_position.distance_to(nearest_player.global_position)
+		# Check distance using squared values (avoid sqrt)
+		var distance_sq = global_position.distance_squared_to(nearest_player.global_position)
 		
-		if distance <= attack_range:
+		if distance_sq <= attack_range_sq:
 			if current_target != nearest_player:
 				acquire_target(nearest_player)
 		elif current_target == nearest_player:
@@ -170,8 +178,14 @@ func fire_at_target():
 
 func create_projectile():
 	"""Create and fire a projectile (fallback if no WeaponComponent)"""
-	var projectile_scene = preload("res://scenes/effects/Projectile.tscn")
-	var projectile = projectile_scene.instantiate()
+	# OPTIMIZATION: Use projectile pool
+	var projectile: Projectile
+	if ProjectilePool:
+		projectile = ProjectilePool.get_projectile()
+	else:
+		var projectile_scene = preload("res://scenes/effects/Projectile.tscn")
+		projectile = projectile_scene.instantiate()
+		get_tree().root.add_child(projectile)
 	
 	var muzzle_pos = global_position
 	if turret_gun:
@@ -186,8 +200,6 @@ func create_projectile():
 		current_target if weapon_type == 2 else null,  # Homing for missiles
 		self
 	)
-	
-	get_tree().root.add_child(projectile)
 
 func show_muzzle_flash():
 	"""Show muzzle flash effect"""

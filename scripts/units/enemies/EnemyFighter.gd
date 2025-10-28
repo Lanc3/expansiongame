@@ -10,7 +10,7 @@ func _ready():
 	max_health = 60.0
 	current_health = max_health
 	move_speed = 180.0
-	vision_range = 250.0  # Set vision range for fog of war
+	vision_range = 500.0  # Set vision range for fog of war (doubled from 250)
 	
 	# Combat stats
 	patrol_speed = 70.0

@@ -31,16 +31,16 @@ var base_scale: float = 1.0  # Determined by total resources
 **New Method:**
 ```gdscript
 func calculate_base_scale(resources: float) -> float:
-    # Scale between 0.6 and 1.5
-    var min_resources = 500.0
-    var max_resources = 2000.0
-    var min_scale = 0.6
-    var max_scale = 1.5
-    
-    var normalized = (resources - min_resources) / (max_resources - min_resources)
-    normalized = clamp(normalized, 0.0, 1.0)
-    
-    return lerp(min_scale, max_scale, normalized)
+	# Scale between 0.6 and 1.5
+	var min_resources = 500.0
+	var max_resources = 2000.0
+	var min_scale = 0.6
+	var max_scale = 1.5
+	
+	var normalized = (resources - min_resources) / (max_resources - min_resources)
+	normalized = clamp(normalized, 0.0, 1.0)
+	
+	return lerp(min_scale, max_scale, normalized)
 ```
 
 **Applied in `update_visual()`:**
@@ -61,25 +61,25 @@ sprite.scale = Vector2.ONE * base_scale
 ```gdscript
 // OLD: Single brown sprite set
 var sprite_textures: Array[String] = [
-    "meteorBrown_big1.png",
-    "meteorBrown_med1.png",
-    "meteorBrown_small1.png",
+	"meteorBrown_big1.png",
+	"meteorBrown_med1.png",
+	"meteorBrown_small1.png",
     "meteorBrown_tiny1.png"
 ]
 
 // NEW: Multiple variants per tier
 var brown_sprites: Array = [
-    ["meteorBrown_big1.png", "big2.png", "big3.png", "big4.png"],  // 4 variants
-    ["meteorBrown_med1.png", "med3.png"],                           // 2 variants
-    ["meteorBrown_small1.png", "small2.png"],                       // 2 variants
-    ["meteorBrown_tiny1.png", "tiny2.png"]                          // 2 variants
+	["meteorBrown_big1.png", "big2.png", "big3.png", "big4.png"],  // 4 variants
+	["meteorBrown_med1.png", "med3.png"],                           // 2 variants
+	["meteorBrown_small1.png", "small2.png"],                       // 2 variants
+	["meteorBrown_tiny1.png", "tiny2.png"]                          // 2 variants
 ]
 
 var grey_sprites: Array = [
-    ["meteorGrey_big1.png", "big2.png", "big3.png", "big4.png"],   // 4 variants
-    ["meteorGrey_med1.png", "med2.png"],                            // 2 variants
-    ["meteorGrey_small1.png", "small2.png"],                        // 2 variants
-    ["meteorGrey_tiny1.png", "tiny2.png"]                           // 2 variants
+	["meteorGrey_big1.png", "big2.png", "big3.png", "big4.png"],   // 4 variants
+	["meteorGrey_med1.png", "med2.png"],                            // 2 variants
+	["meteorGrey_small1.png", "small2.png"],                        // 2 variants
+	["meteorGrey_tiny1.png", "tiny2.png"]                           // 2 variants
 ]
 ```
 
@@ -139,17 +139,17 @@ rotation = randf() * TAU
 **Save System Updated:**
 ```gdscript
 if "sprite_color_set" in resource:
-    resource_data["sprite_color_set"] = resource.sprite_color_set
+	resource_data["sprite_color_set"] = resource.sprite_color_set
 if "base_scale" in resource:
-    resource_data["base_scale"] = resource.base_scale
+	resource_data["base_scale"] = resource.base_scale
 ```
 
 **Load System Updated:**
 ```gdscript
 if resource_data.has("sprite_color_set"):
-    resource.sprite_color_set = resource_data["sprite_color_set"]
+	resource.sprite_color_set = resource_data["sprite_color_set"]
 if resource_data.has("base_scale"):
-    resource.base_scale = resource_data["base_scale"]
+	resource.base_scale = resource_data["base_scale"]
 ```
 
 **Result:**
@@ -376,4 +376,3 @@ The asteroid scaling and variety system transforms a functional but repetitive v
 - **Ensures quality** (no bugs, clean code)
 
 The asteroid field now rivals the visual quality of professional space games while providing clear gameplay feedback and maintaining excellent performance. Players will immediately notice and appreciate the variety and polish.
-

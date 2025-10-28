@@ -1,6 +1,21 @@
-[gd_scene load_steps=2 format=3 uid="uid://cy8k6n2xqw7pa"]
+[gd_scene load_steps=4 format=3 uid="uid://cy8k6n2xqw7pa"]
 
 [ext_resource type="Script" path="res://scripts/ui/WormholeInfoPanel.gd" id="1_wormhole_info"]
+[ext_resource type="Theme" uid="uid://bh3pao1yls74n" path="res://resources/themes/main_theme.tres" id="2_theme"]
+
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_wormhole"]
+bg_color = Color(0.039, 0.059, 0.118, 0.95)
+border_width_left = 2
+border_width_top = 2
+border_width_right = 2
+border_width_bottom = 2
+border_color = Color(0.612, 0.153, 0.69, 1)
+corner_radius_top_left = 8
+corner_radius_top_right = 8
+corner_radius_bottom_right = 8
+corner_radius_bottom_left = 8
+shadow_color = Color(0.612, 0.153, 0.69, 0.5)
+shadow_size = 10
 
 [node name="WormholeInfoPanel" type="Panel"]
 anchors_preset = 8
@@ -14,6 +29,8 @@ offset_right = 200.0
 offset_bottom = 250.0
 grow_horizontal = 2
 grow_vertical = 2
+theme = ExtResource("2_theme")
+theme_override_styles/panel = SubResource("StyleBoxFlat_wormhole")
 script = ExtResource("1_wormhole_info")
 
 [node name="VBoxContainer" type="VBoxContainer" parent="."]
@@ -27,14 +44,15 @@ theme_override_constants/separation = 10
 
 [node name="ZoneTitle" type="Label" parent="VBoxContainer"]
 layout_mode = 2
-theme_override_colors/font_color = Color(0.8, 0.6, 1, 1)
+theme_override_colors/font_color = Color(0.612, 0.153, 0.69, 1)
 theme_override_font_sizes/font_size = 24
 text = "★ ZONE 3: DEEP SPACE ★"
 horizontal_alignment = 1
 
 [node name="ZoneInfo" type="Label" parent="VBoxContainer"]
 layout_mode = 2
-theme_override_colors/font_color = Color(0.7, 0.7, 0.8, 1)
+theme_override_colors/font_color = Color(0, 0.898, 1, 1)
+theme_override_font_sizes/font_size = 12
 text = "[3x AREA] [Tiers 0-2]"
 horizontal_alignment = 1
 
@@ -123,8 +141,8 @@ layout_mode = 2
 [node name="TravelButton" type="Button" parent="VBoxContainer"]
 custom_minimum_size = Vector2(0, 50)
 layout_mode = 2
-theme_override_colors/font_color = Color(0.3, 1, 0.9, 1)
-theme_override_colors/font_hover_color = Color(0.5, 1, 1, 1)
+theme_override_colors/font_color = Color(0, 0.898, 1, 1)
+theme_override_colors/font_hover_color = Color(0.463, 1, 0.012, 1)
 theme_override_font_sizes/font_size = 18
 text = "✦ TRAVEL TO ZONE 3 ✦"
 

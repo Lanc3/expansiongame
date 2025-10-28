@@ -1,0 +1,47 @@
+[gd_scene load_steps=2 format=3 uid="uid://cja3l6t4slxt0"]
+
+[ext_resource type="Script" path="res://scripts/ui/CosmoteerBlueprintLibrary.gd" id="1_blueprint_library"]
+
+[node name="CosmoteerBlueprintLibrary" type="PanelContainer"]
+custom_minimum_size = Vector2(500, 600)
+anchors_preset = 8
+anchor_left = 0.5
+anchor_top = 0.5
+anchor_right = 0.5
+anchor_bottom = 0.5
+offset_left = -250.0
+offset_top = -300.0
+offset_right = 250.0
+offset_bottom = 300.0
+grow_horizontal = 2
+grow_vertical = 2
+script = ExtResource("1_blueprint_library")
+
+[node name="VBox" type="VBoxContainer" parent="."]
+layout_mode = 2
+
+[node name="TitleLabel" type="Label" parent="VBox"]
+layout_mode = 2
+text = "Select Blueprint"
+horizontal_alignment = 1
+custom_minimum_size = Vector2(0, 40)
+
+[node name="Separator" type="HSeparator" parent="VBox"]
+layout_mode = 2
+
+[node name="BlueprintScroll" type="ScrollContainer" parent="VBox"]
+layout_mode = 2
+size_flags_vertical = Control.SIZE_EXPAND_FILL
+
+[node name="BlueprintList" type="VBoxContainer" parent="VBox/BlueprintScroll"]
+layout_mode = 2
+size_flags_horizontal = Control.SIZE_EXPAND_FILL
+
+[node name="Separator2" type="HSeparator" parent="VBox"]
+layout_mode = 2
+
+[node name="CancelBtn" type="Button" parent="VBox"]
+layout_mode = 2
+text = "Cancel"
+custom_minimum_size = Vector2(0, 40)
+

@@ -70,7 +70,16 @@ func select_units_in_rect(rect: Rect2, add_to_selection: bool = false):
 	if not add_to_selection:
 		clear_selection()
 	
-	var units = EntityManager.units
+	# Only select units in current zone
+	var current_zone = ZoneManager.current_zone_id if ZoneManager else ""
+	if current_zone.is_empty():
+		print("SelectionManager: Cannot select - no valid current zone!")
+		return  # Can't select if no valid zone
+	
+	var units = EntityManager.get_units_in_zone(current_zone) if EntityManager else []
+	print("SelectionManager: Box selection in zone '%s' - found %d units" % [current_zone, units.size()])
+	
+	var units_in_rect = 0
 	for unit in units:
 		if not is_instance_valid(unit):
 			continue
@@ -79,6 +88,9 @@ func select_units_in_rect(rect: Rect2, add_to_selection: bool = false):
 		if unit.has_method("get") and unit.team_id == 0:
 			if rect.has_point(unit.global_position):
 				select_unit(unit, true)
+				units_in_rect += 1
+	
+	print("SelectionManager: Selected %d units in box" % units_in_rect)
 
 func has_selection() -> bool:
 	return not selected_units.is_empty()

@@ -36,6 +36,30 @@ func _ready():
 		time_label = $VBox/TimeLabel if has_node("VBox/TimeLabel") else null
 		build_button = $VBox/BuildButton if has_node("VBox/BuildButton") else null
 		multiplier_label = $VBox/MultiplierLabel if has_node("VBox/MultiplierLabel") else null
+	
+	# Add hover effects
+	mouse_entered.connect(_on_mouse_entered)
+	mouse_exited.connect(_on_mouse_exited)
+
+func _on_mouse_entered():
+	"""Add hover glow effect"""
+	var tween = create_tween()
+	tween.set_ease(Tween.EASE_OUT)
+	tween.set_trans(Tween.TRANS_CUBIC)
+	tween.tween_property(self, "modulate", Color(1.1, 1.1, 1.1, 1.0), 0.15)
+	tween.parallel().tween_property(self, "scale", Vector2(1.02, 1.02), 0.15)
+	
+	# Play hover sound
+	if AudioManager and AudioManager.has_method("play_ui_sound"):
+		AudioManager.play_ui_sound("hover")
+
+func _on_mouse_exited():
+	"""Remove hover effect"""
+	var tween = create_tween()
+	tween.set_ease(Tween.EASE_OUT)
+	tween.set_trans(Tween.TRANS_CUBIC)
+	tween.tween_property(self, "modulate", Color(1.0, 1.0, 1.0, 1.0), 0.15)
+	tween.parallel().tween_property(self, "scale", Vector2.ONE, 0.15)
 
 func setup(type: String, data: Dictionary, ship: Node2D):
 	"""Setup button with unit data"""
@@ -161,6 +185,15 @@ func update_availability():
 
 func _on_build_pressed():
 	"""Handle build button press"""
+	# Click flash effect
+	var tween = create_tween()
+	tween.tween_property(self, "modulate", Color(1.3, 1.3, 1.3, 1.0), 0.05)
+	tween.tween_property(self, "modulate", Color(1.0, 1.0, 1.0, 1.0), 0.15)
+	
+	# Play click sound
+	if AudioManager and AudioManager.has_method("play_ui_sound"):
+		AudioManager.play_ui_sound("click")
+	
 	build_requested.emit(unit_type)
 	
 	# Update display after build attempt

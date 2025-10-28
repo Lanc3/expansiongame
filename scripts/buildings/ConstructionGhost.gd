@@ -8,7 +8,7 @@ signal construction_confirmed(building_type: String, position: Vector2)
 var building_type: String = ""
 var building_data: Dictionary = {}
 var is_valid_placement: bool = true
-var zone_id: int = 1
+var zone_id: String = ""
 
 # Visual components
 var sprite: Sprite2D
@@ -31,7 +31,7 @@ func _ready():
 	
 	print("ConstructionGhost: _ready() called")
 
-func initialize(b_type: String, b_data: Dictionary, z_id: int):
+func initialize(b_type: String, b_data: Dictionary, z_id: String):
 	"""Initialize ghost with building data"""
 	building_type = b_type
 	building_data = b_data
@@ -240,4 +240,3 @@ func get_construction_info() -> Dictionary:
 		"zone_id": zone_id,
 		"is_valid": is_valid_placement
 	}
-

@@ -31,6 +31,26 @@ func setup(type: String, _unused: String):
 	
 	tooltip_text = "%s - Click to select all" % type
 	pressed.connect(_on_pressed)
+	
+	# Add smooth hover transitions
+	mouse_entered.connect(_on_button_hover)
+	mouse_exited.connect(_on_button_unhover)
+
+func _on_button_hover():
+	"""Hover effect with scale"""
+	if disabled:
+		return
+	var tween = create_tween()
+	tween.set_ease(Tween.EASE_OUT)
+	tween.set_trans(Tween.TRANS_CUBIC)
+	tween.tween_property(self, "scale", Vector2(1.05, 1.05), 0.2)
+
+func _on_button_unhover():
+	"""Remove hover effect"""
+	var tween = create_tween()
+	tween.set_ease(Tween.EASE_OUT)
+	tween.set_trans(Tween.TRANS_CUBIC)
+	tween.tween_property(self, "scale", Vector2.ONE, 0.2)
 
 func update_count(count: int):
 	unit_count = count
@@ -46,4 +66,13 @@ func update_count(count: int):
 		modulate = Color(0.6, 0.6, 0.6, 0.8)
 
 func _on_pressed():
+	# Click flash effect
+	var tween = create_tween()
+	tween.tween_property(self, "modulate", Color(1.2, 1.2, 1.2, 1.0), 0.05)
+	tween.tween_property(self, "modulate", Color(1.0, 1.0, 1.0, 1.0), 0.1)
+	
+	# Play click sound
+	if AudioManager and AudioManager.has_method("play_sound"):
+		AudioManager.play_sound("button_click")
+	
 	SelectionManager.select_units_by_type(unit_type)

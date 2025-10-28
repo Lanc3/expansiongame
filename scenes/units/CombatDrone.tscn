@@ -8,7 +8,7 @@
 
 [node name="BaseUnit" instance=ExtResource("1_kisff")]
 script = ExtResource("2_0join")
-vision_range = 300.0
+vision_range = 800.0
 attack_range = 300.0
 auto_attack = true
 

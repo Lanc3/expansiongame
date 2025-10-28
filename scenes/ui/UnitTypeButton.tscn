@@ -1,18 +1,52 @@
-[gd_scene load_steps=3 format=3 uid="uid://c7yan4k2m8prw"]
+[gd_scene load_steps=6 format=3 uid="uid://c7yan4k2m8prw"]
 
 [ext_resource type="Script" path="res://scripts/ui/UnitTypeButton.gd" id="1_unit"]
+[ext_resource type="Theme" uid="uid://bh3pao1yls74n" path="res://resources/themes/main_theme.tres" id="2_theme"]
 
-[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_transparent"]
-bg_color = Color(1, 1, 1, 0)
-draw_center = false
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_normal"]
+bg_color = Color(0.039, 0.059, 0.118, 0.4)
+border_width_left = 1
+border_width_top = 1
+border_width_right = 1
+border_width_bottom = 1
+border_color = Color(0, 0.898, 1, 0.4)
+corner_radius_top_left = 5
+corner_radius_top_right = 5
+corner_radius_bottom_right = 5
+corner_radius_bottom_left = 5
+
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_hover"]
+bg_color = Color(0.039, 0.059, 0.118, 0.6)
+border_width_left = 1
+border_width_top = 1
+border_width_right = 1
+border_width_bottom = 1
+border_color = Color(0, 0.898, 1, 0.8)
+corner_radius_top_left = 5
+corner_radius_top_right = 5
+corner_radius_bottom_right = 5
+corner_radius_bottom_left = 5
+shadow_color = Color(0, 0.898, 1, 0.3)
+shadow_size = 2
+
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_disabled"]
+bg_color = Color(0.1, 0.1, 0.15, 0.2)
+border_width_left = 1
+border_width_top = 1
+border_width_right = 1
+border_width_bottom = 1
+border_color = Color(0.4, 0.4, 0.45, 0.3)
+corner_radius_top_left = 5
+corner_radius_top_right = 5
+corner_radius_bottom_right = 5
+corner_radius_bottom_left = 5
 
 [node name="UnitTypeButton" type="Button"]
 custom_minimum_size = Vector2(50, 50)
-theme_override_styles/normal = SubResource("StyleBoxFlat_transparent")
-theme_override_styles/hover = SubResource("StyleBoxFlat_transparent")
-theme_override_styles/pressed = SubResource("StyleBoxFlat_transparent")
-theme_override_styles/disabled = SubResource("StyleBoxFlat_transparent")
-theme_override_styles/focus = SubResource("StyleBoxFlat_transparent")
+theme = ExtResource("2_theme")
+theme_override_styles/normal = SubResource("StyleBoxFlat_normal")
+theme_override_styles/hover = SubResource("StyleBoxFlat_hover")
+theme_override_styles/disabled = SubResource("StyleBoxFlat_disabled")
 script = ExtResource("1_unit")
 
 [node name="VBox" type="VBoxContainer" parent="."]
@@ -32,6 +66,7 @@ stretch_mode = 5
 
 [node name="CountLabel" type="Label" parent="VBox"]
 layout_mode = 2
+theme_override_colors/font_color = Color(0, 0.898, 1, 1)
 theme_override_font_sizes/font_size = 10
 text = "×0"
 horizontal_alignment = 1

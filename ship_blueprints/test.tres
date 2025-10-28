@@ -1,0 +1,108 @@
+[gd_resource type="Resource" script_class="CosmoteerShipBlueprint" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://scripts/data/CosmoteerShipBlueprint.gd" id="1_eq3pv"]
+
+[resource]
+script = ExtResource("1_eq3pv")
+blueprint_name = "test"
+hull_cells = {
+Vector2i(5, 1): 0,
+Vector2i(5, 2): 0,
+Vector2i(5, 3): 0,
+Vector2i(5, 4): 0,
+Vector2i(6, 0): 0,
+Vector2i(6, 1): 0,
+Vector2i(6, 2): 0,
+Vector2i(6, 3): 0,
+Vector2i(6, 4): 0,
+Vector2i(6, 5): 0,
+Vector2i(6, 6): 0,
+Vector2i(6, 7): 0,
+Vector2i(6, 8): 0,
+Vector2i(7, 0): 0,
+Vector2i(7, 1): 0,
+Vector2i(7, 2): 0,
+Vector2i(7, 3): 0,
+Vector2i(7, 4): 0,
+Vector2i(7, 5): 0,
+Vector2i(7, 6): 0,
+Vector2i(7, 7): 0,
+Vector2i(7, 8): 0,
+Vector2i(8, 0): 0,
+Vector2i(8, 1): 0,
+Vector2i(8, 2): 0,
+Vector2i(8, 3): 0,
+Vector2i(8, 4): 0,
+Vector2i(8, 5): 0,
+Vector2i(8, 6): 0,
+Vector2i(8, 7): 0,
+Vector2i(8, 8): 0,
+Vector2i(9, 0): 0,
+Vector2i(9, 1): 0,
+Vector2i(9, 2): 0,
+Vector2i(9, 3): 0,
+Vector2i(9, 4): 0,
+Vector2i(9, 5): 0,
+Vector2i(9, 6): 0,
+Vector2i(9, 7): 0,
+Vector2i(9, 8): 0,
+Vector2i(10, 0): 0,
+Vector2i(10, 1): 0,
+Vector2i(10, 2): 0,
+Vector2i(10, 3): 0,
+Vector2i(10, 4): 0,
+Vector2i(10, 5): 0,
+Vector2i(10, 6): 0,
+Vector2i(10, 7): 0,
+Vector2i(10, 8): 0,
+Vector2i(11, 1): 0,
+Vector2i(11, 2): 0,
+Vector2i(11, 3): 0,
+Vector2i(11, 4): 0
+}
+components = [{
+"grid_position": Vector2i(8, 0),
+"size": Vector2i(2, 2),
+"type": "engine"
+}, {
+"grid_position": Vector2i(11, 3),
+"size": Vector2i(1, 2),
+"type": "laser_weapon"
+}, {
+"grid_position": Vector2i(5, 3),
+"size": Vector2i(1, 2),
+"type": "laser_weapon"
+}, {
+"grid_position": Vector2i(9, 3),
+"size": Vector2i(2, 2),
+"type": "missile_launcher"
+}, {
+"grid_position": Vector2i(6, 3),
+"size": Vector2i(2, 2),
+"type": "missile_launcher"
+}, {
+"grid_position": Vector2i(7, 5),
+"size": Vector2i(2, 2),
+"type": "power_core"
+}, {
+"grid_position": Vector2i(7, 7),
+"size": Vector2i(2, 2),
+"type": "power_core"
+}, {
+"grid_position": Vector2i(9, 5),
+"size": Vector2i(2, 2),
+"type": "engine"
+}, {
+"grid_position": Vector2i(9, 7),
+"size": Vector2i(2, 2),
+"type": "engine"
+}, {
+"grid_position": Vector2i(8, 2),
+"size": Vector2i(2, 1),
+"type": "shield_generator"
+}, {
+"grid_position": Vector2i(6, 1),
+"size": Vector2i(2, 2),
+"type": "power_core"
+}]
+thumbnail_data = PackedByteArray()

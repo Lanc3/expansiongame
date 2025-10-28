@@ -1,15 +1,15 @@
 extends Panel
 ## Minimap display showing game world overview
 
-@onready var minimap_rect: ColorRect = $MinimapRect
+@onready var minimap_rect: ColorRect = $MarginContainer/MinimapRect
 @onready var viewport_indicator: ColorRect = $ViewportIndicator
 
-@export var minimap_size: Vector2 = Vector2(200, 200)
+@export var minimap_size: Vector2 = Vector2(256, 196)
 
 var camera: Camera2D
 var update_interval: float = 0.1  # Update 10 times per second
 var time_since_update: float = 0.0
-var current_zone_id: int = 1
+var current_zone_id: String = ""
 var world_size: Vector2 = Vector2(4000, 4000)
 
 func _ready():
@@ -26,20 +26,20 @@ func _ready():
 	
 	# Set minimap background
 	if minimap_rect:
-		minimap_rect.color = Color(0.1, 0.1, 0.15, 0.9)
+		minimap_rect.color = Color(0.05, 0.05, 0.1, 0.95)
 		minimap_rect.size = minimap_size
 		minimap_rect.mouse_filter = Control.MOUSE_FILTER_PASS
 	
 	# Setup viewport indicator
 	if viewport_indicator:
-		viewport_indicator.color = Color(0.3, 0.5, 1.0, 0.25)  # Blue and more transparent
+		viewport_indicator.color = Color(0, 0.898, 1, 0.3)  # Bright cyan
 		viewport_indicator.mouse_filter = Control.MOUSE_FILTER_IGNORE
 		viewport_indicator.z_index = 10  # Draw on top
 	else:
 		push_error("Minimap: ViewportIndicator not found")
 	
-	# Set panel size
-	custom_minimum_size = minimap_size
+	# Set panel size (260x200 with padding)
+	custom_minimum_size = Vector2(260, 200)
 
 func _process(delta: float):
 	time_since_update += delta
@@ -50,13 +50,39 @@ func _process(delta: float):
 		update_viewport_indicator()
 
 func _draw():
+	# Draw decorative corner brackets for arcade feel (with 4px padding offset)
+	draw_corner_brackets()
+	
 	# Draw all entities on the minimap
 	draw_entities()
+
+func draw_corner_brackets():
+	"""Draw stylized corner brackets for arcade aesthetic"""
+	var padding = 4.0
+	var bracket_size = 12.0
+	var bracket_thickness = 2.0
+	var bracket_color = Color(0, 0.898, 1, 0.6)
+	
+	# Top-left
+	draw_line(Vector2(padding, padding + bracket_size), Vector2(padding, padding), bracket_color, bracket_thickness)
+	draw_line(Vector2(padding, padding), Vector2(padding + bracket_size, padding), bracket_color, bracket_thickness)
+	
+	# Top-right
+	draw_line(Vector2(minimap_size.x + padding - bracket_size, padding), Vector2(minimap_size.x + padding, padding), bracket_color, bracket_thickness)
+	draw_line(Vector2(minimap_size.x + padding, padding), Vector2(minimap_size.x + padding, padding + bracket_size), bracket_color, bracket_thickness)
+	
+	# Bottom-left
+	draw_line(Vector2(padding, minimap_size.y + padding - bracket_size), Vector2(padding, minimap_size.y + padding), bracket_color, bracket_thickness)
+	draw_line(Vector2(padding, minimap_size.y + padding), Vector2(padding + bracket_size, minimap_size.y + padding), bracket_color, bracket_thickness)
+	
+	# Bottom-right
+	draw_line(Vector2(minimap_size.x + padding - bracket_size, minimap_size.y + padding), Vector2(minimap_size.x + padding, minimap_size.y + padding), bracket_color, bracket_thickness)
+	draw_line(Vector2(minimap_size.x + padding, minimap_size.y + padding - bracket_size), Vector2(minimap_size.x + padding, minimap_size.y + padding), bracket_color, bracket_thickness)
 
 func update_minimap():
 	queue_redraw()  # Request a redraw
 
-func _on_zone_switched(from_zone_id: int, to_zone_id: int):
+func _on_zone_switched(from_zone_id: String, to_zone_id: String):
 	"""Handle zone switch"""
 	current_zone_id = to_zone_id
 	update_world_size()
@@ -70,6 +96,9 @@ func update_world_size():
 			world_size = bounds.size
 
 func draw_entities():
+	# Apply 4px padding offset for all drawing
+	var padding_offset = Vector2(4, 4)
+	
 	# Draw fog of war first (as background)
 	if FogOfWarManager:
 		draw_fog_overlay()
@@ -85,18 +114,21 @@ func draw_entities():
 			if FogOfWarManager and not FogOfWarManager.is_position_revealed(current_zone_id, resource.global_position):
 				continue  # Skip unrevealed resources
 			
-			var minimap_pos = world_to_minimap(resource.global_position)
+			var minimap_pos = world_to_minimap(resource.global_position) + padding_offset
 			var color = get_resource_color(resource)
 			draw_circle(minimap_pos, 2.0, color)
 	
-	# Draw units (only if revealed)
+	# Draw units (player units always visible, enemy units only if revealed)
 	for unit in zone_units:
 		if is_instance_valid(unit):
-			# Check if position is revealed
-			if FogOfWarManager and not FogOfWarManager.is_position_revealed(current_zone_id, unit.global_position):
-				continue  # Skip unrevealed units
+			# Player units (team_id 0) always visible on minimap
+			var is_player_unit = unit.get("team_id") == 0
 			
-			var minimap_pos = world_to_minimap(unit.global_position)
+			# Check if position is revealed (skip for player units)
+			if not is_player_unit and FogOfWarManager and not FogOfWarManager.is_position_revealed(current_zone_id, unit.global_position):
+				continue  # Skip unrevealed enemy units
+			
+			var minimap_pos = world_to_minimap(unit.global_position) + padding_offset
 			var color = get_unit_color(unit)
 			draw_circle(minimap_pos, 3.0, color)
 	
@@ -109,7 +141,7 @@ func draw_entities():
 				if FogOfWarManager and not FogOfWarManager.is_position_revealed(current_zone_id, building.global_position):
 					continue  # Skip unrevealed buildings
 				
-				var minimap_pos = world_to_minimap(building.global_position)
+				var minimap_pos = world_to_minimap(building.global_position) + padding_offset
 				
 				# Different visuals for spawners vs turrets
 				if building.is_in_group("spawners"):
@@ -132,7 +164,7 @@ func draw_entities():
 				if FogOfWarManager and not FogOfWarManager.is_position_revealed(current_zone_id, wormhole.global_position):
 					continue  # Skip unrevealed wormholes
 				
-				var minimap_pos = world_to_minimap(wormhole.global_position)
+				var minimap_pos = world_to_minimap(wormhole.global_position) + padding_offset
 				
 				# Different colors for forward vs return wormholes
 				var is_forward = wormhole.get_meta("is_forward", true)
@@ -194,6 +226,7 @@ func draw_fog_overlay():
 	
 	var grid_height = grid.size()
 	var grid_width = grid[0].size()
+	var padding_offset = Vector2(4, 4)
 	
 	# Calculate tile size on minimap
 	var tile_size_minimap = Vector2(
@@ -205,7 +238,7 @@ func draw_fog_overlay():
 	for y in range(grid_height):
 		for x in range(grid_width):
 			if not grid[y][x]:  # Unexplored
-				var tile_pos = Vector2(x * tile_size_minimap.x, y * tile_size_minimap.y)
+				var tile_pos = Vector2(x * tile_size_minimap.x, y * tile_size_minimap.y) + padding_offset
 				draw_rect(Rect2(tile_pos, tile_size_minimap), Color(0, 0, 0, 0.8))
 
 func get_resource_color(resource: Node2D) -> Color:
@@ -236,13 +269,15 @@ func update_viewport_indicator():
 	if not camera or not viewport_indicator:
 		return
 	
+	var padding_offset = Vector2(4, 4)
+	
 	# Calculate visible area in world space
 	var viewport_size = camera.get_viewport_rect().size
 	var viewport_world_size = viewport_size / camera.zoom
 	var camera_pos = camera.global_position
 	
 	# Convert camera center to minimap space
-	var camera_minimap_pos = world_to_minimap(camera_pos)
+	var camera_minimap_pos = world_to_minimap(camera_pos) + padding_offset
 	
 	# Calculate the size of the viewport in minimap space
 	var size_minimap = Vector2(

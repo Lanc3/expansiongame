@@ -1,7 +1,7 @@
 extends Control
 ## Renders fog of war overlay by drawing tiles directly in screen space
 
-var current_zone_id: int = 1
+var current_zone_id: String = ""
 var camera: Camera2D
 var last_camera_pos: Vector2 = Vector2.ZERO
 var last_camera_zoom: float = 1.0
@@ -73,7 +73,7 @@ func _draw():
 	var zone_bounds = zone.boundaries
 	var grid_height = grid.size()
 	var grid_width = grid[0].size()
-	var tile_size = FogOfWarManager.TILE_SIZE
+	var tile_size = FogOfWarManager.get_tile_size(current_zone_id)  # Use adaptive tile size
 	var render_tile_size = tile_size * 2.5  # Render tiles 2.5x larger for full edge coverage
 	
 	# Get viewport size and camera info
@@ -156,7 +156,7 @@ func world_to_screen(world_pos: Vector2, camera_pos: Vector2, camera_zoom: float
 	var screen_pos = (relative_pos * camera_zoom) + (viewport_size / 2.0)
 	return screen_pos
 
-func _on_zone_switched(_from_zone_id: int, to_zone_id: int):
+func _on_zone_switched(_from_zone_id: String, to_zone_id: String):
 	"""Handle zone switch"""
 	current_zone_id = to_zone_id
 	if camera:
@@ -164,8 +164,7 @@ func _on_zone_switched(_from_zone_id: int, to_zone_id: int):
 		last_camera_zoom = camera.zoom.x
 	queue_redraw()
 
-func _on_fog_revealed(zone_id: int):
+func _on_fog_revealed(zone_id: String):
 	"""Handle fog revelation notification"""
 	if zone_id == current_zone_id:
 		queue_redraw()
-

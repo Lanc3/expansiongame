@@ -1,15 +1,23 @@
 extends Area2D
 class_name Wormhole
-## Bi-directional portal connecting two zones
+## Portal connecting zones (lateral or depth)
 
-signal units_traveled(units: Array, target_zone_id: int)
+enum WormholeType {
+	DEPTH,    # Connects to different difficulty (forward/backward)
+	LATERAL   # Connects to same difficulty (sideways)
+}
+
+signal units_traveled(units: Array, target_zone_id: String)
 signal wormhole_selected(wormhole: Wormhole)
 
-@export var source_zone_id: int = 1
-@export var target_zone_id: int = 2
+@export var source_zone_id: String = ""
+@export var target_zone_id: String = ""
 @export var is_active: bool = true
+@export var wormhole_type: WormholeType = WormholeType.DEPTH
+@export var is_undiscovered: bool = false  # True if leads to undiscovered zone
 
 var is_selected: bool = false
+var is_generating_zone: bool = false  # Flag to prevent multiple simultaneous zone generations
 
 @onready var sprite: Sprite2D = $Sprite2D
 @onready var particles: CPUParticles2D = $CPUParticles2D
@@ -18,7 +26,8 @@ var is_selected: bool = false
 @onready var label: Label = $Label
 
 var is_hovered: bool = false
-var base_modulate: Color = Color(0.6, 0.3, 1.0, 1.0)  # Purple/magenta tint
+var base_modulate: Color = Color(0.6, 0.3, 1.0, 1.0)  # Purple for depth
+var wormhole_direction: float = 0.0  # Direction angle for lateral wormholes
 
 func _ready():
 	# Setup collision for selection and input
@@ -32,12 +41,15 @@ func _ready():
 	add_to_group("selectable")
 	add_to_group("wormholes")
 	
-	# Set color based on direction
-	var is_forward = get_meta("is_forward", true)
-	if is_forward:
-		base_modulate = Color(0.6, 0.3, 1.0, 1.0)  # Purple for forward
-	else:
-		base_modulate = Color(0.3, 0.6, 1.0, 1.0)  # Blue for return
+	# Set color based on wormhole type
+	if wormhole_type == WormholeType.LATERAL:
+		base_modulate = Color(0.3, 0.8, 0.8, 1.0)  # Cyan/teal for lateral
+	else:  # DEPTH
+		var is_forward = get_meta("is_forward", true)
+		if is_forward:
+			base_modulate = Color(0.6, 0.3, 1.0, 1.0)  # Purple for forward
+		else:
+			base_modulate = Color(0.3, 0.6, 1.0, 1.0)  # Blue for return
 	
 	# Setup visual
 	setup_visual()
@@ -50,12 +62,11 @@ func _ready():
 	
 	# Register with ZoneManager
 	if ZoneManager:
-		ZoneManager.set_zone_wormhole(source_zone_id, self)
+		var wh_type = "lateral" if wormhole_type == WormholeType.LATERAL else "depth"
+		ZoneManager.set_zone_wormhole(source_zone_id, self, wh_type)
 	
-	# Update label based on direction (use same variable)
-	if label:
-		var arrow = "→" if is_forward else "←"
-		label.text = "%s ZONE %d" % [arrow, target_zone_id]
+	# Update label based on type and destination
+	update_label()
 	
 
 func setup_visual():
@@ -173,9 +184,35 @@ func _on_mouse_exited():
 	if sprite and not is_selected:
 		sprite.modulate = base_modulate
 
+func update_label():
+	"""Update wormhole label based on type and destination"""
+	if not label:
+		return
+	
+	if is_undiscovered:
+		label.text = "??? Undiscovered Region"
+	elif wormhole_type == WormholeType.LATERAL:
+		# Get target zone name if it exists
+		var target_zone = ZoneManager.get_zone(target_zone_id) if ZoneManager else {}
+		var zone_name = target_zone.get("procedural_name", "Unknown Zone")
+		label.text = "↔ %s" % zone_name
+	else:  # DEPTH
+		var is_forward = get_meta("is_forward", true)
+		var target_zone = ZoneManager.get_zone(target_zone_id) if ZoneManager else {}
+		var zone_name = target_zone.get("procedural_name", "Unknown Zone")
+		var arrow = "↓" if is_forward else "↑"
+		label.text = "%s %s" % [arrow, zone_name]
+
 func can_travel() -> bool:
 	"""Check if wormhole is active and ready for travel"""
-	return is_active and ZoneManager.is_valid_zone(target_zone_id)
+	if not is_active:
+		return false
+	
+	# If undiscovered, can still travel (it will trigger generation)
+	if is_undiscovered:
+		return true
+	
+	return ZoneManager and ZoneManager.is_valid_zone(target_zone_id)
 
 func travel_units(units: Array):
 	"""Issue move commands to units to travel to wormhole (they'll teleport when in range)"""
@@ -190,31 +227,100 @@ func travel_units(units: Array):
 	for unit in units:
 		if is_instance_valid(unit) and unit.has_method("add_command"):
 			unit.add_command(CommandSystem.CommandType.TRAVEL_WORMHOLE, global_position, self, false)
-	
-	print("Wormhole: Commanded %d units to travel to wormhole" % units.size())
 
 func teleport_unit(unit: Node2D):
 	"""Teleport a single unit that has arrived at the wormhole"""
 	if not can_travel() or not is_instance_valid(unit):
 		return
 	
-	# Get corresponding wormhole in target zone
-	var target_zone = ZoneManager.get_zone(target_zone_id)
-	if target_zone.is_empty() or target_zone.wormholes.size() == 0:
+	# If zone is currently being generated, wait
+	if is_generating_zone:
 		return
 	
-	# Find the return wormhole (the one that points back to our source zone)
+	# If undiscovered, generate zone first
+	if is_undiscovered and ZoneDiscoveryManager:
+		is_generating_zone = true  # Lock to prevent concurrent generation
+		
+		var new_zone_id = ""
+		
+		if wormhole_type == WormholeType.LATERAL:
+			# Generate lateral zone
+			new_zone_id = ZoneDiscoveryManager.generate_and_discover_lateral_zone(
+				source_zone_id, self, wormhole_direction
+			)
+		else:  # DEPTH
+			# Generate depth zone
+			var source_zone = ZoneManager.get_zone(source_zone_id) if ZoneManager else {}
+			if not source_zone.is_empty():
+				var is_forward = get_meta("is_forward", true)
+				var target_difficulty = source_zone.difficulty + (1 if is_forward else -1)
+				new_zone_id = ZoneDiscoveryManager.generate_and_discover_depth_zone(
+					source_zone_id, target_difficulty, wormhole_direction
+				)
+		
+		# Update target zone ID
+		if new_zone_id:
+			target_zone_id = new_zone_id
+			is_undiscovered = false
+			update_label()
+		else:
+			print("Wormhole: Failed to generate zone!")
+			is_generating_zone = false
+			return
+	
+	# Get target zone
+	var target_zone = ZoneManager.get_zone(target_zone_id) if ZoneManager else {}
+	if target_zone.is_empty():
+		print("Wormhole: Target zone '%s' not found!" % target_zone_id)
+		return
+	
+	# CRITICAL: Wait for zone layer to be created if it doesn't exist yet
+	if not target_zone.layer_node:
+		# Wait a few frames to allow layer creation to complete
+		for i in range(10):
+			await get_tree().process_frame
+			# Re-fetch zone data
+			target_zone = ZoneManager.get_zone(target_zone_id) if ZoneManager else {}
+			if not target_zone.is_empty() and target_zone.layer_node:
+				is_generating_zone = false  # Unlock for other units
+				break
+		
+		if target_zone.is_empty() or not target_zone.layer_node:
+			print("Wormhole: Zone layer not ready for '%s' after waiting!" % target_zone_id)
+			is_generating_zone = false  # Unlock even on failure
+			return
+	else:
+		# Layer already exists, unlock immediately
+		is_generating_zone = false
+	
+	# Find spawn position (return wormhole or zone center)
+	var target_position = Vector2.ZERO
+	
+	# Look for return wormhole
+	var return_wormholes = []
+	if wormhole_type == WormholeType.LATERAL:
+		return_wormholes = target_zone.lateral_wormholes
+	else:
+		return_wormholes = target_zone.depth_wormholes
+	
+	print("Wormhole: Looking for return wormhole to '%s' in target zone '%s'" % [source_zone_id, target_zone_id])
+	print("Wormhole: Target zone has %d depth wormholes" % return_wormholes.size())
+	
 	var target_wormhole = null
-	for wormhole in target_zone.wormholes:
-		if wormhole.target_zone_id == source_zone_id:
-			target_wormhole = wormhole
-			break
+	for wormhole in return_wormholes:
+		if is_instance_valid(wormhole):
+			print("  - Depth wormhole pointing to: %s" % wormhole.target_zone_id)
+			if wormhole.target_zone_id == source_zone_id:
+				target_wormhole = wormhole
+				break
 	
-	# Fallback to first wormhole if no return wormhole found
-	if not target_wormhole:
-		target_wormhole = target_zone.wormholes[0]
-	
-	var target_position = target_wormhole.global_position
+	if target_wormhole:
+		target_position = target_wormhole.global_position
+		print("Wormhole: Found return wormhole at %s" % target_position)
+	else:
+		# No return wormhole, spawn near center of zone
+		target_position = Vector2.ZERO
+		print("Wormhole: WARNING - No return wormhole found! Spawning at zone center (0,0)")
 	
 	# Clear unit's command queue and reset state BEFORE teleporting
 	if unit.has_method("clear_commands"):
@@ -224,7 +330,16 @@ func teleport_unit(unit: Node2D):
 	spawn_travel_effect()
 	
 	# Transfer this unit through ZoneManager (this changes the unit's parent and position)
-	ZoneManager.transfer_units_to_zone([unit], target_zone_id, target_position)
+	if ZoneManager:
+		ZoneManager.transfer_units_to_zone([unit], target_zone_id, target_position)
+		
+		# Switch camera to target zone so player can see/control units
+		ZoneManager.switch_to_zone(target_zone_id)
+		
+		# Pan camera to arrival position
+		var camera = get_viewport().get_camera_2d()
+		if camera and camera.has_method("focus_on_position"):
+			camera.focus_on_position(target_position, 0.5)
 	
 	# Wait for physics frame to ensure position/reparenting is complete
 	await get_tree().physics_frame
@@ -243,6 +358,10 @@ func teleport_unit(unit: Node2D):
 			# Clear the navigation path completely
 			nav_agent.target_position = unit.global_position
 			nav_agent.set_velocity(Vector2.ZERO)
+		
+		# Reveal fog of war around arrival position
+		if FogOfWarManager:
+			FogOfWarManager.reveal_position(target_zone_id, target_position, 800.0)
 			
 	
 	# Spawn arrival effect at target
@@ -316,8 +435,8 @@ func spawn_arrival_effect():
 
 func get_display_name() -> String:
 	"""Get display name for UI"""
-	return "Wormhole to Zone %d" % target_zone_id
+	return "Wormhole to Zone %s" % target_zone_id
 
 func get_description() -> String:
 	"""Get description for UI"""
-	return "Right-click with units selected to travel to Zone %d" % target_zone_id
+	return "Right-click with units selected to travel to Zone %s" % target_zone_id

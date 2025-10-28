@@ -1,14 +1,27 @@
-[gd_scene load_steps=3 format=3 uid="uid://uqst8elkmddt"]
+[gd_scene load_steps=4 format=3 uid="uid://uqst8elkmddt"]
 
 [ext_resource type="Script" uid="uid://b1h0t87s75wwh" path="res://scripts/ui/SelectedUnitsPanel.gd" id="1_panel"]
+[ext_resource type="Theme" uid="uid://bh3pao1yls74n" path="res://resources/themes/main_theme.tres" id="2_theme"]
 
 [sub_resource type="StyleBoxFlat" id="StyleBoxFlat_selected"]
-bg_color = Color(0.1, 0.2, 0.4, 0.5)
+bg_color = Color(0.039, 0.059, 0.118, 0.85)
+border_width_left = 2
+border_width_top = 2
+border_width_right = 2
+border_width_bottom = 2
+border_color = Color(0, 0.898, 1, 1)
+corner_radius_top_left = 8
+corner_radius_top_right = 8
+corner_radius_bottom_right = 8
+corner_radius_bottom_left = 8
+shadow_color = Color(0, 0.898, 1, 0.4)
+shadow_size = 6
 
 [node name="SelectedUnitsPanel" type="Panel"]
-custom_minimum_size = Vector2(400, 100)
-offset_right = 400.0
+custom_minimum_size = Vector2(505, 100)
+offset_right = 505.0
 offset_bottom = 100.0
+theme = ExtResource("2_theme")
 theme_override_styles/panel = SubResource("StyleBoxFlat_selected")
 script = ExtResource("1_panel")
 
@@ -17,6 +30,10 @@ layout_mode = 1
 anchors_preset = 15
 anchor_right = 1.0
 anchor_bottom = 1.0
+offset_left = 4.0
+offset_top = 4.0
+offset_right = -4.0
+offset_bottom = -4.0
 grow_horizontal = 2
 grow_vertical = 2
 theme_override_constants/separation = 2

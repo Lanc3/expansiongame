@@ -16,7 +16,7 @@ const MINING_THRESHOLD: int = 50
 const SCANNING_THRESHOLD: int = 30
 
 # Zone entry tracking
-var last_zone_id: int = 1
+var last_zone_id: String = ""
 var zone_events_triggered: Dictionary = {}  # Track events per zone
 
 # Active events
@@ -132,26 +132,40 @@ func try_trigger_activity_event(activity_type: String):
 			if randf() < 0.5:  # 50% chance
 				trigger_event("derelict_ship")
 
-func try_trigger_zone_entry_event(zone_id: int):
+func try_trigger_zone_entry_event(zone_id: String):
 	"""Trigger event when entering new zone"""
 	# Don't re-trigger in same zone
 	if zone_events_triggered.get(zone_id, false):
 		return
 	
-	# Higher zones = more likely to trigger
-	var chance = 0.2 + (zone_id * 0.05)  # 20% + 5% per zone
+	# Get zone difficulty
+	var difficulty = 1
+	if ZoneManager:
+		var zone = ZoneManager.get_zone(zone_id)
+		if not zone.is_empty():
+			difficulty = zone.difficulty
+	
+	# Higher difficulty = more likely to trigger
+	var chance = 0.2 + (difficulty * 0.05)  # 20% + 5% per difficulty
 	if randf() < chance:
 		zone_events_triggered[zone_id] = true
 		var event_id = pick_random_event_for_zone(zone_id)
 		trigger_event(event_id)
 
-func pick_random_event_for_zone(zone_id: int) -> String:
+func pick_random_event_for_zone(zone_id: String) -> String:
 	"""Pick appropriate event based on zone difficulty"""
 	var available_events = []
 	
-	if zone_id <= 3:
+	# Get zone difficulty
+	var difficulty = 1
+	if ZoneManager:
+		var zone = ZoneManager.get_zone(zone_id)
+		if not zone.is_empty():
+			difficulty = zone.difficulty
+	
+	if difficulty <= 3:
 		available_events = ["pirate_ambush", "resource_cache", "derelict_ship"]
-	elif zone_id <= 6:
+	elif difficulty <= 6:
 		available_events = ["pirate_ambush", "alien_swarm", "asteroid_storm", "resource_cache"]
 	else:
 		available_events = ["alien_swarm", "boss_encounter", "asteroid_storm", "derelict_ship"]
@@ -474,7 +488,7 @@ func on_object_scanned():
 	objects_scanned += 1
 	try_trigger_activity_event("scanning")
 
-func _on_zone_changed(old_zone: int, new_zone: int):
+func _on_zone_changed(old_zone: String, new_zone: String):
 	"""Called when player changes zones"""
 	last_zone_id = new_zone
 	try_trigger_zone_entry_event(new_zone)

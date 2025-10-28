@@ -16,7 +16,7 @@ func _ready():
 	max_health = 70.0  # Fragile support unit
 	current_health = max_health
 	move_speed = 160.0  # Fast to reach allies
-	vision_range = 350.0  # Support drones have moderate vision
+	vision_range = 700.0  # Support drones have moderate vision (doubled from 350)
 
 func can_attack() -> bool:
 	return false

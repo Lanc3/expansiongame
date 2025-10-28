@@ -1,12 +1,12 @@
 extends Control
 ## Main menu scene
 
-@onready var start_button: Button = $VBoxContainer/StartButton
-@onready var load_button: Button = $VBoxContainer/LoadButton
-@onready var blueprint_button: Button = $VBoxContainer/BlueprintButton
-@onready var settings_button: Button = $VBoxContainer/SettingsButton
-@onready var quit_button: Button = $VBoxContainer/QuitButton
-@onready var title_label: Label = $VBoxContainer/TitleLabel
+@onready var start_button: Button = $MenuPanel/VBoxContainer/StartButton
+@onready var load_button: Button = $MenuPanel/VBoxContainer/LoadButton
+@onready var blueprint_button: Button = $MenuPanel/VBoxContainer/BlueprintButton
+@onready var settings_button: Button = $MenuPanel/VBoxContainer/SettingsButton
+@onready var quit_button: Button = $MenuPanel/VBoxContainer/QuitButton
+@onready var title_label: Label = $MenuPanel/VBoxContainer/TitleLabel
 
 func _ready():
 	start_button.pressed.connect(_on_start_pressed)
@@ -35,9 +35,9 @@ func _on_load_pressed():
 	SaveLoadManager.load_game()
 
 func _on_blueprint_pressed():
-	# Could open blueprint editor in menu mode
-	# For now, just start game with editor open
-	GameManager.change_scene("res://scenes/main/GameScene.tscn")
+	# Open Cosmoteer-style ship builder
+	var builder = preload("res://scenes/ui/CosmoteerShipBuilderUI.tscn").instantiate()
+	get_tree().root.add_child(builder)
 
 func _on_settings_pressed():
 	# Open settings panel

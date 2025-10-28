@@ -7,6 +7,7 @@ extends Node
 @onready var command_ship_panel: Panel = null
 @onready var tech_tree_ui: Control = null
 @onready var builder_drone_panel: Panel = null
+@onready var bottom_hud: Panel = null
 
 func _ready():
 	# Find the asteroid info panel
@@ -34,23 +35,30 @@ func _ready():
 		if travel_animation.has_signal("travel_complete"):
 			travel_animation.travel_complete.connect(_on_travel_complete)
 	
-	# Find command ship panel
-	command_ship_panel = get_tree().root.find_child("CommandShipPanel", true, false)
+	# Find bottom HUD manager
+	bottom_hud = get_tree().root.find_child("BottomHUD", true, false)
+	
+	# Get panels from bottom HUD if available
+	if bottom_hud and bottom_hud.has_method("get_command_ship_panel"):
+		await get_tree().process_frame  # Wait for BottomHUD to setup
+		command_ship_panel = bottom_hud.get_command_ship_panel()
+		builder_drone_panel = bottom_hud.get_builder_drone_panel()
+	else:
+		# Fallback to finding panels directly
+		command_ship_panel = get_tree().root.find_child("CommandShipPanel", true, false)
+		builder_drone_panel = get_tree().root.find_child("BuilderDronePanel", true, false)
 	
 	if not command_ship_panel:
 		push_warning("CommandShipPanel not found in scene")
+	
+	if not builder_drone_panel:
+		push_warning("BuilderDronePanel not found in scene")
 	
 	# Find tech tree UI
 	tech_tree_ui = get_tree().root.find_child("TechTreeUI", true, false)
 	
 	if not tech_tree_ui:
 		push_warning("TechTreeUI not found in scene")
-	
-	# Find builder drone panel
-	builder_drone_panel = get_tree().root.find_child("BuilderDronePanel", true, false)
-	
-	if not builder_drone_panel:
-		push_warning("BuilderDronePanel not found in scene")
 	
 	# Connect to selection manager signals
 	SelectionManager.asteroid_selected.connect(_on_asteroid_selected)
@@ -89,7 +97,7 @@ func _on_wormhole_selected(wormhole):
 	if wormhole_info_panel and wormhole_info_panel.has_method("show_for_wormhole"):
 		wormhole_info_panel.show_for_wormhole(wormhole)
 
-func _on_wormhole_travel_requested(target_zone_id: int):
+func _on_wormhole_travel_requested(target_zone_id: String):
 	"""Handle travel button press - start cinematic travel"""
 	
 	if not travel_animation or not travel_animation.has_method("play_travel_animation"):
@@ -118,19 +126,28 @@ func _on_selection_changed(selected_units: Array):
 			if "is_command_ship" in unit and unit.is_command_ship:
 				if command_ship_panel and command_ship_panel.has_method("show_for_command_ship"):
 					command_ship_panel.show_for_command_ship(unit)
-					hide_builder_panel()
+					if bottom_hud and bottom_hud.has_method("show_command_ship_panel"):
+						bottom_hud.show_command_ship_panel()
+					else:
+						hide_builder_panel()
 					return
 			
 			# Check if it's a builder drone
 			if unit is BuilderDrone:
 				if builder_drone_panel and builder_drone_panel.has_method("show_for_builder"):
 					builder_drone_panel.show_for_builder(unit)
-					hide_command_ship_panel()
+					if bottom_hud and bottom_hud.has_method("show_builder_panel"):
+						bottom_hud.show_builder_panel()
+					else:
+						hide_command_ship_panel()
 					return
 	
 	# Hide panels when nothing special is selected
-	hide_command_ship_panel()
-	hide_builder_panel()
+	if bottom_hud and bottom_hud.has_method("hide_center_panels"):
+		bottom_hud.hide_center_panels()
+	else:
+		hide_command_ship_panel()
+		hide_builder_panel()
 
 func hide_command_ship_panel():
 	"""Hide the command ship panel"""
@@ -143,14 +160,28 @@ func hide_builder_panel():
 		builder_drone_panel.visible = false
 
 func _on_building_selected(building: Node2D):
-	"""Handle building selection - show tech tree for Research Buildings"""
+	"""Handle building selection - show appropriate UI for each building type"""
+	print("UIController: Building selected - ", building)
+	
 	if not is_instance_valid(building):
+		print("UIController: Building not valid!")
 		return
 	
 	# Check if it's a Research Building
 	if building is ResearchBuilding:
+		print("UIController: It's a ResearchBuilding")
 		if tech_tree_ui and tech_tree_ui.has_method("show_for_building"):
 			tech_tree_ui.show_for_building(building)
+	
+	# Check if it's a Shipyard
+	elif building is Shipyard:
+		print("UIController: It's a Shipyard, calling on_clicked()")
+		if building.has_method("on_clicked"):
+			building.on_clicked()
+		else:
+			print("UIController: Shipyard doesn't have on_clicked method!")
+	else:
+		print("UIController: Building type not recognized: ", building.get_class())
 
 func _on_building_deselected():
 	"""Handle building deselection - hide tech tree"""

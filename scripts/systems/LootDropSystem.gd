@@ -25,7 +25,9 @@ func _ready():
 
 func drop_loot(enemy: Node2D):
 	"""Called when enemy dies - spawns resource drops"""
-	var zone_id = enemy.get_meta("zone_id", 1)
+	var zone_id = enemy.get_meta("zone_id", "")
+	if zone_id.is_empty() and ZoneManager:
+		zone_id = ZoneManager.get_unit_zone(enemy)
 	var is_boss = enemy.get_meta("is_boss", false)
 	var enemy_type = get_enemy_type(enemy)
 	
@@ -41,12 +43,19 @@ func drop_loot(enemy: Node2D):
 	# Emit signal for mining drones to collect
 	loot_dropped.emit(enemy.global_position, resources)
 
-func calculate_drop_amount(zone_id: int, is_boss: bool) -> int:
+func calculate_drop_amount(zone_id: String, is_boss: bool) -> int:
 	"""Calculate total resource amount to drop"""
 	var amount = float(BASE_DROP_AMOUNT)
 	
-	# Zone scaling
-	amount *= pow(ZONE_MULTIPLIER, zone_id - 1)
+	# Get zone difficulty for scaling
+	var difficulty = 1
+	if ZoneManager:
+		var zone = ZoneManager.get_zone(zone_id)
+		if not zone.is_empty():
+			difficulty = zone.difficulty
+	
+	# Difficulty scaling
+	amount *= pow(ZONE_MULTIPLIER, difficulty - 1)
 	
 	# Boss bonus
 	if is_boss:
@@ -54,7 +63,7 @@ func calculate_drop_amount(zone_id: int, is_boss: bool) -> int:
 	
 	return int(amount)
 
-func roll_resource_drops(enemy_type: String, total_amount: int, zone_id: int) -> Dictionary:
+func roll_resource_drops(enemy_type: String, total_amount: int, zone_id: String) -> Dictionary:
 	"""Roll which specific resources to drop"""
 	var drops = {}
 	var rarity_config = RARITY_RANGES.get(enemy_type, RARITY_RANGES["fighter"])
@@ -62,12 +71,19 @@ func roll_resource_drops(enemy_type: String, total_amount: int, zone_id: int) ->
 	# Split amount across multiple resource types
 	var drops_per_type = total_amount / rarity_config["count"]
 	
+	# Get zone difficulty for bonus calculation
+	var difficulty = 1
+	if ZoneManager:
+		var zone = ZoneManager.get_zone(zone_id)
+		if not zone.is_empty():
+			difficulty = zone.difficulty
+	
 	for i in range(rarity_config["count"]):
 		# Pick random resource ID within rarity range
 		var resource_id = randi_range(rarity_config["min"], rarity_config["max"])
 		
-		# Zone bonus: higher zones have chance for better resources
-		if zone_id > 5 and randf() < 0.3:
+		# Difficulty bonus: higher difficulty zones have chance for better resources
+		if difficulty > 5 and randf() < 0.3:
 			resource_id = min(resource_id + 10, rarity_config["max"])
 		
 		drops[resource_id] = int(drops_per_type)
@@ -95,7 +111,7 @@ func get_enemy_type(enemy: Node2D) -> String:
 	
 	return "fighter"
 
-func spawn_loot_visual(position: Vector2, resources: Dictionary, zone_id: int):
+func spawn_loot_visual(position: Vector2, resources: Dictionary, zone_id: String):
 	"""Spawn visual loot pickups (glowing orbs)"""
 	if not loot_orb_scene:
 		return
@@ -113,7 +129,7 @@ func spawn_loot_visual(position: Vector2, resources: Dictionary, zone_id: int):
 			if effects_container:
 				effects_container.add_child(loot_orb)
 
-func create_loot_orb(position: Vector2, resource_id: int, amount: int, zone_id: int) -> Node2D:
+func create_loot_orb(position: Vector2, resource_id: int, amount: int, zone_id: String) -> Node2D:
 	"""Create a glowing orb representing dropped loot"""
 	var orb = loot_orb_scene.instantiate()
 	orb.global_position = position + Vector2(randf_range(-20, 20), randf_range(-20, 20))
@@ -142,4 +158,3 @@ func get_resource_color(resource_id: int) -> Color:
 		return Color(0.9, 0.3, 0.9)  # Exotic - purple
 	else:
 		return Color(1.0, 0.8, 0.0)  # Legendary - gold
-

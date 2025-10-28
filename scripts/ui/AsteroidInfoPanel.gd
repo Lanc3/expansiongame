@@ -38,9 +38,24 @@ func show_asteroid(asteroid: ResourceNode):
 	visible = true
 	update_display()
 	position_panel()
+	
+	# Smooth fade-in
+	modulate.a = 0.0
+	var tween = create_tween()
+	tween.set_ease(Tween.EASE_OUT)
+	tween.set_trans(Tween.TRANS_CUBIC)
+	tween.tween_property(self, "modulate:a", 1.0, 0.2)
+	tween.parallel().tween_property(self, "scale", Vector2.ONE, 0.2).from(Vector2(0.95, 0.95))
 
 func hide_panel():
-	"""Hide the panel"""
+	"""Hide the panel with fade-out"""
+	var tween = create_tween()
+	tween.set_ease(Tween.EASE_IN)
+	tween.set_trans(Tween.TRANS_CUBIC)
+	tween.tween_property(self, "modulate:a", 0.0, 0.15)
+	tween.parallel().tween_property(self, "scale", Vector2(0.95, 0.95), 0.15)
+	await tween.finished
+	
 	visible = false
 	current_asteroid = null
 

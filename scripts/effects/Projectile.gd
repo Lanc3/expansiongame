@@ -16,7 +16,7 @@ var owner_team_id: int = 0
 @onready var trail: Line2D = $Trail if has_node("Trail") else null
 
 var trail_points: Array[Vector2] = []
-const MAX_TRAIL_POINTS: int = 20
+const MAX_TRAIL_POINTS: int = 8  # OPTIMIZATION: Reduced from 20 to 8 (60% less memory)
 
 func setup(wep_type: int, dmg: float, start_pos: Vector2, target_pos: Vector2, spd: float, homing: Node2D = null, owner: Node2D = null):
 	global_position = start_pos
@@ -32,19 +32,20 @@ func setup(wep_type: int, dmg: float, start_pos: Vector2, target_pos: Vector2, s
 	if owner and "team_id" in owner:
 		owner_team_id = owner.team_id
 	
-	# Set sprite texture and color based on weapon type
-	if sprite:
+	# OPTIMIZATION: Use pre-loaded textures from ProjectilePool
+	if sprite and ProjectilePool:
+		var texture = ProjectilePool.get_texture_for_type(weapon_type)
+		sprite.texture = texture
+		
+		# Set color modulation based on weapon type
 		match weapon_type:
 			0: # LASER (Bullets)
-				sprite.texture = load("res://assets/sprites/Lasers/laserRed01.png")
 				sprite.modulate = Color(1.0, 0.3, 0.3, 1.0)  # Red
 				sprite.scale = Vector2(0.8, 0.8)
 			1: # PLASMA
-				sprite.texture = load("res://assets/sprites/Lasers/laserBlue01.png")
 				sprite.modulate = Color(0.3, 0.8, 1.0, 1.0)  # Cyan
 				sprite.scale = Vector2(0.9, 0.9)
 			2: # MISSILE
-				sprite.texture = load("res://assets/sprites/Lasers/laserGreen01.png")
 				sprite.modulate = Color(1.0, 0.7, 0.2, 1.0)  # Orange
 				sprite.scale = Vector2(1.0, 1.0)
 
@@ -84,7 +85,11 @@ func _process(delta: float):
 	# Lifetime
 	age += delta
 	if age >= lifetime:
-		queue_free()
+		# Return to pool instead of queue_free for reuse
+		if ProjectilePool:
+			ProjectilePool.return_projectile(self)
+		else:
+			queue_free()
 
 func _on_body_entered(body: Node2D):
 	if body == owner_unit:
@@ -108,8 +113,30 @@ func _on_body_entered(body: Node2D):
 	
 	# Create impact effect
 	FeedbackManager.spawn_explosion(global_position)
-	queue_free()
+	
+	# Return to pool instead of queue_free for reuse
+	if ProjectilePool:
+		ProjectilePool.return_projectile(self)
+	else:
+		queue_free()
 
 func _on_area_entered(_area: Area2D):
 	# Handle area collisions if needed
 	pass
+
+func reset_for_pool():
+	"""Reset projectile state when returning to pool"""
+	# Clear trail
+	if trail_points:
+		trail_points.clear()
+	if trail:
+		trail.clear_points()
+	
+	# Reset all properties
+	age = 0.0
+	homing_target = null
+	owner_unit = null
+	owner_team_id = 0
+	direction = Vector2.ZERO
+	global_position = Vector2.ZERO
+	rotation = 0.0

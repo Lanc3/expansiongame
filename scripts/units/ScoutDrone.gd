@@ -22,7 +22,7 @@ func _ready():
 	max_health = 60.0
 	current_health = max_health
 	move_speed = 180.0  # Fast movement
-	vision_range = 600.0  # Scouts have extended vision for fog of war
+	vision_range = 1200.0  # Scouts have extended vision for fog of war (doubled from 600)
 	
 func can_attack() -> bool:
 	return false  # Scouts are unarmed
@@ -45,8 +45,12 @@ func _physics_process(delta: float):
 
 func passive_scan_area():
 	"""Passively discover resources and enemies (doesn't scan composition)"""
-	# Scan for resources
-	for resource in EntityManager.resources:
+	# Get current zone
+	var current_zone = ZoneManager.get_unit_zone(self) if ZoneManager else 1
+	
+	# Scan for resources in current zone only
+	var zone_resources = EntityManager.get_resources_in_zone(current_zone) if EntityManager else []
+	for resource in zone_resources:
 		if is_instance_valid(resource):
 			var distance = global_position.distance_to(resource.global_position)
 			if distance <= vision_range:
@@ -54,9 +58,15 @@ func passive_scan_area():
 					discovered_resources.append(resource)
 					on_resource_discovered(resource)
 	
-	# Scan for enemy units
+	# Scan for enemy units in current zone only
 	var enemies = EntityManager.get_units_in_radius(global_position, vision_range, 1)  # team_id 1 = enemy
 	for enemy in enemies:
+		# Verify enemy is in same zone
+		if ZoneManager:
+			var enemy_zone = ZoneManager.get_unit_zone(enemy)
+			if enemy_zone != current_zone:
+				continue
+		
 		if enemy not in discovered_enemies:
 			discovered_enemies.append(enemy)
 			on_enemy_discovered(enemy)
@@ -65,6 +75,15 @@ func start_scanning(asteroid: ResourceNode):
 	"""Begin scanning an asteroid for composition"""
 	if not is_instance_valid(asteroid):
 		return
+	
+	# Verify asteroid is in same zone as scout
+	if ZoneManager:
+		var scout_zone = ZoneManager.get_unit_zone(self)
+		var asteroid_zone = ZoneManager.get_unit_zone(asteroid)
+		if scout_zone != asteroid_zone:
+			print("Scout: Ignoring scan command - asteroid in different zone (Scout: %d, Asteroid: %d)" % [scout_zone, asteroid_zone])
+			complete_current_command()  # Skip this command
+			return
 	
 	target_asteroid = asteroid
 	target_entity = asteroid  # CRITICAL: Set BaseUnit's target_entity!

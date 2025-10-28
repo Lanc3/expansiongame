@@ -15,7 +15,10 @@ func _ready():
 	max_health = 80.0
 	current_health = max_health
 	move_speed = 140.0
-	vision_range = 400.0  # Combat drones have good vision
+	vision_range = 800.0  # Combat drones have good vision (doubled from 400)
+	
+	# OPTIMIZATION: Stagger initial scan to avoid spikes (random offset)
+	target_scan_timer = randf() * target_scan_interval
 
 func can_attack() -> bool:
 	return true
@@ -34,13 +37,21 @@ func _physics_process(delta: float):
 			auto_target_enemy()
 
 func auto_target_enemy():
-	# Find nearest enemy unit within vision range
-	var nearest_enemy = EntityManager.get_nearest_unit(global_position, 1, self)  # team_id 1 = enemy
+	# OPTIMIZATION: Use zone-aware targeting (only check units in current zone)
+	var current_zone_id = ZoneManager.get_unit_zone(self)
+	var nearest_enemy: Node2D = null
+	var vision_range_sq = vision_range * vision_range  # Use squared for faster comparison
+	
+	# Only search in the same zone - combat drones should not attack across zones
+	if not current_zone_id.is_empty() and EntityManager.has_method("get_nearest_unit_in_zone"):
+		nearest_enemy = EntityManager.get_nearest_unit_in_zone(global_position, 1, current_zone_id, self)  # team_id 1 = enemy
+	# No fallback - combat drones should only attack enemies in their zone
 	
 	if nearest_enemy and is_instance_valid(nearest_enemy):
-		var distance = global_position.distance_to(nearest_enemy.global_position)
+		# Check distance using squared values (avoid sqrt)
+		var distance_sq = global_position.distance_squared_to(nearest_enemy.global_position)
 		
-		if distance <= vision_range:
+		if distance_sq <= vision_range_sq:
 			# Enemy in range, attack it
 			current_target = nearest_enemy
 			

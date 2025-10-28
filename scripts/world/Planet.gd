@@ -2,7 +2,7 @@ extends Sprite2D
 class_name Planet
 ## Large planet sprite that serves as orbital center for asteroids
 
-@export var zone_id: int = 1
+@export var zone_id: String = ""
 @export var planet_scale: float = 3.0
 
 func _ready():
@@ -12,7 +12,7 @@ func _ready():
 	# Optional: Add subtle glow effect
 	modulate = Color(1.0, 1.0, 1.0, 1.0)
 
-func setup(p_zone_id: int, planet_texture: Texture2D, p_scale: float):
+func setup(p_zone_id: String, planet_texture: Texture2D, p_scale: float):
 	"""Setup planet with zone-specific properties"""
 	zone_id = p_zone_id
 	texture = planet_texture

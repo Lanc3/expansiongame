@@ -26,7 +26,7 @@ func _ready():
 	max_health = 500.0
 	current_health = max_health
 	move_speed = 20.0
-	vision_range = 800.0  # Command ship has largest vision
+	vision_range = 1600.0  # Command ship has largest vision (doubled from 800)
 
 func _process(delta: float):
 	super._process(delta)

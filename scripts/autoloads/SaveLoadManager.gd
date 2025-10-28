@@ -121,8 +121,8 @@ func _save_units_by_zone() -> Dictionary:
 	if not EntityManager or not ZoneManager:
 		return units_by_zone
 	
-	# Save units for each zone
-	for zone_id in range(1, 10):
+	# Save units for each discovered zone
+	for zone_id in ZoneManager.zones_by_id.keys():
 		var zone_units = EntityManager.get_units_in_zone(zone_id)
 		var units_data = []
 		
@@ -160,7 +160,7 @@ func _save_buildings_by_zone() -> Dictionary:
 		return buildings_by_zone
 	
 	# Save buildings for each zone
-	for zone_id in range(1, 10):
+	for zone_id in ZoneManager.zones_by_id.keys():
 		var zone_buildings = EntityManager.get_buildings_in_zone(zone_id)
 		var buildings_data = []
 		
@@ -379,7 +379,7 @@ func _save_resource_nodes_by_zone() -> Dictionary:
 		return resources_by_zone
 	
 	# Save resources for each zone
-	for zone_id in range(1, 10):
+	for zone_id in ZoneManager.zones_by_id.keys():
 		var zone_resources = EntityManager.get_resources_in_zone(zone_id)
 		var resources_data = []
 		
@@ -436,20 +436,23 @@ func _save_wormhole_positions() -> Dictionary:
 	if not ZoneManager:
 		return wormholes_data
 	
-	for zone_id in range(1, 10):  # All zones can have wormholes
+	for zone_id in ZoneManager.zones_by_id.keys():  # All discovered zones
 		var zone = ZoneManager.get_zone(zone_id)
-		if zone.is_empty() or zone.wormholes.size() == 0:
+		if zone.is_empty():
 			continue
 		
-		# Save all wormholes in this zone
+		# Save all wormholes in this zone (both lateral and depth)
 		var zone_wormholes = []
-		for wormhole in zone.wormholes:
+		var all_wormholes = zone.lateral_wormholes + zone.depth_wormholes
+		for wormhole in all_wormholes:
 			if is_instance_valid(wormhole):
 				zone_wormholes.append({
 					"x": wormhole.global_position.x,
 					"y": wormhole.global_position.y,
 					"target_zone_id": wormhole.target_zone_id,
-					"source_zone_id": wormhole.source_zone_id
+					"source_zone_id": wormhole.source_zone_id,
+					"wormhole_type": wormhole.wormhole_type,
+					"is_undiscovered": wormhole.is_undiscovered
 				})
 		
 		if zone_wormholes.size() > 0:
@@ -592,7 +595,7 @@ func _load_units_by_zone(units_by_zone: Dictionary):
 	"""Restore units to their respective zones"""
 	
 	for zone_id_str in units_by_zone.keys():
-		var zone_id = int(zone_id_str)
+		var zone_id = zone_id_str  # Zone IDs are now strings, no conversion needed
 		var units_data = units_by_zone[zone_id_str]
 		
 		var zone = ZoneManager.get_zone(zone_id)
@@ -628,23 +631,26 @@ func _load_units_by_zone(units_by_zone: Dictionary):
 			if unit_data.has("max_health") and "max_health" in unit:
 				unit.max_health = unit_data["max_health"]
 			
-			# Restore custom data
-			if unit_data.has("custom_data") and unit.has_method("load_save_data"):
-				unit.load_save_data(unit_data["custom_data"])
-			
-			# Add to zone's units container
+			# Add to zone's units container FIRST (needed for proper initialization)
 			units_container.add_child(unit)
 			
 			# Register with EntityManager
 			if EntityManager.has_method("register_unit"):
 				EntityManager.register_unit(unit, zone_id)
+			
+			# Restore custom data AFTER adding to scene (blueprint ships need scene tree access)
+			if unit_data.has("custom_data"):
+				if unit.has_method("restore_from_save_data"):
+					unit.restore_from_save_data(unit_data["custom_data"])
+				elif unit.has_method("load_save_data"):
+					unit.load_save_data(unit_data["custom_data"])
 	
 
 func _load_buildings_by_zone(buildings_by_zone: Dictionary):
 	"""Restore buildings to their respective zones"""
 	
 	for zone_id_str in buildings_by_zone.keys():
-		var zone_id = int(zone_id_str)
+		var zone_id = zone_id_str  # Zone IDs are now strings, no conversion needed
 		var buildings_data = buildings_by_zone[zone_id_str]
 		
 		var zone = ZoneManager.get_zone(zone_id)
@@ -708,7 +714,7 @@ func _load_resource_nodes_by_zone(resources_by_zone: Dictionary):
 	"""Restore resource nodes to their respective zones"""
 	
 	for zone_id_str in resources_by_zone.keys():
-		var zone_id = int(zone_id_str)
+		var zone_id = zone_id_str  # Zone IDs are now strings, no conversion needed
 		var resources_data = resources_by_zone[zone_id_str]
 		
 		var zone = ZoneManager.get_zone(zone_id)
@@ -770,7 +776,7 @@ func _save_planets() -> Dictionary:
 	var planets_data = {}
 	
 	# Get all planets in all zones
-	for zone_id in range(1, 10):
+	for zone_id in ZoneManager.zones_by_id.keys():
 		var zone = ZoneManager.get_zone(zone_id)
 		if zone.is_empty() or not zone.layer_node:
 			continue
@@ -802,7 +808,7 @@ func _save_asteroid_orbits() -> Dictionary:
 	var orbits_data = {}
 	
 	# Get all resource nodes (asteroids) with orbital data
-	for zone_id in range(1, 10):
+	for zone_id in ZoneManager.zones_by_id.keys():
 		var zone_resources = EntityManager.get_resources_in_zone(zone_id)
 		var zone_orbits = []
 		
@@ -832,7 +838,7 @@ func _load_planets(planets_data: Dictionary):
 	"""Load planet data and recreate planets"""
 	
 	for zone_id_str in planets_data.keys():
-		var zone_id = int(zone_id_str)
+		var zone_id = zone_id_str  # Zone IDs are now strings, no conversion needed
 		var zone = ZoneManager.get_zone(zone_id)
 		if zone.is_empty() or not zone.layer_node:
 			continue
@@ -869,13 +875,13 @@ func _load_planets(planets_data: Dictionary):
 			# Add to planets group
 			planet.add_to_group("planets")
 		
-		print("SaveLoadManager: Loaded %d planets for Zone %d" % [planets_data[zone_id_str].size(), zone_id])
+		print("SaveLoadManager: Loaded %d planets for Zone %s" % [planets_data[zone_id_str].size(), zone_id])
 
 func _load_asteroid_orbits(orbits_data: Dictionary):
 	"""Load asteroid orbital data and restore orbits"""
 	
 	for zone_id_str in orbits_data.keys():
-		var zone_id = int(zone_id_str)
+		var zone_id = zone_id_str  # Zone IDs are now strings, no conversion needed
 		var zone_resources = EntityManager.get_resources_in_zone(zone_id)
 		
 		for orbit_data in orbits_data[zone_id_str]:
@@ -899,7 +905,7 @@ func _load_asteroid_orbits(orbits_data: Dictionary):
 				if OrbitalManager:
 					OrbitalManager.restore_asteroid_orbit(found_resource, planet_pos, orbit_data["orbital_radius"], orbit_data["orbital_angle"])
 		
-		print("SaveLoadManager: Restored %d orbital asteroids for Zone %d" % [orbits_data[zone_id_str].size(), zone_id])
+		print("SaveLoadManager: Restored %d orbital asteroids for Zone %s" % [orbits_data[zone_id_str].size(), zone_id])
 
 # ============================================================================
 # RESEARCH SYSTEM SAVE/LOAD

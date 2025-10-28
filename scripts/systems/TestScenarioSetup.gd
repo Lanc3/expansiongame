@@ -15,36 +15,65 @@ var research_building_scene = preload("res://scenes/buildings/ResearchBuilding.t
 var builder_drone_scene = preload("res://scenes/units/BuilderDrone.tscn")
 
 func _ready():
-
+	print("TestScenarioSetup: _ready() called")
 	
 	# Skip initial spawn if loading from save
 	if SaveLoadManager and SaveLoadManager.is_loading_save:
-		
+		print("TestScenarioSetup: Skipping - loading from save")
 		return
 	
 	if not ZoneManager:
-		
+		print("TestScenarioSetup: ERROR - ZoneManager not found!")
 		return
 	
 	# Wait for zones to be initialized
 	if not ZoneManager.zones_ready:
-		
+		print("TestScenarioSetup: Waiting for zones to be initialized...")
 		await ZoneManager.zones_initialized
-	
+		print("TestScenarioSetup: Zones initialized signal received!")
+	else:
+		print("TestScenarioSetup: Zones already ready")
 	
 	setup_test_scenario()
 
 func setup_test_scenario():
-	# Spawn units in Zone 1
-	var zone1 = ZoneManager.get_zone(1)
-	if zone1.is_empty() or not zone1.layer_node:
-		
+	print("TestScenarioSetup: setup_test_scenario() called")
+	
+	# Spawn units in starting zone
+	if not ZoneManager or ZoneManager.current_zone_id.is_empty():
+		print("TestScenarioSetup: ERROR - ZoneManager not found or current_zone_id is empty!")
+		print("  ZoneManager exists: %s" % (ZoneManager != null))
+		if ZoneManager:
+			print("  current_zone_id: '%s'" % ZoneManager.current_zone_id)
 		return
+	
+	print("TestScenarioSetup: Current zone ID: '%s'" % ZoneManager.current_zone_id)
+	
+	var zone1 = ZoneManager.get_zone(ZoneManager.current_zone_id)
+	if zone1.is_empty():
+		print("TestScenarioSetup: ERROR - Zone data is empty!")
+		print("  Available zones: %s" % ZoneManager.zones_by_id.keys())
+		return
+	
+	print("TestScenarioSetup: Zone data found - %s" % zone1.procedural_name)
+	print("  layer_node: %s" % zone1.layer_node)
+	
+	if not zone1.layer_node:
+		print("TestScenarioSetup: ERROR - Zone layer_node is null!")
+		return
+	
+	print("TestScenarioSetup: Layer node found: %s" % zone1.layer_node.name)
 	
 	var units_node = zone1.layer_node.get_node_or_null("Entities/Units")
 	if not units_node:
-		
+		print("TestScenarioSetup: ERROR - Units node not found!")
+		print("  Layer children: %s" % zone1.layer_node.get_children())
+		var entities = zone1.layer_node.get_node_or_null("Entities")
+		if entities:
+			print("  Entities children: %s" % entities.get_children())
 		return
+	
+	print("TestScenarioSetup: Units node found - spawning units...")
 	
 	
 	# Spawn command ship at center
@@ -97,12 +126,14 @@ func setup_test_scenario():
 		
 		# Reveal area around all starting player units
 		var player_units = EntityManager.get_units_by_team(0)
+		var starting_zone = ZoneManager.current_zone_id if ZoneManager else ""
 		for unit in player_units:
 			if is_instance_valid(unit):
 				var unit_vision = unit.get("vision_range")
 				if unit_vision == null:
 					unit_vision = 400.0
-				FogOfWarManager.reveal_position(1, unit.global_position, unit_vision)
+				if not starting_zone.is_empty():
+					FogOfWarManager.reveal_position(starting_zone, unit.global_position, unit_vision)
 		
 		print("TestScenarioSetup: Initial fog revealed around %d starting units" % player_units.size())
 

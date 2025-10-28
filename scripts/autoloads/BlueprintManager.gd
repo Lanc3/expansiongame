@@ -137,7 +137,7 @@ func load_blueprint(name: String) -> Dictionary:
 		return parsed
 	return {}
 
-func build_blueprint(placements: Array, zone_id: int, spawn_pos: Vector2) -> bool:
+func build_blueprint(placements: Array, zone_id: String, spawn_pos: Vector2) -> bool:
 	var total_cost = compute_total_cost(placements)
 	if not ResourceManager.can_afford_cost(total_cost):
 		return false

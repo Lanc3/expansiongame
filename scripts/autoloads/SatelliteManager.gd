@@ -1,8 +1,8 @@
 extends Node
 ## Manages deployed reconnaissance and combat satellites across all zones
 
-signal satellite_deployed(satellite: Node2D, zone_id: int)
-signal satellite_destroyed(satellite: Node2D, zone_id: int)
+signal satellite_deployed(satellite: Node2D, zone_id: String)
+signal satellite_destroyed(satellite: Node2D, zone_id: String)
 
 # Satellite tracking
 var satellites_by_zone: Dictionary = {}  # zone_id -> Array[Satellite]
@@ -43,7 +43,7 @@ func can_deploy_combat_satellite() -> bool:
 	"""Check if player has unlocked combat satellites"""
 	return ResearchManager and ResearchManager.has_ability("ability_combat_satellite")
 
-func deploy_satellite(world_pos: Vector2, zone_id: int, is_combat: bool = false) -> Node2D:
+func deploy_satellite(world_pos: Vector2, zone_id: String, is_combat: bool = false) -> Node2D:
 	"""Deploy a satellite at the specified position"""
 	# Check research
 	if not can_deploy_satellite():
@@ -78,7 +78,7 @@ func deploy_satellite(world_pos: Vector2, zone_id: int, is_combat: bool = false)
 	
 	return satellite
 
-func create_satellite_node(world_pos: Vector2, zone_id: int, is_combat: bool) -> Node2D:
+func create_satellite_node(world_pos: Vector2, zone_id: String, is_combat: bool) -> Node2D:
 	"""Create the actual satellite node"""
 	var satellite = StaticBody2D.new()
 	satellite.name = "Satellite_%d" % Time.get_ticks_msec()
@@ -271,7 +271,9 @@ func destroy_satellite(satellite: Node2D):
 	if not is_instance_valid(satellite):
 		return
 	
-	var zone_id = satellite.get_meta("zone_id", 1)
+	var zone_id = satellite.get_meta("zone_id", "")
+	if zone_id.is_empty() and ZoneManager:
+		zone_id = ZoneManager.get_unit_zone(satellite)
 	
 	# Remove from tracking
 	if zone_id in satellites_by_zone:
@@ -285,7 +287,7 @@ func destroy_satellite(satellite: Node2D):
 	satellite.queue_free()
 	
 
-func get_satellites_in_zone(zone_id: int) -> Array:
+func get_satellites_in_zone(zone_id: String) -> Array:
 	"""Get all satellites in a specific zone"""
 	if zone_id in satellites_by_zone:
 		return satellites_by_zone[zone_id].duplicate()
@@ -304,12 +306,16 @@ func get_save_data() -> Dictionary:
 		if not is_instance_valid(satellite):
 			continue
 		
+		var zone_id = satellite.get_meta("zone_id", "")
+		if zone_id.is_empty() and ZoneManager:
+			zone_id = ZoneManager.get_unit_zone(satellite)
+		
 		satellite_data.append({
 			"position": {
 				"x": satellite.global_position.x,
 				"y": satellite.global_position.y
 			},
-			"zone_id": satellite.get_meta("zone_id", 1),
+			"zone_id": zone_id,
 			"is_combat": satellite.get_meta("satellite_type", "recon") == "combat",
 			"health": satellite.get_meta("health", SATELLITE_HEALTH)
 		})

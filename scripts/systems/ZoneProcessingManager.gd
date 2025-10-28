@@ -3,7 +3,7 @@ extends Node
 ## Optimizes performance by reducing update frequency for inactive zones
 
 # Zone tracking
-var active_zone_id: int = 1
+var active_zone_id: String = ""
 var inactive_update_counter: int = 0
 const INACTIVE_UPDATE_INTERVAL: int = 60  # 1 FPS at 60 FPS (background simulation)
 
@@ -17,7 +17,7 @@ func _process(delta: float):
 		inactive_update_counter = 0
 		process_inactive_zones(delta * INACTIVE_UPDATE_INTERVAL)
 
-func set_active_zone(zone_id: int):
+func set_active_zone(zone_id: String):
 	"""Switch which zone is actively processed"""
 	if zone_id == active_zone_id:
 		return
@@ -31,7 +31,7 @@ func set_active_zone(zone_id: int):
 	
 	active_zone_id = zone_id
 
-func move_entities_to_inactive(zone_id: int):
+func move_entities_to_inactive(zone_id: String):
 	"""Set entities in zone to reduced processing"""
 	var units = EntityManager.get_units_in_zone(zone_id) if EntityManager else []
 	
@@ -45,9 +45,9 @@ func move_entities_to_inactive(zone_id: int):
 		if is_instance_valid(building) and building.has_method("set_processing_active"):
 			building.set_processing_active(false)
 	
-	print("ZoneProcessingManager: Set Zone %d to REDUCED processing (%d units)" % [zone_id, units.size()])
+	print("ZoneProcessingManager: Set Zone %s to REDUCED processing (%d units)" % [zone_id, units.size()])
 
-func move_entities_to_active(zone_id: int):
+func move_entities_to_active(zone_id: String):
 	"""Set entities in zone to full processing"""
 	var units = EntityManager.get_units_in_zone(zone_id) if EntityManager else []
 	
@@ -61,7 +61,7 @@ func move_entities_to_active(zone_id: int):
 		if is_instance_valid(building) and building.has_method("set_processing_active"):
 			building.set_processing_active(true)
 	
-	print("ZoneProcessingManager: Set Zone %d to FULL processing (%d units)" % [zone_id, units.size()])
+	print("ZoneProcessingManager: Set Zone %s to FULL processing (%d units)" % [zone_id, units.size()])
 
 func process_inactive_zones(accumulated_delta: float):
 	"""Process inactive zones at 1 FPS"""
@@ -69,7 +69,7 @@ func process_inactive_zones(accumulated_delta: float):
 	# This is just to trigger periodic checks
 	pass
 
-func get_zone_buildings(zone_id: int) -> Array:
+func get_zone_buildings(zone_id: String) -> Array:
 	"""Get all buildings in a zone"""
 	var buildings = []
 	var all_buildings = get_tree().get_nodes_in_group("enemy_buildings")
@@ -81,7 +81,7 @@ func get_zone_buildings(zone_id: int) -> Array:
 	
 	return buildings
 
-func on_unit_spawned(unit: Node2D, zone_id: int):
+func on_unit_spawned(unit: Node2D, zone_id: String):
 	"""Called when a new unit is spawned - set appropriate processing state"""
 	if not is_instance_valid(unit):
 		return
@@ -92,13 +92,10 @@ func on_unit_spawned(unit: Node2D, zone_id: int):
 		else:
 			unit.set_processing_state(1)  # REDUCED
 
-func on_building_created(building: Node2D, zone_id: int):
+func on_building_created(building: Node2D, zone_id: String):
 	"""Called when a new building is created - set appropriate processing state"""
 	if not is_instance_valid(building):
 		return
 	
 	if building.has_method("set_processing_active"):
 		building.set_processing_active(zone_id == active_zone_id)
-
-
-
