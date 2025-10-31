@@ -1,6 +1,7 @@
-[gd_scene load_steps=2 format=3 uid="uid://c8jq5r7x4m2vb"]
+[gd_scene load_steps=3 format=3 uid="uid://c8jq5r7x4m2vb"]
 
 [ext_resource type="Script" path="res://scripts/ui/GalaxyMapUI.gd" id="1_galaxy_map"]
+[ext_resource type="Texture2D" uid="uid://dxrh7k8ilq2co" path="res://assets/sprites/UI/rings.png" id="2_rings"]
 
 [node name="GalaxyMapUI" type="Control"]
 process_mode = 3
@@ -10,7 +11,7 @@ anchor_right = 1.0
 anchor_bottom = 1.0
 grow_horizontal = 2
 grow_vertical = 2
-mouse_filter = 2
+mouse_filter = 0
 script = ExtResource("1_galaxy_map")
 
 [node name="Background" type="ColorRect" parent="."]
@@ -23,7 +24,8 @@ grow_vertical = 2
 mouse_filter = 2
 color = Color(0.05, 0.05, 0.1, 1)
 
-[node name="GalaxyShader" type="ColorRect" parent="Background"]
+[node name="BackgroundTexture" type="TextureRect" parent="Background"]
+texture = ExtResource("2_rings")
 layout_mode = 1
 anchors_preset = 15
 anchor_right = 1.0
@@ -31,18 +33,20 @@ anchor_bottom = 1.0
 grow_horizontal = 2
 grow_vertical = 2
 mouse_filter = 2
+expand_mode = 1
+stretch_mode = 6
 
 [node name="InfoPanel" type="PanelContainer" parent="."]
 z_index = 10
 layout_mode = 1
-anchors_preset = 1
-anchor_left = 1.0
-anchor_right = 1.0
-offset_left = -300.0
-offset_top = 20.0
-offset_right = -20.0
-offset_bottom = 200.0
-grow_horizontal = 0
+anchors_preset = 0
+anchor_left = 0.0
+anchor_right = 0.0
+offset_left = 0.0
+offset_top = 0.0
+offset_right = 280.0
+offset_bottom = 180.0
+grow_horizontal = 1
 
 [node name="MarginContainer" type="MarginContainer" parent="InfoPanel"]
 layout_mode = 2
@@ -190,15 +194,15 @@ anchor_right = 1.0
 anchor_bottom = 1.0
 grow_horizontal = 2
 grow_vertical = 2
-mouse_filter = 1
+mouse_filter = 2
 
 [node name="ConnectionLines" type="Control" parent="."]
-z_index = 0
+z_index = 1
 layout_mode = 1
 anchors_preset = 15
 anchor_right = 1.0
 anchor_bottom = 1.0
 grow_horizontal = 2
 grow_vertical = 2
-mouse_filter = 1
+mouse_filter = 2
 

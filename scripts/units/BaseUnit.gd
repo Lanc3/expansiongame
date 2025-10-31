@@ -760,4 +760,5 @@ func update_collision_state():
 	if should_enable != collision_enabled:
 		collision_enabled = should_enable
 		set_collision_layer_value(1, collision_enabled)
-		set_collision_mask_value(1, collision_enabled)
+		# Ship-to-ship collisions disabled - ships don't check layer 1 (Units)
+		# set_collision_mask_value(1, collision_enabled)

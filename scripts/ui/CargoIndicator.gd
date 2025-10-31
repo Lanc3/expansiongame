@@ -19,6 +19,17 @@ func _process(_delta: float):
 		queue_free()
 		return
 	
+	# Check if target is in current zone
+	if ZoneManager:
+		var unit_zone = ZoneManager.get_unit_zone(target_unit)
+		var current_zone = ZoneManager.current_zone_id
+		
+		if unit_zone != current_zone:
+			visible = false
+			return
+		else:
+			visible = true
+	
 	# Follow target unit (convert world position to screen position)
 	var camera = get_viewport().get_camera_2d()
 	if camera:

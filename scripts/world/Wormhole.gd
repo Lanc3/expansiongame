@@ -30,6 +30,12 @@ var base_modulate: Color = Color(0.6, 0.3, 1.0, 1.0)  # Purple for depth
 var wormhole_direction: float = 0.0  # Direction angle for lateral wormholes
 
 func _ready():
+	print("Wormhole_debug : ~~~ WORMHOLE._ready() CALLED ~~~")
+	print("Wormhole_debug :   Source zone: %s" % source_zone_id)
+	print("Wormhole_debug :   Target zone: %s" % ("UNDISCOVERED" if target_zone_id.is_empty() else target_zone_id))
+	print("Wormhole_debug :   Type at _ready: %d (0=DEPTH, 1=LATERAL)" % wormhole_type)
+	print("Wormhole_debug :   Position: %s" % global_position)
+	
 	# Setup collision for selection and input
 	collision_layer = 0
 	collision_mask = 0
@@ -44,12 +50,15 @@ func _ready():
 	# Set color based on wormhole type
 	if wormhole_type == WormholeType.LATERAL:
 		base_modulate = Color(0.3, 0.8, 0.8, 1.0)  # Cyan/teal for lateral
+		print("Wormhole_debug :   Color set: CYAN (lateral)")
 	else:  # DEPTH
 		var is_forward = get_meta("is_forward", true)
 		if is_forward:
 			base_modulate = Color(0.6, 0.3, 1.0, 1.0)  # Purple for forward
+			print("Wormhole_debug :   Color set: PURPLE (depth forward)")
 		else:
 			base_modulate = Color(0.3, 0.6, 1.0, 1.0)  # Blue for return
+			print("Wormhole_debug :   Color set: BLUE (depth backward)")
 	
 	# Setup visual
 	setup_visual()
@@ -63,10 +72,14 @@ func _ready():
 	# Register with ZoneManager
 	if ZoneManager:
 		var wh_type = "lateral" if wormhole_type == WormholeType.LATERAL else "depth"
+		print("Wormhole_debug :   Registering with ZoneManager as: %s" % wh_type)
 		ZoneManager.set_zone_wormhole(source_zone_id, self, wh_type)
 	
 	# Update label based on type and destination
 	update_label()
+	
+	print("Wormhole_debug :   Type after _ready complete: %d (0=DEPTH, 1=LATERAL)" % wormhole_type)
+	print("Wormhole_debug : ~~~ WORMHOLE._ready() COMPLETE ~~~\n")
 	
 
 func setup_visual():
@@ -216,10 +229,19 @@ func can_travel() -> bool:
 
 func travel_units(units: Array):
 	"""Issue move commands to units to travel to wormhole (they'll teleport when in range)"""
+	print("Wormhole_debug : !!! TRAVEL_UNITS CALLED (wormhole clicked) !!!")
+	print("Wormhole_debug :   Wormhole position: %s" % global_position)
+	print("Wormhole_debug :   Wormhole type: %d (0=DEPTH, 1=LATERAL)" % wormhole_type)
+	print("Wormhole_debug :   Wormhole color: %s" % base_modulate)
+	print("Wormhole_debug :   Target zone: %s" % ("UNDISCOVERED" if target_zone_id.is_empty() else target_zone_id))
+	print("Wormhole_debug :   Units being sent: %d" % units.size())
+	
 	if not can_travel():
+		print("Wormhole_debug :   ERROR: can_travel() returned false!")
 		return
 	
 	if units.is_empty():
+		print("Wormhole_debug :   No units to send")
 		return
 	
 	# Command units to move to wormhole position
@@ -230,49 +252,91 @@ func travel_units(units: Array):
 
 func teleport_unit(unit: Node2D):
 	"""Teleport a single unit that has arrived at the wormhole"""
+	print("Wormhole_debug : --- TELEPORT_UNIT START ---")
+	print("Wormhole_debug :   Wormhole type: %s" % ("LATERAL" if wormhole_type == WormholeType.LATERAL else "DEPTH"))
+	print("Wormhole_debug :   Is undiscovered: %s" % is_undiscovered)
+	print("Wormhole_debug :   Current target: %s" % ("NONE" if target_zone_id.is_empty() else target_zone_id))
+	
 	if not can_travel() or not is_instance_valid(unit):
 		return
 	
 	# If zone is currently being generated, wait
 	if is_generating_zone:
+		print("Wormhole_debug :   Zone generation in progress, waiting...")
 		return
 	
 	# If undiscovered, generate zone first
 	if is_undiscovered and ZoneDiscoveryManager:
+		print("Wormhole_debug :   Wormhole is UNDISCOVERED - generating new zone...")
 		is_generating_zone = true  # Lock to prevent concurrent generation
 		
 		var new_zone_id = ""
 		
 		if wormhole_type == WormholeType.LATERAL:
+			print("Wormhole_debug :   Generating LATERAL zone...")
 			# Generate lateral zone
 			new_zone_id = ZoneDiscoveryManager.generate_and_discover_lateral_zone(
 				source_zone_id, self, wormhole_direction
 			)
 		else:  # DEPTH
+			print("Wormhole_debug :   Generating DEPTH zone...")
 			# Generate depth zone
 			var source_zone = ZoneManager.get_zone(source_zone_id) if ZoneManager else {}
 			if not source_zone.is_empty():
 				var is_forward = get_meta("is_forward", true)
 				var target_difficulty = source_zone.difficulty + (1 if is_forward else -1)
+				print("Wormhole_debug :   Calling generate_and_discover_depth_zone(source=%s, target_diff=%d)" % [source_zone_id, target_difficulty])
 				new_zone_id = ZoneDiscoveryManager.generate_and_discover_depth_zone(
 					source_zone_id, target_difficulty, wormhole_direction
 				)
+				print("Wormhole_debug :   Generated zone: %s" % new_zone_id)
 		
 		# Update target zone ID
 		if new_zone_id:
+			print("Wormhole_debug :   Zone generation SUCCESS - updating wormhole target to: %s" % new_zone_id)
 			target_zone_id = new_zone_id
 			is_undiscovered = false
 			update_label()
 		else:
-			print("Wormhole: Failed to generate zone!")
+			print("Wormhole_debug :   ERROR - Failed to generate zone!")
 			is_generating_zone = false
 			return
 	
-	# Get target zone
+	# Get source and target zone info for debugging
+	var source_zone = ZoneManager.get_zone(source_zone_id) if ZoneManager else {}
 	var target_zone = ZoneManager.get_zone(target_zone_id) if ZoneManager else {}
 	if target_zone.is_empty():
 		print("Wormhole: Target zone '%s' not found!" % target_zone_id)
 		return
+	
+	# DEBUG: Print teleport information
+	print("Wormhole_debug : === FINAL TELEPORT CHECK ===")
+	print("Wormhole_debug :   FROM: %s (difficulty %d, size %.0f)" % [source_zone_id, source_zone.difficulty, source_zone.spawn_area_size])
+	print("Wormhole_debug :   TO: %s (difficulty %d, size %.0f)" % [target_zone_id, target_zone.difficulty, target_zone.spawn_area_size])
+	print("Wormhole_debug :   Wormhole Type: %s (enum: %d)" % [("DEPTH" if wormhole_type == WormholeType.DEPTH else "LATERAL"), wormhole_type])
+	print("Wormhole_debug :   Size change: %.0f -> %.0f" % [source_zone.spawn_area_size, target_zone.spawn_area_size])
+	print("Wormhole_debug :   Difficulty change: %d -> %d" % [source_zone.difficulty, target_zone.difficulty])
+	
+	# CRITICAL CHECKS
+	if wormhole_type == WormholeType.DEPTH and source_zone.difficulty == target_zone.difficulty:
+		print("Wormhole_debug :   *** BUG *** DEPTH wormhole but SAME difficulty! This is WRONG!")
+	if wormhole_type == WormholeType.LATERAL and source_zone.difficulty != target_zone.difficulty:
+		print("Wormhole_debug :   *** BUG *** LATERAL wormhole but DIFFERENT difficulty! This is WRONG!")
+	if wormhole_type == WormholeType.DEPTH and source_zone.spawn_area_size == target_zone.spawn_area_size:
+		print("Wormhole_debug :   *** BUG *** DEPTH wormhole but SAME SIZE! This is WRONG!")
+	
+	print("Wormhole_debug : ===========================")
+	
+	# OLD DEBUG (keep for compatibility)
+	print("=== TELEPORT DEBUG ===")
+	if not source_zone.is_empty():
+		print("Source Zone: %s (difficulty %d, size %.0fx%.0f)" % [source_zone_id, source_zone.difficulty, source_zone.spawn_area_size, source_zone.spawn_area_size])
+	print("Target Zone: %s (difficulty %d, size %.0fx%.0f)" % [target_zone_id, target_zone.difficulty, target_zone.spawn_area_size, target_zone.spawn_area_size])
+	print("Wormhole Type: %s" % ("DEPTH" if wormhole_type == WormholeType.DEPTH else "LATERAL"))
+	if wormhole_type == WormholeType.DEPTH:
+		var is_forward_meta = get_meta("is_forward", true)
+		print("Direction: %s (is_forward=%s)" % ["FORWARD (toward center/higher diff)" if is_forward_meta else "BACKWARD (toward outer/lower diff)", is_forward_meta])
+	print("======================")
 	
 	# CRITICAL: Wait for zone layer to be created if it doesn't exist yet
 	if not target_zone.layer_node:
@@ -296,20 +360,23 @@ func teleport_unit(unit: Node2D):
 	# Find spawn position (return wormhole or zone center)
 	var target_position = Vector2.ZERO
 	
-	# Look for return wormhole
+	# Look for return wormhole in the SAME type of wormhole array
 	var return_wormholes = []
+	var wormhole_type_name = ""
 	if wormhole_type == WormholeType.LATERAL:
 		return_wormholes = target_zone.lateral_wormholes
+		wormhole_type_name = "lateral"
 	else:
 		return_wormholes = target_zone.depth_wormholes
+		wormhole_type_name = "depth"
 	
-	print("Wormhole: Looking for return wormhole to '%s' in target zone '%s'" % [source_zone_id, target_zone_id])
-	print("Wormhole: Target zone has %d depth wormholes" % return_wormholes.size())
+	print("Wormhole: Looking for return %s wormhole to '%s' in target zone '%s'" % [wormhole_type_name, source_zone_id, target_zone_id])
+	print("Wormhole: Target zone has %d %s wormholes" % [return_wormholes.size(), wormhole_type_name])
 	
 	var target_wormhole = null
 	for wormhole in return_wormholes:
 		if is_instance_valid(wormhole):
-			print("  - Depth wormhole pointing to: %s" % wormhole.target_zone_id)
+			print("  - %s wormhole pointing to: %s" % [wormhole_type_name.capitalize(), wormhole.target_zone_id])
 			if wormhole.target_zone_id == source_zone_id:
 				target_wormhole = wormhole
 				break

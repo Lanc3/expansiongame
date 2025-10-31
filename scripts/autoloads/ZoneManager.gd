@@ -65,42 +65,81 @@ func generate_zone_network_seed():
 	print("ZoneManager: Zone network seed: %d" % zone_network_seed)
 
 func create_initial_zone(difficulty: int) -> String:
-	"""Create the first zone at a given difficulty level"""
-	var zone_id = "d%d_start" % difficulty
-	var ring_position = 0.0  # Starting position on ring
+	"""Create the first zone at a given difficulty level (at index 0)"""
+	return create_zone_at_index(difficulty, 0, true)
+
+func create_zone_at_index(difficulty: int, zone_index: int, discovered: bool = false) -> String:
+	"""Create a zone at a specific index on its ring"""
+	# Validate zone_index
+	var max_zones = ZONES_PER_DIFFICULTY.get(difficulty, 4)
+	if zone_index < 0 or zone_index >= max_zones:
+		push_error("ZoneManager: Invalid zone_index %d for difficulty %d (max: %d)" % [zone_index, difficulty, max_zones])
+		return ""
 	
-	var zone = create_zone_data(zone_id, difficulty, ring_position, true)
+	# Check if zone at this index already exists
+	var existing_zones = get_zones_at_difficulty(difficulty)
+	for zone in existing_zones:
+		if zone.zone_index == zone_index:
+			print("ZoneManager: Zone at difficulty %d, index %d already exists: '%s'" % [difficulty, zone_index, zone.zone_id])
+			return zone.zone_id
+	
+	# Create unique zone ID
+	var zone_id = ""
+	if zone_index == 0:
+		zone_id = "d%d_start" % difficulty
+	else:
+		zone_id = "d%d_zone_%d" % [difficulty, zone_index]
+	
+	var zone = create_zone_data(zone_id, difficulty, zone_index, discovered)
 	zones_by_id[zone_id] = zone
 	
-	print("ZoneManager: Created initial zone '%s' at difficulty %d" % [zone_id, difficulty])
+	print("ZoneManager: Created zone '%s' at difficulty %d, index %d" % [zone_id, difficulty, zone_index])
 	return zone_id
 
-func generate_lateral_zone(difficulty: int, source_zone_id: String, direction_angle: float) -> String:
+func generate_lateral_zone(difficulty: int, source_zone_id: String, direction_angle: float, target_zone_index: int = -1) -> String:
 	"""Generate a new lateral zone at the same difficulty"""
-	# Get existing zones at this difficulty to determine next ID
+	# If target_zone_index is provided, use it; otherwise calculate sequentially
+	var zone_index = target_zone_index
+	
+	if zone_index == -1:
+		# Fallback: use sequential indexing (old behavior)
+		var existing_zones = get_zones_at_difficulty(difficulty)
+		zone_index = existing_zones.size()
+		print("ZoneManager: WARNING - No target_zone_index provided, using sequential: %d" % zone_index)
+	else:
+		print("ZoneManager: Creating lateral zone at specified index: %d" % zone_index)
+	
+	# Check if ring is full
+	var max_zones = ZONES_PER_DIFFICULTY.get(difficulty, 4)
+	if zone_index >= max_zones:
+		push_warning("ZoneManager: Cannot generate lateral zone - ring %d is full (%d/%d zones)" % [difficulty, zone_index, max_zones])
+		return ""
+	
+	# Check if zone at this index already exists
 	var existing_zones = get_zones_at_difficulty(difficulty)
-	var zone_index = existing_zones.size()
+	for zone in existing_zones:
+		if zone.zone_index == zone_index:
+			print("ZoneManager: Zone at difficulty %d, index %d already exists: '%s'" % [difficulty, zone_index, zone.zone_id])
+			return zone.zone_id
 	
 	# Create unique zone ID
 	var zone_id = "d%d_zone_%d" % [difficulty, zone_index]
 	
-	# Calculate ring position based on direction
-	var source_zone = get_zone(source_zone_id)
-	var ring_position = direction_angle
-	if not source_zone.is_empty():
-		ring_position = fmod(source_zone.ring_position + direction_angle, TAU)
-	
-	var zone = create_zone_data(zone_id, difficulty, ring_position, false)
+	var zone = create_zone_data(zone_id, difficulty, zone_index, false)
 	zones_by_id[zone_id] = zone
 	
-	print("ZoneManager: Generated lateral zone '%s' at difficulty %d" % [zone_id, difficulty])
+	print("ZoneManager: Generated lateral zone '%s' at difficulty %d (index %d)" % [zone_id, difficulty, zone_index])
 	return zone_id
 
-func create_zone_data(zone_id: String, difficulty: int, ring_position: float, discovered: bool) -> Dictionary:
+func create_zone_data(zone_id: String, difficulty: int, zone_index: int, discovered: bool) -> Dictionary:
 	"""Create zone data structure"""
+	# Calculate deterministic ring position from zone index
+	var ring_position = get_zone_angle(difficulty, zone_index)
+	
 	var zone = {
 		"zone_id": zone_id,
 		"difficulty": difficulty,
+		"zone_index": zone_index,  # New: deterministic position on ring
 		"procedural_name": get_zone_procedural_name(zone_id, difficulty),
 		"discovered": discovered,
 		"ring_position": ring_position,
@@ -138,6 +177,42 @@ func calculate_zone_boundaries(difficulty: int) -> Rect2:
 	var half_size = size / 2.0
 	return Rect2(-half_size, -half_size, size, size)
 
+func get_zone_angle(difficulty: int, zone_index: int) -> float:
+	"""Calculate fixed angle for a zone on its ring based on its index"""
+	var zones_on_ring = ZONES_PER_DIFFICULTY.get(difficulty, 4)
+	if zones_on_ring <= 0:
+		return 0.0
+	
+	# Validate zone_index
+	if zone_index < 0 or zone_index >= zones_on_ring:
+		push_warning("ZoneManager: Invalid zone_index %d for difficulty %d (max: %d)" % [zone_index, difficulty, zones_on_ring])
+		return 0.0
+	
+	# Evenly distribute zones around the ring
+	var angle = (float(zone_index) / float(zones_on_ring)) * TAU
+	return angle
+
+func get_depth_portal_zone_index(difficulty: int) -> int:
+	"""Determine which zone index on a ring gets the purple wormhole"""
+	# Use seed-based selection for variety, but deterministic
+	var hash_value = (difficulty * 17) ^ zone_network_seed
+	var zones_on_ring = ZONES_PER_DIFFICULTY.get(difficulty, 4)
+	return abs(hash_value) % zones_on_ring
+
+func should_zone_have_depth_portal(zone_id: String) -> bool:
+	"""Check if this zone is the designated portal zone for its ring"""
+	var zone = get_zone(zone_id)
+	if zone.is_empty():
+		return false
+	
+	# Check if zone has zone_index (backward compatibility)
+	if not zone.has("zone_index"):
+		push_warning("ZoneManager: Zone '%s' missing zone_index! Cannot determine portal status." % zone_id)
+		return false
+	
+	var portal_index = get_depth_portal_zone_index(zone.difficulty)
+	return zone.zone_index == portal_index
+
 ## Zone Access and Management
 
 func get_zone(zone_id: String) -> Dictionary:
@@ -155,6 +230,49 @@ func get_zones_at_difficulty(difficulty: int) -> Array:
 		if zone.difficulty == difficulty:
 			result.append(zone)
 	return result
+
+func get_zones_at_difficulty_sorted(difficulty: int) -> Array:
+	"""Get all zones at a specific difficulty level, sorted by zone_index"""
+	var zones = get_zones_at_difficulty(difficulty)
+	# Sort only zones that have zone_index
+	zones.sort_custom(func(a, b): 
+		var a_idx = a.zone_index if a.has("zone_index") else 0
+		var b_idx = b.zone_index if b.has("zone_index") else 0
+		return a_idx < b_idx
+	)
+	return zones
+
+func get_zone_neighbors(zone_id: String) -> Dictionary:
+	"""Get left and right neighbor zone IDs on the same ring"""
+	var zone = get_zone(zone_id)
+	if zone.is_empty():
+		return {"left": "", "right": ""}
+	
+	# Check if zone has zone_index (might not if it's from old save or wasn't migrated)
+	if not zone.has("zone_index"):
+		push_warning("ZoneManager: Zone '%s' missing zone_index! Cannot determine neighbors." % zone_id)
+		return {"left": "", "right": ""}
+	
+	var difficulty = zone.difficulty
+	var zone_index = zone.zone_index
+	var zones_on_ring = ZONES_PER_DIFFICULTY.get(difficulty, 4)
+	
+	# Calculate neighbor indices with wrapping
+	var left_index = (zone_index - 1 + zones_on_ring) % zones_on_ring
+	var right_index = (zone_index + 1) % zones_on_ring
+	
+	# Find zones with these indices (they might not exist yet)
+	var left_zone_id = ""
+	var right_zone_id = ""
+	
+	var zones_at_diff = get_zones_at_difficulty(difficulty)
+	for z in zones_at_diff:
+		if z.zone_index == left_index:
+			left_zone_id = z.zone_id
+		elif z.zone_index == right_index:
+			right_zone_id = z.zone_id
+	
+	return {"left": left_zone_id, "right": right_zone_id}
 
 func get_discovered_zones() -> Array[String]:
 	"""Get list of all discovered zone IDs"""
@@ -202,13 +320,16 @@ func is_zone_discovered(zone_id: String) -> bool:
 func switch_to_zone(zone_id: String) -> bool:
 	"""Switch camera view to a different zone"""
 	if not zones_by_id.has(zone_id):
+		print("ZoneManager: switch_to_zone - Zone %s not found!" % zone_id)
 		return false
 	
 	if zone_id == current_zone_id:
+		print("ZoneManager: switch_to_zone - Already in zone %s" % zone_id)
 		return false
 	
 	var old_zone = current_zone_id
 	current_zone_id = zone_id
+	print("ZoneManager: switch_to_zone - Switching from %s to %s" % [old_zone, zone_id])
 	
 	# Update zone visibility
 	update_zone_visibility()
@@ -228,10 +349,20 @@ func switch_to_zone(zone_id: String) -> bool:
 	return true
 
 func update_zone_visibility():
-	"""Update visibility of zone layers"""
+	"""Update visibility and processing of zone layers"""
+	print("ZoneManager: update_zone_visibility() - Current zone: %s" % current_zone_id)
 	for zone in zones_by_id.values():
 		if zone.layer_node and is_instance_valid(zone.layer_node):
-			zone.layer_node.visible = (zone.zone_id == current_zone_id)
+			var is_active = (zone.zone_id == current_zone_id)
+			zone.layer_node.visible = is_active
+			
+			# IMPORTANT: Disable processing for inactive zones to save performance
+			if is_active:
+				zone.layer_node.process_mode = Node.PROCESS_MODE_INHERIT
+			else:
+				zone.layer_node.process_mode = Node.PROCESS_MODE_DISABLED
+			
+			print("  - Zone %s: visible=%s, process_mode=%s" % [zone.zone_id, is_active, "INHERIT" if is_active else "DISABLED"])
 
 func set_zone_layer(zone_id: String, layer_node: Node2D):
 	"""Associate a zone with its scene layer node"""
@@ -310,7 +441,7 @@ func is_valid_zone(zone_id: String) -> bool:
 	"""Check if zone ID is valid"""
 	return zones_by_id.has(zone_id)
 
-func get_zone_wormhole_spawn_position(zone_id: String, angle: float = -1.0) -> Vector2:
+func get_zone_wormhole_spawn_position(zone_id: String, angle: float) -> Vector2:
 	"""Get position at the edge of a zone for wormhole placement"""
 	var zone = get_zone(zone_id)
 	if zone.is_empty():
@@ -318,11 +449,7 @@ func get_zone_wormhole_spawn_position(zone_id: String, angle: float = -1.0) -> V
 	
 	var bounds = zone.boundaries
 	
-	# If angle provided, use it; otherwise random
-	if angle < 0:
-		angle = randf() * TAU
-	
-	# Calculate position on perimeter based on angle
+	# Calculate position on perimeter based on angle (angle must be provided)
 	var edge_distance = bounds.size.x / 2.0 * 0.9  # 90% of zone radius
 	var position = Vector2(
 		cos(angle) * edge_distance,
@@ -456,3 +583,76 @@ func reset():
 	
 	# Reinitialize
 	initialize_zones()
+
+## Debug Functions
+
+func debug_print_current_zone_info():
+	"""Print detailed information about the current zone"""
+	var zone = get_current_zone()
+	if zone.is_empty():
+		print("DEBUG: No current zone!")
+		return
+	
+	print("\n=== CURRENT ZONE INFO ===")
+	print("  Zone ID: %s" % zone.zone_id)
+	print("  Name: %s" % zone.procedural_name)
+	print("  Difficulty: %d" % zone.difficulty)
+	print("  Zone Index: %s" % (str(zone.zone_index) if zone.has("zone_index") else "MISSING"))
+	print("  Size: %.0f x %.0f" % [zone.spawn_area_size, zone.spawn_area_size])
+	print("  Boundaries: %s" % zone.boundaries)
+	print("  Is Portal: %s" % should_zone_have_depth_portal(zone.zone_id))
+	print("  Total Wormholes: %d (%d lateral + %d depth)" % [
+		zone.lateral_wormholes.size() + zone.depth_wormholes.size(),
+		zone.lateral_wormholes.size(),
+		zone.depth_wormholes.size()
+	])
+	
+	# List ALL wormholes with details
+	print("\n  --- ALL WORMHOLES IN THIS ZONE ---")
+	
+	var wormhole_count = 1
+	if zone.lateral_wormholes.size() > 0:
+		print("  LATERAL Wormholes (BLUE/CYAN):")
+		for wh in zone.lateral_wormholes:
+			if is_instance_valid(wh):
+				var target = "(undiscovered)" if wh.target_zone_id.is_empty() else wh.target_zone_id
+				print("    [%d] BLUE at position %s → %s" % [wormhole_count, wh.global_position, target])
+				wormhole_count += 1
+	
+	if zone.depth_wormholes.size() > 0:
+		print("  DEPTH Wormholes (PURPLE):")
+		for wh in zone.depth_wormholes:
+			if is_instance_valid(wh):
+				var target = "(undiscovered)" if wh.target_zone_id.is_empty() else wh.target_zone_id
+				var direction = "forward" if wh.get_meta("is_forward", true) else "backward"
+				var type_check = wh.wormhole_type
+				print("    [%d] PURPLE at position %s → %s (%s) [type=%d]" % [wormhole_count, wh.global_position, target, direction, type_check])
+				if type_check != 0:
+					print("        *** ERROR *** Depth wormhole has wrong type! Should be 0, is %d" % type_check)
+				wormhole_count += 1
+	else:
+		print("  NO DEPTH WORMHOLES! (This is the problem if this is a portal zone)")
+	
+	print("  -----------------------------------")
+	print("========================\n")
+
+func debug_print_all_zones():
+	"""Print information about all discovered zones"""
+	print("\n=== ALL DISCOVERED ZONES ===")
+	for difficulty in range(1, 10):
+		var zones = get_zones_at_difficulty_sorted(difficulty)
+		if zones.is_empty():
+			continue
+		
+		var portal_index = get_depth_portal_zone_index(difficulty)
+		print("\nDifficulty %d (%d zones, portal at index %d):" % [difficulty, zones.size(), portal_index])
+		for zone in zones:
+			var is_portal = should_zone_have_depth_portal(zone.zone_id)
+			var portal_str = " [PORTAL]" if is_portal else ""
+			var discovered_str = " (discovered)" if zone.discovered else " (undiscovered)"
+			var zone_idx_str = str(zone.zone_index) if zone.has("zone_index") else "MISSING"
+			print("  %s (index %s, size %.0f)%s%s" % [
+				zone.zone_id, zone_idx_str, 
+				zone.spawn_area_size, portal_str, discovered_str
+			])
+	print("============================\n")

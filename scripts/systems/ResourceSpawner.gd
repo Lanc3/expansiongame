@@ -132,7 +132,7 @@ func spawn_resources_for_zone(zone_id: String, zone_data: Dictionary):
 					orbital_data.angle
 				)
 	
-	print("ResourceSpawner: Spawned %d asteroids in Zone %d around %d planet(s)" % [spawned_resources.size(), zone_id, planets.size()])
+	print("ResourceSpawner: Spawned %d asteroids in Zone %s around %d planet(s)" % [spawned_resources.size(), zone_id, planets.size()])
 
 func generate_zone_composition(asteroid: ResourceNode, zone_id: String):
 	"""Generate zone-appropriate resource composition for asteroid"""

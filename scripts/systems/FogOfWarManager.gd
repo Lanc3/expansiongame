@@ -25,6 +25,7 @@ func _ready():
 	# Connect to zone discovery to initialize fog for new zones
 	if ZoneManager:
 		ZoneManager.zone_discovered.connect(_on_zone_discovered)
+		ZoneManager.zone_switched.connect(_on_zone_switched)
 		# Initialize fog for starting zone
 		if not ZoneManager.current_zone_id.is_empty():
 			initialize_zone_fog(ZoneManager.current_zone_id)
@@ -32,6 +33,14 @@ func _ready():
 func _on_zone_discovered(zone_id: String):
 	"""Initialize fog for newly discovered zone"""
 	initialize_zone_fog(zone_id)
+
+func _on_zone_switched(old_zone_id: String, new_zone_id: String):
+	"""Handle zone switch - ensure fog is initialized for the new zone"""
+	if not new_zone_id in fog_grids:
+		print("FogOfWarManager: Zone '%s' has no fog grid, initializing..." % new_zone_id)
+		initialize_zone_fog(new_zone_id)
+	else:
+		print("FogOfWarManager: Switched to zone '%s' (fog grid exists)" % new_zone_id)
 
 func _process(delta: float):
 	time_since_update += delta
@@ -129,7 +138,7 @@ func update_fog_from_units():
 		if not units_per_zone.is_empty():
 			var debug_msg = "FogOfWar: Units revealing fog - "
 			for z_id in units_per_zone.keys():
-				debug_msg += "Zone %d: %d units, " % [z_id, units_per_zone[z_id]]
+				debug_msg += "Zone %s: %d units, " % [z_id, units_per_zone[z_id]]
 			debug_msg = debug_msg.trim_suffix(", ")
 			debug_msg += " (Total player units: %d)" % player_units.size()
 			print(debug_msg)
@@ -293,9 +302,16 @@ func save_fog_data() -> Dictionary:
 
 func load_fog_data(data: Dictionary):
 	"""Restore fog grids from save data"""
-	for zone_id_str in data:
-		var zone_id = int(zone_id_str)
-		fog_grids[zone_id] = data[zone_id_str]
+	for zone_id in data:
+		# Zone IDs are strings (e.g., "d1_start", "d2_start")
+		fog_grids[zone_id] = data[zone_id]
 		fog_dirty[zone_id] = true
+		# Also mark the entire grid as dirty region for texture update
+		var grid = fog_grids[zone_id]
+		if not grid.is_empty():
+			dirty_regions[zone_id] = {
+				"min": Vector2i.ZERO,
+				"max": Vector2i(grid[0].size() - 1, grid.size() - 1)
+			}
 	
 	print("FogOfWarManager: Loaded fog data for %d zones" % data.size())

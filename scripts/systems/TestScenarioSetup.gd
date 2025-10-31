@@ -177,7 +177,7 @@ func spawn_test_research_building():
 	if EntityManager:
 		EntityManager.register_building(building)
 	
-	print("TestScenarioSetup: Spawned Research Building at %s in Zone %d (Press R)" % [spawn_pos, current_zone])
+	print("TestScenarioSetup: Spawned Research Building at %s in Zone %s (Press R)" % [spawn_pos, current_zone])
 
 func spawn_test_builder():
 	"""Spawn a Builder Drone at camera position for testing"""
@@ -206,4 +206,4 @@ func spawn_test_builder():
 	builder.team_id = 0
 	units_node.add_child(builder)
 	
-	print("TestScenarioSetup: Spawned Builder Drone at %s in Zone %d (Press B)" % [spawn_pos, current_zone])
+	print("TestScenarioSetup: Spawned Builder Drone at %s in Zone %s (Press B)" % [spawn_pos, current_zone])

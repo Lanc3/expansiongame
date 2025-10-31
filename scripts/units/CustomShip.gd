@@ -21,6 +21,10 @@ var range_indicator: WeaponRangeIndicator = null
 # Weapon panel UI
 var weapon_panel: ShipWeaponPanel = null
 
+# Engine particle system
+var engine_particles: Array[GPUParticles2D] = []
+var engine_thrust_direction: Vector2 = Vector2.ZERO  # Cached from blueprint
+
 func _ready():
 	super._ready()
 	unit_name = "Custom Ship"
@@ -48,6 +52,7 @@ func initialize_from_cosmoteer_blueprint(blueprint: CosmoteerShipBlueprint):
 	# Instantiate functional components (needs to happen after visuals for VisualContainer access)
 	_instantiate_weapon_components(blueprint)
 	_instantiate_shield_components(blueprint)
+	_instantiate_engine_particles(blueprint)
 	
 	# Create UI elements
 	_create_shield_bar()
@@ -92,7 +97,15 @@ func _build_visuals_cosmoteer(blueprint: CosmoteerShipBlueprint):
 	# Create a rotated visual container for the ship graphics
 	var visual_container = Node2D.new()
 	visual_container.name = "VisualContainer"
-	visual_container.rotation = -PI / 2.0  # 90 degrees counter-clockwise
+	
+	# Calculate rotation from blueprint's forward_direction
+	# The old hardcoded rotation was -PI/2 for forward_direction (0, -1)
+	# When forward_direction rotates by Δθ in the builder, visual rotation needs to compensate by -Δθ
+	# Formula: rotation = default_rotation - (forward_angle - default_forward_angle) + PI (180° correction)
+	var forward_angle = blueprint.forward_direction.angle()
+	var default_forward_angle = Vector2(0, -1).angle()  # -PI/2
+	var default_rotation = -PI / 2.0  # Worked for default forward_direction
+	visual_container.rotation = default_rotation - (forward_angle - default_forward_angle) + PI
 	add_child(visual_container)
 	
 	# Calculate bounding box to properly center the ship
@@ -116,12 +129,38 @@ func _build_visuals_cosmoteer(blueprint: CosmoteerShipBlueprint):
 	# Render hull cells in the visual container
 	for hull_pos in blueprint.hull_cells.keys():
 		var hull_type = blueprint.get_hull_type(hull_pos)
-		var hull_rect = ColorRect.new()
-		hull_rect.color = CosmoteerComponentDefs.get_hull_color(hull_type)
-		hull_rect.size = Vector2(cell_px, cell_px)
-		hull_rect.position = Vector2(hull_pos.x * cell_px, hull_pos.y * cell_px) - center_offset
-		hull_rect.z_index = -1
-		visual_container.add_child(hull_rect)
+		var texture_path = CosmoteerComponentDefs.get_hull_texture(hull_type)
+		
+		# Try to use texture, fallback to colored rectangle
+		if texture_path and ResourceLoader.exists(texture_path):
+			var texture = load(texture_path)
+			if texture:
+				var hull_sprite = Sprite2D.new()
+				hull_sprite.texture = texture
+				hull_sprite.position = Vector2(hull_pos.x * cell_px, hull_pos.y * cell_px) - center_offset
+				hull_sprite.position += Vector2(cell_px * 0.5, cell_px * 0.5)  # Center sprite
+				hull_sprite.centered = true
+				# Scale to fit cell size
+				var texture_size = texture.get_size()
+				hull_sprite.scale = Vector2(cell_px / texture_size.x, cell_px / texture_size.y)
+				hull_sprite.z_index = -1
+				visual_container.add_child(hull_sprite)
+			else:
+				# Fallback to color rect
+				var hull_rect = ColorRect.new()
+				hull_rect.color = CosmoteerComponentDefs.get_hull_color(hull_type)
+				hull_rect.size = Vector2(cell_px, cell_px)
+				hull_rect.position = Vector2(hull_pos.x * cell_px, hull_pos.y * cell_px) - center_offset
+				hull_rect.z_index = -1
+				visual_container.add_child(hull_rect)
+		else:
+			# Fallback to color rect
+			var hull_rect = ColorRect.new()
+			hull_rect.color = CosmoteerComponentDefs.get_hull_color(hull_type)
+			hull_rect.size = Vector2(cell_px, cell_px)
+			hull_rect.position = Vector2(hull_pos.x * cell_px, hull_pos.y * cell_px) - center_offset
+			hull_rect.z_index = -1
+			visual_container.add_child(hull_rect)
 	
 	# Render components on top in the visual container
 	for comp_data in blueprint.components:
@@ -133,30 +172,63 @@ func _build_visuals_cosmoteer(blueprint: CosmoteerShipBlueprint):
 		if comp_def.is_empty():
 			continue
 		
-		var comp_rect = ColorRect.new()
-		var color = Color(0.5, 0.5, 0.8, 0.8)
+		var sprite_path = comp_def.get("sprite", "")
 		
-		# Color by component type
-		match comp_type:
-			"power_core":
-				color = Color(0.6, 0.9, 0.6, 0.9)
-			"engine":
-				color = Color(0.9, 0.6, 0.4, 0.9)
-			"laser_weapon", "missile_launcher":
-				color = Color(0.9, 0.4, 0.4, 0.9)
-			"shield_generator":
-				color = Color(0.6, 0.6, 0.9, 0.9)
-			"repair_bot":
-				color = Color(0.7, 0.7, 0.7, 0.9)
-		
-		comp_rect.color = color
-		comp_rect.size = Vector2(comp_size.x * cell_px, comp_size.y * cell_px)
-		comp_rect.position = Vector2(comp_pos.x * cell_px, comp_pos.y * cell_px) - center_offset
-		comp_rect.z_index = 0
-		visual_container.add_child(comp_rect)
+		# Try to use texture, fallback to colored rectangle
+		if sprite_path and ResourceLoader.exists(sprite_path):
+			var texture = load(sprite_path)
+			if texture:
+				var comp_sprite = Sprite2D.new()
+				comp_sprite.texture = texture
+				# Position at center of component area
+				comp_sprite.position = Vector2(comp_pos.x * cell_px, comp_pos.y * cell_px) - center_offset
+				comp_sprite.position += Vector2(comp_size.x * cell_px * 0.5, comp_size.y * cell_px * 0.5)
+				comp_sprite.centered = true
+				# Scale to fit component size
+				var texture_size = texture.get_size()
+				var target_size = Vector2(comp_size.x * cell_px, comp_size.y * cell_px)
+				comp_sprite.scale = Vector2(target_size.x / texture_size.x, target_size.y / texture_size.y)
+				
+				# Set z_index: weapons go below turret, others at 0
+				if comp_type == "laser_weapon" or comp_type == "missile_launcher":
+					comp_sprite.z_index = 0  # Below turret (which is at z_index 5)
+				else:
+					comp_sprite.z_index = 0
+				
+				visual_container.add_child(comp_sprite)
+			else:
+				# Fallback to ColorRect
+				_create_component_colorrect(comp_type, comp_pos, comp_size, center_offset, visual_container)
+		else:
+			# Fallback to ColorRect
+			_create_component_colorrect(comp_type, comp_pos, comp_size, center_offset, visual_container)
 	
 	# Generate collision shape from hull
 	_generate_collision_from_hull(blueprint)
+
+func _create_component_colorrect(comp_type: String, comp_pos: Vector2i, comp_size: Vector2i, center_offset: Vector2, visual_container: Node2D):
+	"""Create a colored rectangle fallback for components without textures"""
+	var comp_rect = ColorRect.new()
+	var color = Color(0.5, 0.5, 0.8, 0.8)
+	
+	# Color by component type
+	match comp_type:
+		"power_core":
+			color = Color(0.6, 0.9, 0.6, 0.9)
+		"engine":
+			color = Color(0.9, 0.6, 0.4, 0.9)
+		"laser_weapon", "missile_launcher":
+			color = Color(0.9, 0.4, 0.4, 0.9)
+		"shield_generator":
+			color = Color(0.6, 0.6, 0.9, 0.9)
+		"repair_bot":
+			color = Color(0.7, 0.7, 0.7, 0.9)
+	
+	comp_rect.color = color
+	comp_rect.size = Vector2(comp_size.x * cell_px, comp_size.y * cell_px)
+	comp_rect.position = Vector2(comp_pos.x * cell_px, comp_pos.y * cell_px) - center_offset
+	comp_rect.z_index = 0
+	visual_container.add_child(comp_rect)
 
 func _generate_collision_from_hull(blueprint: CosmoteerShipBlueprint):
 	"""Create collision shape based on hull cells"""
@@ -178,6 +250,159 @@ func _generate_collision_from_hull(blueprint: CosmoteerShipBlueprint):
 	var circle = CircleShape2D.new()
 	circle.radius = radius
 	collision_shape.shape = circle
+
+func _instantiate_engine_particles(blueprint: CosmoteerShipBlueprint):
+	"""Create particle effects for engines"""
+	# Store thrust direction from blueprint (in blueprint coordinates)
+	# This will be rotated to match VisualContainer coordinate system
+	var blueprint_thrust_direction = -blueprint.forward_direction  # Opposite of forward = thrust direction
+	
+	# Get the visual container rotation (same as calculated in _build_visuals_cosmoteer)
+	var visual_container = get_node_or_null("VisualContainer")
+	var container_rotation = 0.0
+	if visual_container:
+		container_rotation = visual_container.rotation
+	else:
+		# Calculate rotation the same way as in _build_visuals_cosmoteer
+		var forward_angle = blueprint.forward_direction.angle()
+		var default_forward_angle = Vector2(0, -1).angle()  # -PI/2
+		var default_rotation = -PI / 2.0
+		container_rotation = default_rotation - (forward_angle - default_forward_angle)
+	
+	# Rotate thrust direction to match VisualContainer coordinate system
+	engine_thrust_direction = blueprint_thrust_direction.rotated(container_rotation)
+	
+	# Calculate the same center offset used for visuals
+	var min_x = INF
+	var max_x = -INF
+	var min_y = INF
+	var max_y = -INF
+	
+	for hull_pos in blueprint.hull_cells.keys():
+		min_x = min(min_x, hull_pos.x)
+		max_x = max(max_x, hull_pos.x)
+		min_y = min(min_y, hull_pos.y)
+		max_y = max(max_y, hull_pos.y)
+	
+	var center_offset = Vector2(
+		(min_x + max_x) * 0.5 * cell_px + cell_px * 0.5,
+		(min_y + max_y) * 0.5 * cell_px + cell_px * 0.5
+	)
+	
+	# visual_container already retrieved at the start of function
+	if not visual_container:
+		return
+	
+	for comp_data in blueprint.components:
+		var comp_id = comp_data.get("type", "")
+		var parsed = CosmoteerComponentDefs.parse_component_id(comp_id)
+		var comp_type = parsed["type"]
+		var comp_level = parsed["level"]
+		
+		if comp_type != "engine":
+			continue
+		
+		var comp_pos = comp_data.get("grid_position", Vector2i.ZERO)
+		var comp_size = comp_data.get("size", Vector2i.ONE)
+		
+		# Calculate engine center in local coordinates
+		var engine_local_pos = Vector2(comp_pos.x * cell_px, comp_pos.y * cell_px) - center_offset
+		engine_local_pos += Vector2(comp_size.x * cell_px * 0.5, comp_size.y * cell_px * 0.5)
+		
+		# Scale particle count with engine level
+		var num_streams = 2  # Base for levels 1-3
+		if comp_level >= 7:
+			num_streams = 4  # Levels 7-9
+		elif comp_level >= 4:
+			num_streams = 3  # Levels 4-6
+		
+		var particles_per_stream = 40 + (comp_level - 1) * 5  # Scale up with level
+		
+		# Create dual/triple/quad particle streams for powerful effect
+		var perpendicular = Vector2(-engine_thrust_direction.y, engine_thrust_direction.x)
+		var stream_offset = cell_px * 0.2  # Offset between streams
+		
+		# Create particle streams per engine
+		for stream_idx in range(num_streams):
+			# Calculate stream position offset
+			var offset_multiplier = 0.0
+			if num_streams == 2:
+				offset_multiplier = 1.0 if stream_idx == 0 else -1.0
+			elif num_streams == 3:
+				offset_multiplier = (stream_idx - 1.0) * 1.0  # -1, 0, 1
+			else:  # 4 streams
+				offset_multiplier = (stream_idx - 1.5) * 0.7  # -1.05, -0.35, 0.35, 1.05
+			
+			var offset_dir = perpendicular * offset_multiplier
+			var stream_pos = engine_local_pos + offset_dir * stream_offset
+			
+			var particles = GPUParticles2D.new()
+			particles.name = "EngineParticles_%d_%d" % [engine_particles.size(), stream_idx]
+			particles.position = stream_pos
+			particles.amount = particles_per_stream
+			particles.lifetime = 0.6  # Slightly longer
+			particles.preprocess = 0.2
+			particles.explosiveness = 0.0
+			particles.randomness = 0.2  # Less random for tighter trails
+			particles.z_index = -2  # Behind ship
+			particles.emitting = false  # Start off, will enable when moving
+			
+			# Create particle material
+			var material = ParticleProcessMaterial.new()
+			
+			# Emission shape - point
+			material.emission_shape = ParticleProcessMaterial.EMISSION_SHAPE_POINT
+			
+			# Direction - emit in thrust direction
+			# In VisualContainer space, the thrust direction is already correct
+			# We just need to use it directly (no rotation needed since particles are in VisualContainer)
+			material.direction = Vector3(engine_thrust_direction.x, engine_thrust_direction.y, 0)
+			material.spread = 1.5  # Very tight cone for trail effect
+			
+			# Velocity - higher for trail effect
+			material.initial_velocity_min = 100.0
+			material.initial_velocity_max = 150.0
+			
+			# Linear accel (slow down gradually)
+			material.linear_accel_min = -50.0
+			material.linear_accel_max = -30.0
+			
+			# Scale - elongated particles for trail effect
+			material.scale_min = 2.0
+			material.scale_max = 3.5
+			material.scale_curve = _create_fade_curve()
+			
+			# Particle flags for trail effect
+			material.particle_flag_align_y = true  # Align particles to velocity direction
+			
+			# Color (cyan/blue thrust with gradient)
+			material.color = Color(0.5, 0.8, 1.0, 1.0)
+			material.color_ramp = _create_color_ramp()
+			
+			particles.process_material = material
+			
+			# Add to visual container
+			visual_container.add_child(particles)
+			engine_particles.append(particles)
+	
+	print("Created %d engine particle systems" % engine_particles.size())
+
+func _create_fade_curve() -> Curve:
+	"""Create a curve that fades particles out over their lifetime"""
+	var curve = Curve.new()
+	curve.add_point(Vector2(0.0, 1.0))  # Start at full scale
+	curve.add_point(Vector2(0.5, 0.8))  # Maintain most of scale mid-life
+	curve.add_point(Vector2(1.0, 0.0))  # Fade to nothing at end
+	return curve
+
+func _create_color_ramp() -> Gradient:
+	"""Create a color gradient that fades particles from bright to transparent"""
+	var gradient = Gradient.new()
+	# Start bright cyan/blue
+	gradient.set_color(0, Color(0.6, 0.9, 1.0, 1.0))
+	# Mid-point slightly dimmer
+	gradient.set_color(1, Color(0.3, 0.5, 0.8, 0.0))  # Fade to transparent
+	return gradient
 
 func _build_visuals():
 	"""Legacy blueprint system visuals"""
@@ -251,13 +476,15 @@ func _instantiate_weapon_components(blueprint: CosmoteerShipBlueprint):
 	)
 	
 	for comp_data in blueprint.components:
-		var comp_type = comp_data.get("type", "")
+		var comp_id = comp_data.get("type", "")
+		var parsed = CosmoteerComponentDefs.parse_component_id(comp_id)
+		var comp_type = parsed["type"]
 		
 		# Only process weapon components
 		if comp_type != "laser_weapon" and comp_type != "missile_launcher":
 			continue
 		
-		var comp_def = CosmoteerComponentDefs.get_component_data(comp_type)
+		var comp_def = CosmoteerComponentDefs.get_component_data(comp_id)
 		if comp_def.is_empty():
 			continue
 		
@@ -265,7 +492,7 @@ func _instantiate_weapon_components(blueprint: CosmoteerShipBlueprint):
 		var weapon = WeaponComponent.new()
 		weapon.name = "Weapon_%d" % weapon_index
 		
-		# Configure weapon from component definition
+		# Configure weapon from component definition (level-specific damage)
 		if comp_type == "laser_weapon":
 			weapon.weapon_type = WeaponComponent.WeaponType.LASER
 			weapon.damage = comp_def.get("damage", 10.0)
@@ -306,9 +533,10 @@ func _instantiate_shield_components(blueprint: CosmoteerShipBlueprint):
 	var shield_count = 0
 	
 	for comp_data in blueprint.components:
-		var comp_type = comp_data.get("type", "")
-		if comp_type == "shield_generator":
-			var comp_def = CosmoteerComponentDefs.get_component_data(comp_type)
+		var comp_id = comp_data.get("type", "")
+		var parsed = CosmoteerComponentDefs.parse_component_id(comp_id)
+		if parsed["type"] == "shield_generator":
+			var comp_def = CosmoteerComponentDefs.get_component_data(comp_id)
 			if not comp_def.is_empty():
 				total_shield_hp += comp_def.get("shield_hp", 100.0)
 				shield_count += 1
@@ -478,6 +706,22 @@ func update_visual():
 			shield_bar.rotation = 0
 		shield_bar.value = shield_component.current_shield
 		shield_bar.visible = shield_component.max_shield > 0
+	
+	# Update engine particles based on movement
+	_update_engine_particles()
+
+func _update_engine_particles():
+	"""Enable/disable engine particles based on ship velocity"""
+	if engine_particles.is_empty():
+		return
+	
+	# Check if ship is moving (velocity magnitude > threshold)
+	var is_moving = velocity.length() > 10.0
+	
+	# Enable/disable all engine particles
+	for particles in engine_particles:
+		if is_instance_valid(particles):
+			particles.emitting = is_moving
 
 # ============================================================================
 # SELECTION HANDLING
@@ -644,7 +888,7 @@ func restore_from_save_data(data: Dictionary):
 			var blueprint = ResourceLoader.load(blueprint_path)
 			if blueprint is CosmoteerShipBlueprint:
 				initialize_from_cosmoteer_blueprint(blueprint)
-				print("CustomShip: Restored from Cosmoteer blueprint '%s'" % blueprint_name)
+				print("CustomShip: Restored from Cosmoteer blueprint '%s' with %d engines" % [blueprint_name, engine_particles.size()])
 			else:
 				push_error("CustomShip: Invalid blueprint at %s" % blueprint_path)
 		else:

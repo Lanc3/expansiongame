@@ -81,7 +81,7 @@ func start_scanning(asteroid: ResourceNode):
 		var scout_zone = ZoneManager.get_unit_zone(self)
 		var asteroid_zone = ZoneManager.get_unit_zone(asteroid)
 		if scout_zone != asteroid_zone:
-			print("Scout: Ignoring scan command - asteroid in different zone (Scout: %d, Asteroid: %d)" % [scout_zone, asteroid_zone])
+			print("Scout: Ignoring scan command - asteroid in different zone (Scout: %s, Asteroid: %s)" % [scout_zone, asteroid_zone])
 			complete_current_command()  # Skip this command
 			return
 	

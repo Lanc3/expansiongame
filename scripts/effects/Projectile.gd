@@ -11,6 +11,7 @@ var weapon_type: int
 var homing_target: Node2D = null
 var owner_unit: Node2D = null
 var owner_team_id: int = 0
+var owner_zone_id: String = ""  # Zone where projectile was fired
 
 @onready var sprite: Sprite2D = $Sprite2D
 @onready var trail: Line2D = $Trail if has_node("Trail") else null
@@ -31,6 +32,13 @@ func setup(wep_type: int, dmg: float, start_pos: Vector2, target_pos: Vector2, s
 	# Store owner's team_id for friendly fire prevention
 	if owner and "team_id" in owner:
 		owner_team_id = owner.team_id
+	
+	# Store zone for visibility filtering
+	if ZoneManager:
+		if owner and ZoneManager.has_method("get_unit_zone"):
+			owner_zone_id = ZoneManager.get_unit_zone(owner)
+		else:
+			owner_zone_id = ZoneManager.current_zone_id
 	
 	# OPTIMIZATION: Use pre-loaded textures from ProjectilePool
 	if sprite and ProjectilePool:
@@ -66,6 +74,14 @@ func _exit_tree():
 	EntityManager.unregister_projectile(self)
 
 func _process(delta: float):
+	# Check if projectile is in current zone
+	if ZoneManager and not owner_zone_id.is_empty():
+		if owner_zone_id != ZoneManager.current_zone_id:
+			visible = false
+			return
+		else:
+			visible = true
+	
 	# Homing behavior
 	if homing_target and is_instance_valid(homing_target):
 		var target_direction = (homing_target.global_position - global_position).normalized()
@@ -137,6 +153,7 @@ func reset_for_pool():
 	homing_target = null
 	owner_unit = null
 	owner_team_id = 0
+	owner_zone_id = ""  # Reset zone tracking
 	direction = Vector2.ZERO
 	global_position = Vector2.ZERO
 	rotation = 0.0

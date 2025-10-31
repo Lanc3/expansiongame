@@ -42,8 +42,8 @@ func _ready():
 	await setup_zone_layers()
 	print("ZoneSetup: Zone layers setup complete!")
 	
-	print("ZoneSetup: Setting up wormholes...")
-	setup_wormholes()
+	# NOTE: Wormholes are created in create_zone_layer_for_discovered_zone()
+	# Don't call setup_wormholes() here - it would create duplicates!
 	
 	# Show only Zone 1 initially
 	print("ZoneSetup: Updating zone visibility...")
@@ -79,7 +79,7 @@ func setup_zone_layers():
 			# Wait for nodes to be removed
 			await get_tree().process_frame
 	
-	# Create only the initial starting zone
+	# Create only the initial starting zone (saves will call create_zone_layers_for_loaded_zones separately)
 	if ZoneManager and not ZoneManager.current_zone_id.is_empty():
 		print("ZoneSetup: Creating initial zone layer for: '%s'" % ZoneManager.current_zone_id)
 		create_zone_layer_for_discovered_zone(ZoneManager.current_zone_id)
@@ -90,6 +90,37 @@ func setup_zone_layers():
 		elif ZoneManager.current_zone_id.is_empty():
 			print("  current_zone_id is empty!")
 		
+
+func create_zone_layers_for_loaded_zones():
+	"""Create zone layers for all zones loaded from save file"""
+	print("ZoneSetup: create_zone_layers_for_loaded_zones() called!")
+	
+	if not ZoneManager:
+		print("ZoneSetup: ERROR - ZoneManager not found!")
+		return
+	
+	if not world_layer:
+		print("ZoneSetup: ERROR - world_layer not found!")
+		return
+	
+	var discovered_zones = ZoneManager.get_discovered_zones()
+	print("ZoneSetup: Creating zone layers for %d loaded zones..." % discovered_zones.size())
+	print("ZoneSetup: Discovered zones: %s" % str(discovered_zones))
+	
+	for zone_id in discovered_zones:
+		# Check if layer already exists
+		var zone = ZoneManager.get_zone(zone_id)
+		if zone.is_empty():
+			print("ZoneSetup: WARNING - Zone %s is empty!" % zone_id)
+			continue
+		
+		if zone.layer_node == null:
+			print("ZoneSetup: Creating layer for loaded zone: %s (no layer exists)" % zone_id)
+			create_zone_layer_for_discovered_zone(zone_id)
+		else:
+			print("ZoneSetup: Zone %s already has layer: %s" % [zone_id, zone.layer_node.name])
+	
+	print("ZoneSetup: Finished creating layers for loaded zones")
 
 func create_zone_layer_for_discovered_zone(zone_id: String):
 	"""Create zone layer structure for a newly discovered zone"""
@@ -214,9 +245,9 @@ func link_existing_zones():
 			ZoneManager.set_zone_layer(zone_id, child)
 
 func setup_wormholes():
-	"""Create wormholes for initial zone"""
-	if ZoneManager and not ZoneManager.current_zone_id.is_empty():
-		create_wormholes_for_zone(ZoneManager.current_zone_id)
+	"""DEPRECATED: Wormholes are now created in create_zone_layer_for_discovered_zone()"""
+	# This function is no longer called to avoid duplicate wormhole creation
+	pass
 
 func create_wormholes_for_zone(zone_id: String):
 	"""Create depth and lateral wormholes for a zone"""
@@ -233,54 +264,189 @@ func create_wormholes_for_zone(zone_id: String):
 	
 	var difficulty = zone.difficulty
 	
-	# Create lateral wormholes (2-3 per zone)
-	var num_lateral = 2 if difficulty >= 7 else 3
-	var lateral_angle_step = TAU / num_lateral
+	# Phase 2: Create exactly 2 lateral wormholes (left and right neighbors on ring)
+	create_lateral_wormholes(zone_id, wormholes_node)
 	
-	for i in range(num_lateral):
-		var angle = i * lateral_angle_step + randf_range(-0.3, 0.3)  # Add randomness
-		create_lateral_wormhole(zone_id, wormholes_node, angle)
-	
-	# Create depth wormholes (if not at difficulty boundaries)
-	# Forward (deeper) wormhole
-	if difficulty < 9:
-		create_depth_wormhole(zone_id, wormholes_node, true)
-	
-	# Backward (outer) wormhole
-	if difficulty > 1:
-		create_depth_wormhole(zone_id, wormholes_node, false)
+	# Phase 3: Create depth wormholes ONLY if this is the designated portal zone
+	if ZoneManager.should_zone_have_depth_portal(zone_id):
+		# Forward (deeper) wormhole
+		if difficulty < 9:
+			create_depth_wormhole(zone_id, wormholes_node, true)
+		
+		# Backward (outer) wormhole
+		if difficulty > 1:
+			create_depth_wormhole(zone_id, wormholes_node, false)
+		
+		print("ZoneSetup: Zone '%s' is the depth portal zone for difficulty %d" % [zone_id, difficulty])
 
-func create_lateral_wormhole(zone_id: String, parent: Node2D, angle: float):
-	"""Create a lateral wormhole (undiscovered initially)"""
+func create_lateral_wormholes(zone_id: String, parent: Node2D):
+	"""Create lateral wormholes connecting to left and right neighbors on the ring"""
+	var zone = ZoneManager.get_zone(zone_id)
+	if zone.is_empty():
+		return
+	
+	# Get neighbor zone information
+	var neighbors = ZoneManager.get_zone_neighbors(zone_id)
+	
+	# Create left wormhole
+	if not neighbors.left.is_empty():
+		create_lateral_wormhole_to_neighbor(zone_id, neighbors.left, parent, true)
+	else:
+		# Neighbor doesn't exist yet - create undiscovered wormhole
+		create_undiscovered_lateral_wormhole(zone_id, parent, true)
+	
+	# Create right wormhole
+	if not neighbors.right.is_empty():
+		create_lateral_wormhole_to_neighbor(zone_id, neighbors.right, parent, false)
+	else:
+		# Neighbor doesn't exist yet - create undiscovered wormhole
+		create_undiscovered_lateral_wormhole(zone_id, parent, false)
+
+func create_lateral_wormhole_to_neighbor(source_zone_id: String, target_zone_id: String, parent: Node2D, is_left: bool):
+	"""Create a lateral wormhole to a specific existing neighbor"""
+	var source_zone = ZoneManager.get_zone(source_zone_id)
+	var target_zone = ZoneManager.get_zone(target_zone_id)
+	if source_zone.is_empty() or target_zone.is_empty():
+		return
+	
+	# Calculate angle toward the neighbor
+	var angle_to_neighbor = calculate_angle_to_neighbor(source_zone, target_zone)
+	
+	var wormhole = wormhole_scene.instantiate()
+	wormhole.source_zone_id = source_zone_id
+	wormhole.target_zone_id = target_zone_id
+	wormhole.wormhole_type = Wormhole.WormholeType.LATERAL
+	wormhole.is_undiscovered = false  # Known neighbor
+	wormhole.wormhole_direction = angle_to_neighbor
+	
+	# Position at zone edge pointing toward neighbor
+	var spawn_pos = ZoneManager.get_zone_wormhole_spawn_position(source_zone_id, angle_to_neighbor)
+	wormhole.global_position = spawn_pos
+	
+	parent.add_child(wormhole)
+	
+	# Set z_index for lateral wormholes (lower than depth)
+	wormhole.z_index = 0  # Default, depth wormholes will be 10
+	
+	ZoneManager.set_zone_wormhole(source_zone_id, wormhole, "lateral")
+	
+	var direction = "left" if is_left else "right"
+	print("ZoneSetup: Created %s lateral wormhole in '%s' to '%s' at angle %.2f" % [direction, source_zone_id, target_zone_id, angle_to_neighbor])
+
+func create_undiscovered_lateral_wormhole(zone_id: String, parent: Node2D, is_left: bool):
+	"""Create an undiscovered lateral wormhole (neighbor doesn't exist yet)"""
+	var zone = ZoneManager.get_zone(zone_id)
+	if zone.is_empty():
+		return
+	
+	# Check if zone has zone_index
+	if not zone.has("zone_index"):
+		push_warning("ZoneSetup: Cannot create lateral wormhole - zone '%s' missing zone_index" % zone_id)
+		return
+	
+	var difficulty = zone.difficulty
+	var zone_index = zone.zone_index
+	var zones_on_ring = ZoneManager.ZONES_PER_DIFFICULTY.get(difficulty, 4)
+	
+	# Calculate target neighbor index
+	var target_index = (zone_index + (-1 if is_left else 1) + zones_on_ring) % zones_on_ring
+	
+	# Calculate angle toward where the neighbor would be
+	var target_angle = ZoneManager.get_zone_angle(difficulty, target_index)
+	var angle_to_neighbor = calculate_angle_between_ring_positions(zone.ring_position, target_angle)
+	
 	var wormhole = wormhole_scene.instantiate()
 	wormhole.source_zone_id = zone_id
 	wormhole.target_zone_id = ""  # Will be set when discovered
 	wormhole.wormhole_type = Wormhole.WormholeType.LATERAL
 	wormhole.is_undiscovered = true
-	wormhole.wormhole_direction = angle
+	wormhole.wormhole_direction = angle_to_neighbor
 	
-	# Position at zone edge based on angle
-	var spawn_pos = ZoneManager.get_zone_wormhole_spawn_position(zone_id, angle)
+	# CRITICAL: Store the target zone index so when discovered, we create the zone at the correct index
+	wormhole.set_meta("target_zone_index", target_index)
+	
+	print("ZoneSetup: Undiscovered lateral wormhole will create zone at index %d (difficulty %d)" % [target_index, difficulty])
+	
+	# Position at zone edge
+	var spawn_pos = ZoneManager.get_zone_wormhole_spawn_position(zone_id, angle_to_neighbor)
 	wormhole.global_position = spawn_pos
 	
 	parent.add_child(wormhole)
-	print("ZoneSetup: Created lateral wormhole in '%s' at angle %.2f" % [zone_id, angle])
+	
+	# Set z_index for lateral wormholes (lower than depth)
+	wormhole.z_index = 0  # Default, depth wormholes will be 10
+	
+	ZoneManager.set_zone_wormhole(zone_id, wormhole, "lateral")
+	
+	var direction = "left" if is_left else "right"
+	print("ZoneSetup: Created undiscovered %s lateral wormhole in '%s' at angle %.2f" % [direction, zone_id, angle_to_neighbor])
+
+func calculate_angle_to_neighbor(source_zone: Dictionary, target_zone: Dictionary) -> float:
+	"""Calculate angle from source zone toward target zone on same ring"""
+	# Both zones are on the same ring (same radius), so we just need direction
+	var angle_diff = target_zone.ring_position - source_zone.ring_position
+	
+	# Normalize to [-PI, PI] for shortest path
+	while angle_diff > PI:
+		angle_diff -= TAU
+	while angle_diff < -PI:
+		angle_diff += TAU
+	
+	# Return the direction angle
+	return source_zone.ring_position + angle_diff
+
+func calculate_angle_between_ring_positions(from_angle: float, to_angle: float) -> float:
+	"""Calculate the shortest angle between two ring positions"""
+	var angle_diff = to_angle - from_angle
+	
+	# Normalize to [-PI, PI]
+	while angle_diff > PI:
+		angle_diff -= TAU
+	while angle_diff < -PI:
+		angle_diff += TAU
+	
+	return from_angle + angle_diff
 
 func create_depth_wormhole(zone_id: String, parent: Node2D, is_forward: bool):
-	"""Create a depth wormhole (discovered if target exists)"""
+	"""Create a depth wormhole (discovered if target portal zone exists)"""
+	print("Wormhole_debug : === CREATE DEPTH WORMHOLE START ===")
+	print("Wormhole_debug :   Zone: %s" % zone_id)
+	print("Wormhole_debug :   Direction: %s" % ("FORWARD (toward center)" if is_forward else "BACKWARD (toward outer)"))
+	
 	if not ZoneManager:
+		print("Wormhole_debug :   ERROR - ZoneManager is null!")
 		return
 	
 	var source_zone = ZoneManager.get_zone(zone_id)
 	if source_zone.is_empty():
+		print("Wormhole_debug :   ERROR - Source zone is empty!")
 		return
 	
 	var target_difficulty = source_zone.difficulty + (1 if is_forward else -1)
+	print("Wormhole_debug :   Source difficulty: %d" % source_zone.difficulty)
+	print("Wormhole_debug :   Target difficulty: %d (zones get %s)" % [target_difficulty, "BIGGER" if is_forward else "smaller"])
 	
-	# Check if target zone exists
+	# Find the portal zone at the target difficulty
+	var target_zone_id = ""
+	var target_portal_index = ZoneManager.get_depth_portal_zone_index(target_difficulty)
+	
+	print("Wormhole_debug :   Looking for PORTAL zone at difficulty %d, portal index %d" % [target_difficulty, target_portal_index])
+	
+	# Check if target portal zone exists
 	var target_zones = ZoneManager.get_zones_at_difficulty(target_difficulty)
-	var target_zone_id = target_zones[0].zone_id if not target_zones.is_empty() else ""
+	print("Wormhole_debug :   Found %d existing zones at difficulty %d" % [target_zones.size(), target_difficulty])
 	
+	for zone in target_zones:
+		if zone.has("zone_index"):
+			if zone.zone_index == target_portal_index:
+				target_zone_id = zone.zone_id
+				print("Wormhole_debug :   ✓ FOUND existing portal zone: %s" % target_zone_id)
+				break
+	
+	if target_zone_id.is_empty():
+		print("Wormhole_debug :   Portal zone doesn't exist yet - wormhole will be UNDISCOVERED")
+	
+	print("Wormhole_debug :   Creating wormhole instance...")
 	var wormhole = wormhole_scene.instantiate()
 	wormhole.source_zone_id = zone_id
 	wormhole.target_zone_id = target_zone_id
@@ -288,15 +454,45 @@ func create_depth_wormhole(zone_id: String, parent: Node2D, is_forward: bool):
 	wormhole.is_undiscovered = target_zone_id.is_empty()
 	wormhole.set_meta("is_forward", is_forward)
 	
-	# Position based on forward/backward
-	var angle = 0.0 if is_forward else PI  # Forward = right, backward = left
+	print("Wormhole_debug :   Wormhole properties SET:")
+	print("Wormhole_debug :     source_zone_id = %s" % wormhole.source_zone_id)
+	print("Wormhole_debug :     target_zone_id = %s" % ("EMPTY (undiscovered)" if wormhole.target_zone_id.is_empty() else wormhole.target_zone_id))
+	print("Wormhole_debug :     wormhole_type = %d (0=DEPTH, 1=LATERAL)" % wormhole.wormhole_type)
+	print("Wormhole_debug :     is_undiscovered = %s" % wormhole.is_undiscovered)
+	print("Wormhole_debug :     is_forward = %s" % is_forward)
+	
+	# Position perpendicular to the zone's ring position to avoid ANY overlap with lateral wormholes
+	# Lateral wormholes point along the ring (toward neighbors)
+	# Depth wormholes point perpendicular to the ring (inward/outward from center)
+	var ring_angle = source_zone.ring_position
+	var angle = ring_angle + (PI / 2.0) if is_forward else ring_angle - (PI / 2.0)
+	# Normalize angle to [0, 2PI]
+	while angle < 0:
+		angle += TAU
+	while angle >= TAU:
+		angle -= TAU
+	
 	var spawn_pos = ZoneManager.get_zone_wormhole_spawn_position(zone_id, angle)
 	wormhole.global_position = spawn_pos
 	
+	print("Wormhole_debug :   Zone ring position: %.2f degrees" % rad_to_deg(ring_angle))
+	print("Wormhole_debug :   Depth wormhole angle: %.2f degrees (perpendicular %s from ring)" % [rad_to_deg(angle), "INWARD" if is_forward else "OUTWARD"])
+	print("Wormhole_debug :   Spawn position: %s" % spawn_pos)
+	
 	parent.add_child(wormhole)
 	
-	var direction = "forward" if is_forward else "backward"
-	print("ZoneSetup: Created %s depth wormhole in '%s'" % [direction, zone_id])
+	# CRITICAL: Set z_index to render depth wormholes ON TOP of lateral wormholes
+	wormhole.z_index = 10  # Lateral wormholes default to 0, depth should be higher
+	
+	print("Wormhole_debug :   Added to scene tree under: %s" % parent.name)
+	print("Wormhole_debug :   Z-index set to: %d (renders ON TOP)" % wormhole.z_index)
+	
+	ZoneManager.set_zone_wormhole(zone_id, wormhole, "depth")
+	
+	# Verify registration
+	var zone_check = ZoneManager.get_zone(zone_id)
+	print("Wormhole_debug :   Zone '%s' now has %d depth wormholes, %d lateral wormholes" % [zone_id, zone_check.depth_wormholes.size(), zone_check.lateral_wormholes.size()])
+	print("Wormhole_debug : === CREATE DEPTH WORMHOLE COMPLETE ===\n")
 
 func move_existing_entities_to_zone1():
 	"""Move any existing units/resources to starting zone"""

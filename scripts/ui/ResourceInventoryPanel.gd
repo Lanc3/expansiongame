@@ -28,6 +28,9 @@ func _ready():
 	_create_tier_sections()
 	_populate_resources()
 	
+	# Ensure panel blocks input to game world
+	mouse_filter = Control.MOUSE_FILTER_STOP
+	
 	# Initially hidden
 	visible = false
 
@@ -64,14 +67,16 @@ func _populate_resources():
 	# Add to appropriate tier sections
 	for item in sorted_resources:
 		var slot = resource_slot_scene.instantiate() as ResourceSlot
-		slot.setup(item.id, item.data)
 		all_resource_slots.append(slot)
 		
-		# Find correct tier section
+		# Find correct tier section and add to scene tree FIRST
 		for section in tier_sections:
 			if item.data.tier >= section.tier_range[0] and item.data.tier <= section.tier_range[1]:
 				section.add_resource_slot(slot)
 				break
+		
+		# Call setup deferred so @onready variables are initialized after _ready()
+		slot.call_deferred("setup", item.id, item.data)
 	
 	# Connect to resource changes
 	ResourceManager.resource_count_changed.connect(_on_resource_count_changed)
@@ -152,6 +157,13 @@ func _on_search_changed(new_text: String):
 func _on_filter_selected(index: int):
 	current_filter = index
 	_apply_filter_and_search()
+
+func _gui_input(event: InputEvent):
+	"""Handle input events on the panel - consume mouse wheel to prevent camera zoom"""
+	if event is InputEventMouseButton:
+		if event.button_index == MOUSE_BUTTON_WHEEL_UP or event.button_index == MOUSE_BUTTON_WHEEL_DOWN:
+			# Consume the event to prevent it from reaching the camera
+			accept_event()
 
 func _input(event: InputEvent):
 	if visible and event is InputEventKey:

@@ -9,6 +9,10 @@ const INACTIVE_UPDATE_INTERVAL: int = 60  # 1 FPS at 60 FPS (background simulati
 
 func _ready():
 	process_mode = Node.PROCESS_MODE_ALWAYS
+	
+	# Connect to zone switching to update processing states
+	if ZoneManager:
+		ZoneManager.zone_switched.connect(_on_zone_switched)
 
 func _process(delta: float):
 	# Update inactive zones at reduced frequency (1 FPS)
@@ -99,3 +103,7 @@ func on_building_created(building: Node2D, zone_id: String):
 	
 	if building.has_method("set_processing_active"):
 		building.set_processing_active(zone_id == active_zone_id)
+
+func _on_zone_switched(from_zone_id: String, to_zone_id: String):
+	"""Handle zone switch - update entity processing states"""
+	set_active_zone(to_zone_id)

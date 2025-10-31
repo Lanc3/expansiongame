@@ -264,7 +264,7 @@ func spawn_ship(blueprint: CosmoteerShipBlueprint) -> Node2D:
 			if EntityManager:
 				EntityManager.register_unit(ship, spawn_zone_id)
 			
-			print("Shipyard: Ship '%s' spawned in Zone %d at %s with %d weapons" % [blueprint.blueprint_name, spawn_zone_id, ship.global_position, ship.get_weapon_count() if ship.has_method("get_weapon_count") else 0])
+			print("Shipyard: Ship '%s' spawned in Zone %s at %s with %d weapons" % [blueprint.blueprint_name, spawn_zone_id, ship.global_position, ship.get_weapon_count() if ship.has_method("get_weapon_count") else 0])
 			return ship
 	
 	print("Shipyard: Failed to spawn ship - no valid zone")

@@ -10,6 +10,7 @@ z_index = 10
 collision_layer = 1
 collision_mask = 2
 script = ExtResource("1_custom")
+metadata/_edit_group_ = true
 
 [node name="CollisionShape2D" type="CollisionShape2D" parent="."]
 shape = SubResource("CircleShape2D_ship")

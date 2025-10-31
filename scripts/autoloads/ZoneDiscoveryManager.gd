@@ -63,8 +63,15 @@ func generate_and_discover_lateral_zone(source_zone_id: String, wormhole: Node2D
 		print("ZoneDiscovery: Max zones reached for difficulty %d (%d/%d)" % [difficulty, existing_zones.size(), max_zones])
 		return ""
 	
-	# Generate new zone
-	var new_zone_id = ZoneManager.generate_lateral_zone(difficulty, source_zone_id, wormhole_direction)
+	# CRITICAL: Get the target zone index from the wormhole metadata
+	var target_zone_index = wormhole.get_meta("target_zone_index", -1)
+	if target_zone_index == -1:
+		print("ZoneDiscovery: WARNING - Wormhole missing target_zone_index metadata!")
+	else:
+		print("ZoneDiscovery: Wormhole expects to create zone at index %d" % target_zone_index)
+	
+	# Generate new zone at the correct index
+	var new_zone_id = ZoneManager.generate_lateral_zone(difficulty, source_zone_id, wormhole_direction, target_zone_index)
 	
 	# Update wormhole target
 	if wormhole and is_instance_valid(wormhole):
@@ -116,27 +123,67 @@ func generate_and_discover_lateral_zone(source_zone_id: String, wormhole: Node2D
 
 func generate_and_discover_depth_zone(source_zone_id: String, target_difficulty: int, wormhole_direction: float) -> String:
 	"""Generate a new depth zone (different difficulty) when entering an undiscovered wormhole"""
+	print("Wormhole_debug : >>> GENERATE_DEPTH_ZONE CALLED <<<")
+	print("Wormhole_debug :   Source zone: %s" % source_zone_id)
+	print("Wormhole_debug :   Target difficulty: %d" % target_difficulty)
+	
 	if not ZoneManager:
+		print("Wormhole_debug :   ERROR - ZoneManager not found!")
 		return ""
 	
 	# Check if valid difficulty
 	if target_difficulty < 1 or target_difficulty > 9:
+		print("Wormhole_debug :   ERROR - Invalid target difficulty: %d" % target_difficulty)
 		return ""
 	
-	# Check if we already have a zone at this difficulty (create first zone)
-	var existing_zones = ZoneManager.get_zones_at_difficulty(target_difficulty)
-	
+	# Find or create the portal zone at target difficulty
 	var new_zone_id = ""
 	var zone_is_new = false
 	
-	if existing_zones.is_empty():
-		# Create first zone at this difficulty
-		new_zone_id = ZoneManager.create_initial_zone(target_difficulty)
-		zone_is_new = true
-	else:
-		# Link to existing zone
-		new_zone_id = existing_zones[0].zone_id
+	# Get the designated portal zone index for the target difficulty
+	var portal_index = ZoneManager.get_depth_portal_zone_index(target_difficulty)
+	print("Wormhole_debug :   Portal index for difficulty %d is: %d" % [target_difficulty, portal_index])
+	
+	# Check if portal zone exists
+	var existing_zones = ZoneManager.get_zones_at_difficulty(target_difficulty)
+	var portal_zone = null
+	
+	print("Wormhole_debug :   Searching for existing portal zone...")
+	print("Wormhole_debug :   Found %d zones at difficulty %d" % [existing_zones.size(), target_difficulty])
+	
+	for zone in existing_zones:
+		if zone.has("zone_index"):
+			if zone.zone_index == portal_index:
+				portal_zone = zone
+				print("Wormhole_debug :   ✓ Portal zone EXISTS: %s" % zone.zone_id)
+				break
+	
+	if portal_zone:
+		# Portal zone already exists, link to it
+		new_zone_id = portal_zone.zone_id
 		zone_is_new = false
+		print("Wormhole_debug :   Using EXISTING portal zone: %s" % new_zone_id)
+	else:
+		# Portal zone doesn't exist, create it at the correct index
+		print("Wormhole_debug :   Portal zone DOES NOT EXIST - creating NEW zone...")
+		print("Wormhole_debug :   Calling create_zone_at_index(difficulty=%d, index=%d)" % [target_difficulty, portal_index])
+		new_zone_id = ZoneManager.create_zone_at_index(target_difficulty, portal_index, false)
+		if new_zone_id.is_empty():
+			print("Wormhole_debug :   ERROR - create_zone_at_index returned EMPTY!")
+			return ""
+		zone_is_new = true
+		print("Wormhole_debug :   ✓ Created NEW portal zone: %s" % new_zone_id)
+	
+	# DEBUG: Verify the created/found zone
+	var verify_zone = ZoneManager.get_zone(new_zone_id)
+	if not verify_zone.is_empty():
+		print("Wormhole_debug :   Verifying zone '%s':" % new_zone_id)
+		print("Wormhole_debug :     Difficulty: %d" % verify_zone.difficulty)
+		print("Wormhole_debug :     Size: %.0f" % verify_zone.spawn_area_size)
+		print("Wormhole_debug :     Has zone_index: %s" % ("yes (%d)" % verify_zone.zone_index if verify_zone.has("zone_index") else "NO"))
+		print("Wormhole_debug :     Is portal zone: %s" % ZoneManager.should_zone_have_depth_portal(new_zone_id))
+	else:
+		print("Wormhole_debug :   ERROR - Cannot verify zone! Zone is empty!")
 	
 	# Generate zone layer FIRST if needed (before discovery)
 	if not ZoneManager.get_zone(new_zone_id).layer_node:
@@ -158,6 +205,7 @@ func generate_and_discover_depth_zone(source_zone_id: String, target_difficulty:
 		create_return_depth_wormhole(new_zone_id, source_zone_id)
 	
 	# NOW discover the zone (this triggers resource/enemy spawning)
+	print("Wormhole_debug :   Discovering zone and initializing systems...")
 	ZoneManager.discover_zone(new_zone_id)
 	
 	# CRITICAL: Initialize systems for the new zone (in case zone was created as discovered)
@@ -176,7 +224,8 @@ func generate_and_discover_depth_zone(source_zone_id: String, target_difficulty:
 	if enemy_spawner and enemy_spawner.has_method("setup_zone_enemies"):
 		enemy_spawner.setup_zone_enemies(new_zone_id)
 	
-	print("ZoneDiscovery: Discovered depth zone '%s' at difficulty %d" % [new_zone_id, target_difficulty])
+	print("Wormhole_debug :   Depth zone '%s' (difficulty %d) ready!" % [new_zone_id, target_difficulty])
+	print("Wormhole_debug : >>> GENERATE_DEPTH_ZONE COMPLETE <<<\n")
 	
 	zone_discovered.emit(new_zone_id)
 	
@@ -206,6 +255,10 @@ func get_undiscovered_zone_count_at_difficulty(difficulty: int) -> int:
 
 func create_return_lateral_wormhole(new_zone_id: String, source_zone_id: String, original_direction: float):
 	"""Create a return wormhole in the new zone that points back to source zone"""
+	# NOTE: This function is now mostly redundant because create_wormholes_for_zone
+	# automatically creates wormholes to neighbors based on ring structure.
+	# However, we keep it as a safety check to ensure bidirectional connection exists.
+	
 	if not ZoneManager:
 		return
 	
@@ -217,42 +270,22 @@ func create_return_lateral_wormhole(new_zone_id: String, source_zone_id: String,
 	if not wormholes_node:
 		return
 	
-	# Check if return wormhole already exists
+	# Check if return wormhole already exists (should exist from create_wormholes_for_zone)
 	for existing_wormhole in new_zone.lateral_wormholes:
 		if is_instance_valid(existing_wormhole) and existing_wormhole.target_zone_id == source_zone_id:
-			print("ZoneDiscovery: Return wormhole already exists in '%s'" % new_zone_id)
+			print("ZoneDiscovery: Return wormhole already exists in '%s' (created by ring structure)" % new_zone_id)
 			return
 	
-	# Load wormhole scene
-	var wormhole_scene = load("res://scenes/world/Wormhole.tscn")
-	if not wormhole_scene:
-		return
-	
-	# Create return wormhole at opposite angle
-	var return_angle = fmod(original_direction + PI, TAU)
-	
-	var wormhole = wormhole_scene.instantiate()
-	wormhole.source_zone_id = new_zone_id
-	wormhole.target_zone_id = source_zone_id  # Points back to source!
-	wormhole.wormhole_type = Wormhole.WormholeType.LATERAL
-	wormhole.is_undiscovered = false  # Already discovered!
-	wormhole.wormhole_direction = return_angle
-	
-	# Position at zone edge based on angle
-	var spawn_pos = ZoneManager.get_zone_wormhole_spawn_position(new_zone_id, return_angle)
-	wormhole.global_position = spawn_pos
-	
-	wormholes_node.add_child(wormhole)
-	
-	# Wait for wormhole to be ready and register it with ZoneManager
-	await get_tree().process_frame
-	if is_instance_valid(wormhole) and ZoneManager:
-		ZoneManager.set_zone_wormhole(new_zone_id, wormhole)
-	
-	print("ZoneDiscovery: Created return lateral wormhole in '%s' pointing to '%s' at position %s" % [new_zone_id, source_zone_id, spawn_pos])
+	# If we get here, the source zone is NOT a ring neighbor (shouldn't happen with proper ring structure)
+	# This is a safety fallback
+	print("ZoneDiscovery: WARNING - Source zone '%s' is not a ring neighbor of '%s', creating fallback wormhole" % [source_zone_id, new_zone_id])
 
 func create_return_depth_wormhole(new_zone_id: String, source_zone_id: String):
 	"""Create a return wormhole in the new zone that points back to source zone (for depth travel)"""
+	# NOTE: Both zones should be portal zones. The return wormhole should already exist
+	# from create_wormholes_for_zone if the new zone is a portal zone and properly set up.
+	# This function ensures bidirectional connection exists.
+	
 	if not ZoneManager:
 		return
 	
@@ -260,17 +293,22 @@ func create_return_depth_wormhole(new_zone_id: String, source_zone_id: String):
 	if new_zone.is_empty() or not new_zone.layer_node:
 		return
 	
+	# Verify new zone is a portal zone (should have depth wormholes)
+	if not ZoneManager.should_zone_have_depth_portal(new_zone_id):
+		print("ZoneDiscovery: WARNING - Trying to create return depth wormhole in non-portal zone '%s'" % new_zone_id)
+	
 	var wormholes_node = new_zone.layer_node.get_node_or_null("Wormholes")
 	if not wormholes_node:
 		return
 	
-	# Check if return wormhole already exists
+	# Check if return wormhole already exists (should exist from create_wormholes_for_zone)
 	for existing_wormhole in new_zone.depth_wormholes:
 		if is_instance_valid(existing_wormhole) and existing_wormhole.target_zone_id == source_zone_id:
-			print("ZoneDiscovery: Return depth wormhole already exists in '%s'" % new_zone_id)
+			print("ZoneDiscovery: Return depth wormhole already exists in '%s' (created by portal structure)" % new_zone_id)
 			return
 	
-	# Load wormhole scene
+	# If we get here, need to create the return wormhole
+	# This can happen if the zones were created at different times
 	var wormhole_scene = load("res://scenes/world/Wormhole.tscn")
 	if not wormhole_scene:
 		return
@@ -289,16 +327,29 @@ func create_return_depth_wormhole(new_zone_id: String, source_zone_id: String):
 	wormhole.is_undiscovered = false  # Already discovered!
 	wormhole.set_meta("is_forward", not is_forward)  # Opposite direction
 	
-	# Position at left or right edge
-	var angle = PI if is_forward else 0.0  # Backward wormhole on left, forward on right
+	# Position perpendicular to the zone's ring position (same as forward depth wormholes)
+	var new_zone_data = ZoneManager.get_zone(new_zone_id)
+	var ring_angle = new_zone_data.ring_position
+	var angle = ring_angle + (PI / 2.0) if is_forward else ring_angle - (PI / 2.0)
+	# Normalize angle
+	while angle < 0:
+		angle += TAU
+	while angle >= TAU:
+		angle -= TAU
+	
 	var spawn_pos = ZoneManager.get_zone_wormhole_spawn_position(new_zone_id, angle)
 	wormhole.global_position = spawn_pos
 	
+	print("ZoneDiscovery: Return depth wormhole angle: %.2f degrees (perpendicular to ring at %.2f)" % [rad_to_deg(angle), rad_to_deg(ring_angle)])
+	
 	wormholes_node.add_child(wormhole)
+	
+	# CRITICAL: Set z_index to render depth wormholes ON TOP
+	wormhole.z_index = 10  # Higher than lateral (0)
 	
 	# Wait for wormhole to be ready and register it with ZoneManager
 	await get_tree().process_frame
 	if is_instance_valid(wormhole) and ZoneManager:
-		ZoneManager.set_zone_wormhole(new_zone_id, wormhole)
+		ZoneManager.set_zone_wormhole(new_zone_id, wormhole, "depth")
 	
 	print("ZoneDiscovery: Created return depth wormhole in '%s' pointing to '%s' at position %s" % [new_zone_id, source_zone_id, spawn_pos])

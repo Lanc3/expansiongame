@@ -60,4 +60,3 @@ func is_position_within_boundaries(position: Vector2) -> bool:
 	
 	return position.x >= bounds_min.x and position.x <= bounds_max.x and \
 		   position.y >= bounds_min.y and position.y <= bounds_max.y
-

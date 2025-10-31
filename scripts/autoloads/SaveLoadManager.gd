@@ -18,11 +18,14 @@ func _ready():
 func save_game() -> bool:
 	"""Save the current game state to disk"""
 	
+	print("SaveLoadManager: Saving game - Current zone: %s" % (ZoneManager.current_zone_id if ZoneManager else "NONE"))
+	
 	var save_data = {
-		"version": "2.1",  # Updated for research system
+		"version": "2.2",  # Updated for zone network persistence
 		"timestamp": Time.get_unix_time_from_system(),
 		"game_time": GameManager.game_time,
-		"current_zone_id": ZoneManager.current_zone_id if ZoneManager else 1,
+		"current_zone_id": ZoneManager.current_zone_id if ZoneManager else "",
+		"zone_network": _save_zone_network(),  # NEW: Save zone network data
 		"resources": _save_resources(),
 		"units": _save_units_by_zone(),
 		"buildings": _save_buildings_by_zone(),
@@ -199,6 +202,41 @@ func _save_buildings_by_zone() -> Dictionary:
 	print("SaveLoadManager: Saved %d buildings across all zones" % buildings_by_zone.size())
 	return buildings_by_zone
 
+func _save_zone_network() -> Dictionary:
+	"""Save the zone network data for persistence"""
+	if not ZoneManager:
+		return {}
+	
+	var zones_data = []
+	
+	# Save each discovered zone's data
+	for zone_id in ZoneManager.zones_by_id.keys():
+		var zone = ZoneManager.get_zone(zone_id)
+		if zone.is_empty():
+			continue
+		
+		# Save zone metadata (without layer_node reference)
+		var zone_data = {
+			"zone_id": zone.zone_id,
+			"difficulty": zone.difficulty,
+			"zone_index": zone.get("zone_index", 0),  # CRITICAL: Needed for ring structure
+			"procedural_name": zone.procedural_name,
+			"discovered": zone.discovered,
+			"ring_position": zone.ring_position,
+			"size_multiplier": zone.size_multiplier,
+			"spawn_area_size": zone.spawn_area_size,
+			"max_resource_tier": zone.max_resource_tier
+		}
+		
+		zones_data.append(zone_data)
+	
+	print("SaveLoadManager: Saved %d zones in network" % zones_data.size())
+	
+	return {
+		"zone_network_seed": ZoneManager.zone_network_seed,
+		"zones": zones_data
+	}
+
 func _save_control_groups() -> Dictionary:
 	"""Save control group assignments"""
 	var groups = {}
@@ -229,8 +267,30 @@ func _save_camera_position() -> Dictionary:
 func _load_game_state(save_data: Dictionary):
 	"""Restore game state from save data"""
 	
-	# Wait for zones to be fully set up
-	await get_tree().create_timer(0.7).timeout
+	# Extract the actual saved zone FIRST
+	var saved_zone_id = save_data.get("current_zone_id", "")
+	print("SaveLoadManager: Loading game with saved zone: %s" % saved_zone_id)
+	
+	# Restore zone network FIRST (before anything else)
+	if save_data.has("zone_network") and ZoneManager:
+		await _load_zone_network(save_data["zone_network"], saved_zone_id)
+	
+	# Wait for ZoneSetup to complete and create zone layers for loaded zones
+	await get_tree().create_timer(0.9).timeout
+	
+	# Now update zone visibility for the correct current zone
+	if ZoneManager:
+		ZoneManager.update_zone_visibility()
+		print("SaveLoadManager: Zone visibility updated for zone: %s" % ZoneManager.current_zone_id)
+		
+		# Explicitly sync ZoneProcessingManager with current zone
+		if ZoneProcessingManager:
+			print("SaveLoadManager: Syncing processing states for zone: %s" % ZoneManager.current_zone_id)
+			ZoneProcessingManager.set_active_zone(ZoneManager.current_zone_id)
+		
+		# Debug: Print zone tracking info
+		print("SaveLoadManager: Zones in network: %s" % str(ZoneManager.zones_by_id.keys()))
+		print("SaveLoadManager: Current zone ID: %s" % ZoneManager.current_zone_id)
 	
 	# Clear any existing entities first (safety measure)
 	_clear_existing_entities()
@@ -238,10 +298,6 @@ func _load_game_state(save_data: Dictionary):
 	# Restore game manager state
 	if save_data.has("game_time"):
 		GameManager.game_time = save_data["game_time"]
-	
-	# Restore zone manager state
-	if save_data.has("current_zone_id") and ZoneManager:
-		ZoneManager.switch_to_zone(save_data["current_zone_id"])
 	
 	# Restore resources
 	if save_data.has("resources"):
@@ -267,9 +323,13 @@ func _load_game_state(save_data: Dictionary):
 			# Legacy format
 			_load_resource_nodes(save_data["resource_nodes"])
 	
-	# Restore camera position
+	# Restore wormholes (CRITICAL: Must be done after zones are loaded)
+	if save_data.has("wormhole_positions"):
+		await _load_wormhole_positions(save_data["wormhole_positions"])
+	
+	# Restore camera position (zone already switched earlier)
 	if save_data.has("camera_position"):
-		_load_camera_position(save_data["camera_position"])
+		_load_camera_position(save_data["camera_position"], save_data.get("current_zone_id", ""))
 	
 	# Restore fog of war
 	if save_data.has("fog_of_war") and FogOfWarManager:
@@ -290,6 +350,68 @@ func _load_game_state(save_data: Dictionary):
 	if save_data.has("asteroid_orbits"):
 		_load_asteroid_orbits(save_data["asteroid_orbits"])
 	
+
+func _load_zone_network(zone_network_data: Dictionary, actual_current_zone: String = ""):
+	"""Restore the zone network from save data"""
+	if not zone_network_data or not ZoneManager:
+		return
+	
+	print("SaveLoadManager: Restoring zone network...")
+	
+	# Restore zone network seed
+	if zone_network_data.has("zone_network_seed"):
+		ZoneManager.zone_network_seed = zone_network_data["zone_network_seed"]
+		print("SaveLoadManager: Restored zone network seed: %d" % ZoneManager.zone_network_seed)
+	
+	# Clear existing zones and reinitialize with saved network
+	ZoneManager.zones_by_id.clear()
+	
+	# Restore all discovered zones
+	if zone_network_data.has("zones"):
+		for zone_data in zone_network_data["zones"]:
+			# Recreate zone data structure
+			var zone = {
+				"zone_id": zone_data.zone_id,
+				"difficulty": int(zone_data.difficulty),
+				"zone_index": int(zone_data.get("zone_index", 0)),  # CRITICAL: Needed for ring structure (must be int for modulo)
+				"procedural_name": zone_data.procedural_name,
+				"discovered": zone_data.discovered,
+				"ring_position": zone_data.ring_position,
+				"size_multiplier": zone_data.size_multiplier,
+				"spawn_area_size": zone_data.spawn_area_size,
+				"max_resource_tier": zone_data.max_resource_tier,
+				"layer_node": null,  # Will be set by ZoneSetup
+				"lateral_wormholes": [],  # Will be populated by wormhole loading
+				"depth_wormholes": [],  # Will be populated by wormhole loading
+				"boundaries": ZoneManager.calculate_zone_boundaries(int(zone_data.difficulty))  # Calculate boundaries properly!
+			}
+			
+			ZoneManager.zones_by_id[zone_data.zone_id] = zone
+			print("SaveLoadManager: Restored zone %s with boundaries: %s" % [zone_data.zone_id, zone.boundaries])
+		
+		print("SaveLoadManager: Restored %d zones to network" % zone_network_data["zones"].size())
+		
+		# Set to ACTUAL current zone from save, not first zone
+		if not actual_current_zone.is_empty():
+			ZoneManager.current_zone_id = actual_current_zone
+			print("SaveLoadManager: Set current_zone_id to saved value: %s" % actual_current_zone)
+		elif ZoneManager.current_zone_id.is_empty() and zone_network_data["zones"].size() > 0:
+			ZoneManager.current_zone_id = zone_network_data["zones"][0].zone_id
+			print("SaveLoadManager: Set current_zone_id to first zone (fallback): %s" % ZoneManager.current_zone_id)
+	
+	# Now trigger ZoneSetup to create zone layers for ALL discovered zones
+	await get_tree().process_frame
+	
+	var zone_setup = get_tree().root.find_child("ZoneSetup", true, false)
+	if zone_setup:
+		if zone_setup.has_method("create_zone_layers_for_loaded_zones"):
+			var num_zones = zone_network_data.get("zones", []).size()
+			print("SaveLoadManager: Triggering ZoneSetup to create layers for %d loaded zones..." % num_zones)
+			zone_setup.create_zone_layers_for_loaded_zones()
+		else:
+			print("SaveLoadManager: ERROR - ZoneSetup doesn't have create_zone_layers_for_loaded_zones method!")
+	else:
+		print("SaveLoadManager: ERROR - ZoneSetup not found!")
 
 func _load_resources(resources_data: Dictionary):
 	"""Restore resource inventory"""
@@ -357,15 +479,65 @@ func _load_units(units_data: Array):
 				EntityManager.register_unit(unit)
 	
 
-func _load_camera_position(camera_data: Dictionary):
-	"""Restore camera position"""
+func _load_camera_position(camera_data: Dictionary, saved_zone_id: String = ""):
+	"""Restore camera position and zone"""
 	await get_tree().process_frame
 	
 	var camera = get_viewport().get_camera_2d()
-	if camera and camera_data.has("x") and camera_data.has("y"):
+	if not camera:
+		print("SaveLoadManager: ERROR - Camera not found!")
+		return
+	
+	print("SaveLoadManager: _load_camera_position called with zone: %s" % saved_zone_id)
+	
+	# Switch to saved zone first
+	if not saved_zone_id.is_empty() and ZoneManager:
+		print("SaveLoadManager: Camera switching to saved zone: %s (current: %s)" % [saved_zone_id, ZoneManager.current_zone_id])
+		# Only switch if not already in correct zone
+		if ZoneManager.current_zone_id != saved_zone_id:
+			ZoneManager.switch_to_zone(saved_zone_id)
+			await get_tree().process_frame
+		else:
+			# Already in correct zone, but need to set camera bounds manually
+			var zone = ZoneManager.get_zone(saved_zone_id)
+			if not zone.is_empty() and camera.has_method("set_zone_bounds"):
+				camera.set_zone_bounds(zone.boundaries)
+				print("SaveLoadManager: Set camera bounds for zone: %s" % saved_zone_id)
+			
+			# Manually update UI systems since zone_switched signal wasn't emitted
+			print("SaveLoadManager: Manually updating UI systems for zone: %s" % saved_zone_id)
+			
+			# Update FogOverlay
+			var fog_overlay = get_tree().root.find_child("FogOverlay", true, false)
+			if fog_overlay and fog_overlay.has_method("_on_zone_switched"):
+				fog_overlay._on_zone_switched("", saved_zone_id)
+			
+			# Update Minimap
+			var minimap = get_tree().root.find_child("Minimap", true, false)
+			if minimap and minimap.has_method("_on_zone_switched"):
+				minimap._on_zone_switched("", saved_zone_id)
+			
+			# Update ZoneSwitcher UI
+			var zone_switcher = get_tree().root.find_child("ZoneSwitcher", true, false)
+			if zone_switcher and zone_switcher.has_method("_on_zone_switched"):
+				zone_switcher._on_zone_switched("", saved_zone_id)
+		print("SaveLoadManager: Zone switch complete, current zone: %s" % ZoneManager.current_zone_id)
+	else:
+		print("SaveLoadManager: WARNING - No zone ID to switch to (saved_zone_id: '%s')" % saved_zone_id)
+	
+	# Restore camera position and zoom
+	if camera_data.has("x") and camera_data.has("y"):
 		camera.global_position = Vector2(camera_data["x"], camera_data["y"])
-		if camera_data.has("zoom_x") and camera_data.has("zoom_y"):
-			camera.zoom = Vector2(camera_data["zoom_x"], camera_data["zoom_y"])
+		print("SaveLoadManager: Camera positioned at %s" % camera.global_position)
+	
+	if camera_data.has("zoom_x") and camera_data.has("zoom_y"):
+		camera.zoom = Vector2(camera_data["zoom_x"], camera_data["zoom_y"])
+	
+	# Ensure zone visibility is correct after all loading
+	await get_tree().process_frame
+	print("SaveLoadManager: Final zone visibility update after load complete")
+	ZoneManager.update_zone_visibility()
+
 
 func _save_resource_nodes() -> Array:
 	"""Save resource node data (legacy, kept for compatibility)"""
@@ -446,19 +618,100 @@ func _save_wormhole_positions() -> Dictionary:
 		var all_wormholes = zone.lateral_wormholes + zone.depth_wormholes
 		for wormhole in all_wormholes:
 			if is_instance_valid(wormhole):
-				zone_wormholes.append({
+				var wormhole_data = {
 					"x": wormhole.global_position.x,
 					"y": wormhole.global_position.y,
 					"target_zone_id": wormhole.target_zone_id,
 					"source_zone_id": wormhole.source_zone_id,
 					"wormhole_type": wormhole.wormhole_type,
 					"is_undiscovered": wormhole.is_undiscovered
-				})
+				}
+				# Save direction for lateral wormholes
+				if "wormhole_direction" in wormhole:
+					wormhole_data["wormhole_direction"] = wormhole.wormhole_direction
+				# Save forward flag for depth wormholes
+				if wormhole.has_meta("is_forward"):
+					wormhole_data["is_forward"] = wormhole.get_meta("is_forward")
+				
+				zone_wormholes.append(wormhole_data)
 		
 		if zone_wormholes.size() > 0:
 			wormholes_data[str(zone_id)] = zone_wormholes
 	
+	print("SaveLoadManager: Saved %d zones with wormholes" % wormholes_data.size())
 	return wormholes_data
+
+func _load_wormhole_positions(wormholes_data: Dictionary):
+	"""Load and recreate wormholes for each zone"""
+	if not ZoneManager:
+		return
+	
+	print("SaveLoadManager: Loading wormholes...")
+	
+	var wormhole_scene = load("res://scenes/world/Wormhole.tscn")
+	if not wormhole_scene:
+		push_error("Failed to load Wormhole scene!")
+		return
+	
+	var total_wormholes = 0
+	
+	for zone_id_str in wormholes_data.keys():
+		var zone_id = zone_id_str
+		var zone = ZoneManager.get_zone(zone_id)
+		
+		if zone.is_empty() or not zone.layer_node:
+			print("SaveLoadManager: WARNING - Zone '%s' not ready for wormhole loading" % zone_id)
+			continue
+		
+		var wormholes_container = zone.layer_node.get_node_or_null("Wormholes")
+		if not wormholes_container:
+			print("SaveLoadManager: WARNING - No Wormholes container in zone '%s'" % zone_id)
+			continue
+		
+		# Clear existing wormholes (if any)
+		for child in wormholes_container.get_children():
+			child.queue_free()
+		
+		# Clear wormhole arrays in zone data
+		zone.lateral_wormholes.clear()
+		zone.depth_wormholes.clear()
+		
+		# Load wormholes for this zone
+		for wormhole_data in wormholes_data[zone_id_str]:
+			var wormhole = wormhole_scene.instantiate()
+			
+			# Set wormhole properties BEFORE adding to scene
+			wormhole.source_zone_id = wormhole_data.get("source_zone_id", zone_id)
+			wormhole.target_zone_id = wormhole_data.get("target_zone_id", "")
+			wormhole.wormhole_type = wormhole_data.get("wormhole_type", Wormhole.WormholeType.DEPTH)
+			wormhole.is_undiscovered = wormhole_data.get("is_undiscovered", false)
+			
+			# Restore additional metadata
+			if wormhole_data.has("wormhole_direction"):
+				wormhole.wormhole_direction = wormhole_data["wormhole_direction"]
+			if wormhole_data.has("is_forward"):
+				wormhole.set_meta("is_forward", wormhole_data["is_forward"])
+			
+			# Add to scene
+			wormholes_container.add_child(wormhole)
+			
+			# Set position AFTER adding to scene
+			wormhole.global_position = Vector2(wormhole_data["x"], wormhole_data["y"])
+			
+			# Wait for wormhole to initialize
+			await get_tree().process_frame
+			
+			# Register with ZoneManager
+			if wormhole.wormhole_type == Wormhole.WormholeType.LATERAL:
+				zone.lateral_wormholes.append(wormhole)
+			else:
+				zone.depth_wormholes.append(wormhole)
+			
+			total_wormholes += 1
+		
+		print("SaveLoadManager: Loaded %d wormholes for zone '%s'" % [wormholes_data[zone_id_str].size(), zone_id])
+	
+	print("SaveLoadManager: Loaded %d total wormholes across %d zones" % [total_wormholes, wormholes_data.size()])
 
 func _load_resource_nodes(resources_data: Array):
 	"""Restore resource nodes"""
@@ -617,9 +870,10 @@ func _load_units_by_zone(units_by_zone: Dictionary):
 			
 			var unit = unit_scene.instantiate()
 			
-			# Set position
-			if unit_data.has("position"):
-				unit.global_position = Vector2(unit_data["position"]["x"], unit_data["position"]["y"])
+			# Set position BEFORE adding to scene
+			var unit_pos = Vector2(unit_data["position"]["x"], unit_data["position"]["y"]) if unit_data.has("position") else Vector2.ZERO
+			unit.global_position = unit_pos
+			print("SaveLoadManager: Loading unit to zone %s at position %s" % [zone_id, unit_pos])
 			
 			# Set team
 			if unit_data.has("team_id") and "team_id" in unit:
@@ -634,7 +888,7 @@ func _load_units_by_zone(units_by_zone: Dictionary):
 			# Add to zone's units container FIRST (needed for proper initialization)
 			units_container.add_child(unit)
 			
-			# Register with EntityManager
+			# Register with EntityManager with explicit zone_id
 			if EntityManager.has_method("register_unit"):
 				EntityManager.register_unit(unit, zone_id)
 			

@@ -166,10 +166,18 @@ func draw_entities():
 				
 				var minimap_pos = world_to_minimap(wormhole.global_position) + padding_offset
 				
-				# Different colors for forward vs return wormholes
-				var is_forward = wormhole.get_meta("is_forward", true)
+				# Different colors for wormhole types
 				var pulse = 1.0 + sin(Time.get_ticks_msec() * 0.005) * 0.3
-				var wormhole_color = Color(0.7, 0.4, 1.0) * pulse if is_forward else Color(0.4, 0.7, 1.0) * pulse
+				var wormhole_color: Color
+				
+				# Check wormhole type (lateral = blue/cyan, depth = purple)
+				if wormhole.wormhole_type == Wormhole.WormholeType.LATERAL:
+					# Blue/cyan for lateral (ring connections)
+					wormhole_color = Color(0.3, 0.8, 0.8) * pulse
+				else:
+					# Purple for depth (forward/backward between rings)
+					var is_forward = wormhole.get_meta("is_forward", true)
+					wormhole_color = Color(0.7, 0.4, 1.0) * pulse if is_forward else Color(0.4, 0.6, 1.0) * pulse
 				
 				draw_circle(minimap_pos, 5.0, wormhole_color)
 				# Draw outline

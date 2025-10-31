@@ -53,8 +53,8 @@ float spiral_arms(vec2 polar_pos, float angle, float radius) {
 		// Calculate arm angle
 		float arm_angle = float(i) * (6.28318 / float(num_arms));
 		
-		// Logarithmic spiral equation
-		float spiral_angle = arm_angle + radius * spiral_tightness * 3.0;
+		// Logarithmic spiral equation - stronger spiral effect
+		float spiral_angle = arm_angle + radius * spiral_tightness * 5.0;
 		
 		// Angle difference
 		float angle_diff = abs(angle - spiral_angle);
@@ -63,15 +63,15 @@ float spiral_arms(vec2 polar_pos, float angle, float radius) {
 		angle_diff = min(angle_diff, 6.28318 - angle_diff);
 		
 		// Calculate intensity based on distance from spiral arm
-		float arm_width = 0.3 + radius * 0.2;  // Wider arms at outer edge
+		float arm_width = 0.4 + radius * 0.3;  // Wider, more visible arms
 		float arm_intensity = exp(-angle_diff * angle_diff / (arm_width * arm_width));
 		
 		intensity = max(intensity, arm_intensity);
 	}
 	
-	// Add density variation along radius (more dense in middle)
-	float radial_density = exp(-pow(radius - 0.5, 2.0) * 4.0);
-	intensity *= radial_density;
+	// Add density variation along radius (stronger in middle)
+	float radial_density = exp(-pow(radius - 0.4, 2.0) * 3.0);
+	intensity *= radial_density * 1.2;  // Boost overall intensity
 	
 	return intensity;
 }
@@ -102,17 +102,18 @@ void fragment() {
 	color += nebula_color * nebula * 0.3;
 	
 	// === SPIRAL ARMS ===
-	if (radius < 0.48 && radius > 0.05) {  // Galaxy disk
+	if (radius < 0.48 && radius > 0.02) {  // Galaxy disk (expanded range)
 		float arm_intensity = spiral_arms(centered, angle, radius);
 		
 		// Add noise to spiral arms for organic look
 		float arm_noise = fbm(vec2(angle * 5.0, radius * 10.0));
-		arm_intensity *= (0.7 + arm_noise * 0.3);
+		arm_intensity *= (0.6 + arm_noise * 0.4);
 		
 		// Color gradient from outer (blue) to center (orange/red)
 		vec3 arm_color = mix(outer_color, center_color, pow(radius * 2.0, 1.5));
 		
-		color = mix(color, arm_color * 1.2, arm_intensity * 0.8);
+		// Make spiral arms more prominent
+		color = mix(color, arm_color * 1.5, arm_intensity * 0.9);
 	}
 	
 	// === GALACTIC CORE ===

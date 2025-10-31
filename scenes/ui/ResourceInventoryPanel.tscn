@@ -1,6 +1,21 @@
-[gd_scene load_steps=2 format=3 uid="uid://b5m7n2lap4tsx"]
+[gd_scene load_steps=4 format=3 uid="uid://b5m7n2lap4tsx"]
 
 [ext_resource type="Script" path="res://scripts/ui/ResourceInventoryPanel.gd" id="1_inventory"]
+[ext_resource type="Theme" uid="uid://bh3pao1yls74n" path="res://resources/themes/main_theme.tres" id="2_theme"]
+
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_panel"]
+bg_color = Color(0.039, 0.059, 0.118, 0.9)
+border_width_left = 2
+border_width_top = 2
+border_width_right = 2
+border_width_bottom = 2
+border_color = Color(1, 0.843, 0, 1)
+corner_radius_top_left = 8
+corner_radius_top_right = 8
+corner_radius_bottom_right = 8
+corner_radius_bottom_left = 8
+shadow_color = Color(1, 0.843, 0, 0.4)
+shadow_size = 6
 
 [node name="ResourceInventoryPanel" type="Panel"]
 visible = false
@@ -16,6 +31,9 @@ offset_right = 400.0
 offset_bottom = 300.0
 grow_horizontal = 2
 grow_vertical = 2
+mouse_filter = 0
+theme = ExtResource("2_theme")
+theme_override_styles/panel = SubResource("StyleBoxFlat_panel")
 script = ExtResource("1_inventory")
 
 [node name="VBox" type="VBoxContainer" parent="."]

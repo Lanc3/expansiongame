@@ -80,7 +80,7 @@ func handle_keyboard(event: InputEventKey):
 			if camera and FogOfWarManager and ZoneManager:
 				var zone_id = ZoneManager.current_zone_id
 				FogOfWarManager.reveal_position(zone_id, camera.global_position, 1000.0)
-				print("DEBUG: Revealed fog at camera position in Zone %d: %s" % [zone_id, camera.global_position])
+				print("DEBUG: Revealed fog at camera position in Zone %s: %s" % [zone_id, camera.global_position])
 			return
 		
 		# Handle control group assignment (Ctrl+1-9)
@@ -450,6 +450,12 @@ func is_mouse_over_ui(mouse_pos: Vector2) -> bool:
 		if tech_tree is Control and tech_tree.get_global_rect().has_point(mouse_pos):
 			return true
 	
+	# Check GalaxyMapUI
+	var galaxy_map = get_tree().root.find_child("GalaxyMapUI", true, false)
+	if galaxy_map and galaxy_map.visible:
+		if galaxy_map is Control and galaxy_map.get_global_rect().has_point(mouse_pos):
+			return true
+	
 	# Check BlueprintBuilderUI
 	var blueprint_builder = get_tree().root.find_child("BlueprintBuilderUI", true, false)
 	if blueprint_builder and blueprint_builder.visible:
@@ -484,12 +490,6 @@ func is_mouse_over_ui(mouse_pos: Vector2) -> bool:
 	var zone_switcher = get_tree().root.find_child("ZoneSwitcher", true, false)
 	if zone_switcher and zone_switcher.visible:
 		if zone_switcher is Control and zone_switcher.get_global_rect().has_point(mouse_pos):
-			return true
-	
-	# Check GalaxyMapUI
-	var galaxy_map = get_tree().root.find_child("GalaxyMapUI", true, false)
-	if galaxy_map and galaxy_map.visible:
-		if galaxy_map is Control and galaxy_map.get_global_rect().has_point(mouse_pos):
 			return true
 	
 	return false
@@ -760,7 +760,7 @@ func trigger_debug_event():
 	var zone_id = ZoneManager.current_zone_id
 	var event_id = EventManager.pick_random_event_for_zone(zone_id)
 	
-	print("DEBUG: Triggering event '%s' in Zone %d (Press J)" % [event_id, zone_id])
+	print("DEBUG: Triggering event '%s' in Zone %s (Press J)" % [event_id, zone_id])
 	EventManager.trigger_event(event_id)
 
 func spawn_debug_blueprint_ship():

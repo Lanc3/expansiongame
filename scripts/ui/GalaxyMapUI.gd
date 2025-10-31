@@ -5,8 +5,8 @@ signal zone_clicked(zone_id: String)
 signal map_closed()
 
 # Galaxy display settings
-const ZONE_MARKER_SIZE: float = 40.0
-const UNDISCOVERED_MARKER_SIZE: float = 25.0
+const ZONE_MARKER_SIZE: float = 25.0
+const UNDISCOVERED_MARKER_SIZE: float = 15.0
 const ZONE_LABEL_DISTANCE: float = 50.0
 
 # Galaxy center is calculated dynamically
@@ -27,7 +27,7 @@ const DIFFICULTY_COLORS: Array[Color] = [
 
 # UI nodes
 @onready var background: ColorRect = $Background
-@onready var galaxy_shader_rect: ColorRect = $Background/GalaxyShader
+@onready var background_texture: TextureRect = $Background/BackgroundTexture
 @onready var zone_container: Control = $ZoneContainer
 @onready var connection_lines: Control = $ConnectionLines
 @onready var info_panel: PanelContainer = $InfoPanel
@@ -65,22 +65,24 @@ func _ready():
 	if return_button:
 		return_button.pressed.connect(_on_return_to_current_pressed)
 	
-	# Setup galaxy shader
-	if galaxy_shader_rect:
-		var shader_material = ShaderMaterial.new()
-		var shader = load("res://shaders/spiral_galaxy.gdshader")
-		shader_material.shader = shader
-		galaxy_shader_rect.material = shader_material
-	
 	# Hide info panel initially
 	if info_panel:
 		info_panel.visible = false
 
-func _process(_delta):
-	# Handle ESC key to close (M is handled by InputHandler via toggle_galaxy_map)
-	if visible and Input.is_action_just_pressed("ui_cancel"):
-		print("GalaxyMapUI: ESC pressed, closing map")
-		close_map()
+func _input(event: InputEvent):
+	# Handle M key and ESC to close map when visible
+	if not visible:
+		return
+	
+	if event is InputEventKey and event.pressed and not event.echo:
+		if event.keycode == KEY_M:
+			print("GalaxyMapUI: M pressed, closing map")
+			close_map()
+			get_viewport().set_input_as_handled()
+		elif event.keycode == KEY_ESCAPE:
+			print("GalaxyMapUI: ESC pressed, closing map")
+			close_map()
+			get_viewport().set_input_as_handled()
 
 func open_map():
 	"""Open the galaxy map"""
@@ -123,8 +125,27 @@ func refresh_zone_display():
 	
 	# Get all discovered zones
 	var discovered_zones = ZoneManager.get_discovered_zones()
-	print("GalaxyMapUI: Discovered zones: %s" % discovered_zones)
+	print("GalaxyMapUI: Discovered zones: %s" % str(discovered_zones))
 	print("GalaxyMapUI: Displaying %d discovered zones" % discovered_zones.size())
+	
+	# Debug: Count zones by difficulty
+	var zones_by_diff = {}
+	print("GalaxyMapUI: Building zones by difficulty map...")
+	for zone_id in discovered_zones:
+		var zone = ZoneManager.get_zone(zone_id)
+		print("GalaxyMapUI:   Checking zone %s - empty: %s" % [zone_id, zone.is_empty()])
+		if not zone.is_empty():
+			var diff = zone.difficulty
+			print("GalaxyMapUI:   Zone %s has difficulty: %d" % [zone_id, diff])
+			if not zones_by_diff.has(diff):
+				zones_by_diff[diff] = []
+			zones_by_diff[diff].append(zone_id)
+	
+	print("GalaxyMapUI: === ZONES BY DIFFICULTY ===")
+	print("GalaxyMapUI: zones_by_diff has %d difficulties" % zones_by_diff.size())
+	for diff in zones_by_diff.keys():
+		print("  Ring %d (difficulty %d): %d zones - %s" % [diff, diff, zones_by_diff[diff].size(), zones_by_diff[diff]])
+	print("GalaxyMapUI: ============================")
 	
 	if discovered_zones.is_empty():
 		print("GalaxyMapUI: WARNING - No discovered zones to display!")
@@ -144,32 +165,6 @@ func refresh_zone_display():
 	# Create markers for discovered zones
 	for zone_id in discovered_zones:
 		create_zone_marker(zone_id, false)
-	
-	# DEBUG: Add a test marker at center to verify marker creation works
-	var test_marker = Panel.new()
-	test_marker.process_mode = Node.PROCESS_MODE_ALWAYS  # Process input even when paused!
-	test_marker.custom_minimum_size = Vector2(50, 50)
-	test_marker.position = galaxy_center - Vector2(25, 25)
-	test_marker.mouse_filter = Control.MOUSE_FILTER_STOP
-	
-	var test_style = StyleBoxFlat.new()
-	test_style.bg_color = Color.RED
-	test_marker.add_theme_stylebox_override("panel", test_style)
-	
-	test_marker.mouse_entered.connect(func(): print("GalaxyMapUI: TEST MARKER HOVERED!"))
-	test_marker.gui_input.connect(func(event): print("GalaxyMapUI: TEST MARKER CLICKED! Event: %s" % event.get_class()))
-	
-	zone_container.add_child(test_marker)
-	
-	# Wait a frame for layout
-	await get_tree().process_frame
-	
-	print("GalaxyMapUI: Added test marker at center: %s" % galaxy_center)
-	print("  - Test marker position: %s" % test_marker.position)
-	print("  - Test marker size: %s" % test_marker.size)
-	print("  - Test marker global_position: %s" % test_marker.global_position)
-	print("  - Test marker visible: %s" % test_marker.visible)
-	print("  - Test marker mouse_filter: %d" % test_marker.mouse_filter)
 	
 	# Create markers for undiscovered neighbors
 	for zone_id in discovered_zones:
@@ -206,6 +201,7 @@ func create_zone_marker(zone_id: String, is_undiscovered: bool = false):
 	var marker = Panel.new()
 	marker.process_mode = Node.PROCESS_MODE_ALWAYS  # Process input even when paused!
 	marker.custom_minimum_size = Vector2(ZONE_MARKER_SIZE, ZONE_MARKER_SIZE)
+	marker.size = Vector2(ZONE_MARKER_SIZE, ZONE_MARKER_SIZE)  # CRITICAL: Set actual size for hit detection
 	marker.position = position - Vector2(ZONE_MARKER_SIZE / 2, ZONE_MARKER_SIZE / 2)
 	marker.mouse_filter = Control.MOUSE_FILTER_STOP  # Allow mouse events
 	
@@ -230,12 +226,14 @@ func create_zone_marker(zone_id: String, is_undiscovered: bool = false):
 	glow.size = Vector2(ZONE_MARKER_SIZE + 20, ZONE_MARKER_SIZE + 20)
 	glow.position = Vector2(-10, -10)
 	glow.z_index = -1
+	glow.mouse_filter = Control.MOUSE_FILTER_IGNORE  # Don't block parent's input
 	marker.add_child(glow)
 	
 	# Add label with background for readability
 	var label_bg = PanelContainer.new()
 	label_bg.position = Vector2(-ZONE_MARKER_SIZE, ZONE_MARKER_SIZE + 5)
 	label_bg.custom_minimum_size = Vector2(ZONE_MARKER_SIZE * 3, 25)
+	label_bg.mouse_filter = Control.MOUSE_FILTER_IGNORE  # Don't block parent's input
 	
 	var label_style = StyleBoxFlat.new()
 	label_style.bg_color = Color(0, 0, 0, 0.7)
@@ -250,6 +248,7 @@ func create_zone_marker(zone_id: String, is_undiscovered: bool = false):
 	label.text = zone.procedural_name
 	label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	label.add_theme_font_size_override("font_size", 11)
+	label.mouse_filter = Control.MOUSE_FILTER_IGNORE  # Don't block parent's input
 	label_bg.add_child(label)
 	marker.add_child(label_bg)
 	
@@ -260,6 +259,7 @@ func create_zone_marker(zone_id: String, is_undiscovered: bool = false):
 		indicator.size = Vector2(ZONE_MARKER_SIZE + 15, ZONE_MARKER_SIZE + 15)
 		indicator.position = Vector2(-7.5, -7.5)
 		indicator.z_index = -2
+		indicator.mouse_filter = Control.MOUSE_FILTER_IGNORE  # Don't block parent's input
 		marker.add_child(indicator)
 		
 		# Add pulsing effect indicator
@@ -268,6 +268,7 @@ func create_zone_marker(zone_id: String, is_undiscovered: bool = false):
 		pulse_indicator.size = Vector2(ZONE_MARKER_SIZE + 25, ZONE_MARKER_SIZE + 25)
 		pulse_indicator.position = Vector2(-12.5, -12.5)
 		pulse_indicator.z_index = -3
+		pulse_indicator.mouse_filter = Control.MOUSE_FILTER_IGNORE  # Don't block parent's input
 		marker.add_child(pulse_indicator)
 	
 	# Add viewed zone indicator (cyan border) - different from current zone
@@ -277,6 +278,7 @@ func create_zone_marker(zone_id: String, is_undiscovered: bool = false):
 		indicator.size = Vector2(ZONE_MARKER_SIZE + 12, ZONE_MARKER_SIZE + 12)
 		indicator.position = Vector2(-6, -6)
 		indicator.z_index = -2
+		indicator.mouse_filter = Control.MOUSE_FILTER_IGNORE  # Don't block parent's input
 		marker.add_child(indicator)
 	
 	# Make clickable
@@ -349,13 +351,17 @@ func create_undiscovered_marker(source_zone_id: String, neighbor_info: Dictionar
 
 func calculate_galaxy_position(difficulty: int, ring_position: float) -> Vector2:
 	"""Calculate screen position for a zone based on difficulty and ring position"""
-	# Spiral calculation - creates a logarithmic spiral effect
-	var angle = (difficulty * PI / 2.0) + ring_position
+	# Concentric ring calculation - zones evenly spaced on their rings
+	# ring_position is already the angle (0 to TAU)
+	var angle = ring_position
 	
-	# Increase radius significantly for better visibility
+	# Calculate radius for this difficulty ring
 	# Outer zones (difficulty 1) are far from center, inner zones (difficulty 9) are close
-	var base_radius = min(galaxy_center.x, galaxy_center.y) * 0.7  # Use 70% of smaller dimension
-	var radius = base_radius * (10.0 - difficulty) / 9.0
+	var base_radius = min(galaxy_center.x, galaxy_center.y) * 0.85  # Use 85% of smaller dimension for larger spread
+	var ring_spacing = base_radius / 9.0  # Space between rings
+	var radius = base_radius - (difficulty - 1) * ring_spacing
+	
+	print("GalaxyMapUI: Radius calc - difficulty=%d, base=%.1f, spacing=%.1f, radius=%.1f" % [difficulty, base_radius, ring_spacing, radius])
 	
 	var x = galaxy_center.x + cos(angle) * radius
 	var y = galaxy_center.y + sin(angle) * radius
@@ -373,29 +379,31 @@ func draw_zone_connections():
 	for child in connection_lines.get_children():
 		child.queue_free()
 	
+	var discovered_zones = ZoneManager.get_discovered_zones()
+	
 	# Draw connections between discovered zones
-	for zone_id in ZoneManager.get_discovered_zones():
+	for zone_id in discovered_zones:
 		var zone = ZoneManager.get_zone(zone_id)
 		if zone.is_empty():
 			continue
 		
 		var source_pos = calculate_galaxy_position(zone.difficulty, zone.ring_position)
 		
-		# Draw lateral connections
+		# Draw lateral connections (cyan - same difficulty connections)
 		for wormhole in zone.lateral_wormholes:
 			if is_instance_valid(wormhole) and not wormhole.is_undiscovered:
 				var target_zone = ZoneManager.get_zone(wormhole.target_zone_id)
 				if not target_zone.is_empty() and ZoneManager.is_zone_discovered(wormhole.target_zone_id):
 					var target_pos = calculate_galaxy_position(target_zone.difficulty, target_zone.ring_position)
-					draw_connection_line(source_pos, target_pos, Color(0.3, 0.8, 0.8, 0.5))
+					draw_connection_line(source_pos, target_pos, Color(0.3, 0.9, 0.9, 0.6))  # Brighter cyan
 		
-		# Draw depth connections
+		# Draw depth connections (purple - different difficulty connections)
 		for wormhole in zone.depth_wormholes:
 			if is_instance_valid(wormhole) and not wormhole.is_undiscovered:
 				var target_zone = ZoneManager.get_zone(wormhole.target_zone_id)
 				if not target_zone.is_empty() and ZoneManager.is_zone_discovered(wormhole.target_zone_id):
 					var target_pos = calculate_galaxy_position(target_zone.difficulty, target_zone.ring_position)
-					draw_connection_line(source_pos, target_pos, Color(0.6, 0.3, 1.0, 0.5))
+					draw_connection_line(source_pos, target_pos, Color(0.7, 0.4, 1.0, 0.6))  # Brighter purple
 
 func draw_connection_line(from: Vector2, to: Vector2, color: Color):
 	"""Draw a line between two points"""
@@ -403,8 +411,9 @@ func draw_connection_line(from: Vector2, to: Vector2, color: Color):
 	line.add_point(from)
 	line.add_point(to)
 	line.default_color = color
-	line.width = 2.0
-	line.z_index = -1
+	line.width = 3.0  # Increased width for better visibility
+	line.z_index = 0  # Draw at parent level (ConnectionLines is z_index 1, so lines will be visible)
+	line.antialiased = true  # Smoother lines
 	connection_lines.add_child(line)
 
 func _on_zone_marker_hovered(zone_id: String):
@@ -426,7 +435,7 @@ func _on_zone_marker_input(event: InputEvent, zone_id: String):
 		print("GalaxyMapUI: Zone marker clicked - %s" % zone_id)
 		zone_clicked.emit(zone_id)
 		switch_camera_to_zone(zone_id)
-		show_detailed_zone_info(zone_id)
+		# Keep map open - player can close with M/ESC when done exploring
 
 func show_zone_info(zone_id: String):
 	"""Show basic zone info on hover"""
@@ -501,6 +510,27 @@ func show_zone_info(zone_id: String):
 	info_text += "\n[color=gray]Click to view zone[/color]"
 	
 	info_label.text = info_text
+	
+	# Position info panel near the zone marker
+	var marker = zone_markers.get(zone_id)
+	if marker:
+		# Get marker center position
+		var marker_center = marker.global_position + marker.size / 2
+		
+		# Offset panel to the right and slightly up from marker
+		var panel_offset = Vector2(60, -50)
+		var panel_pos = marker_center + panel_offset
+		
+		# Clamp to screen bounds (with padding)
+		var screen_size = get_viewport_rect().size
+		var panel_size = info_panel.size
+		var padding = 10.0
+		
+		panel_pos.x = clamp(panel_pos.x, padding, screen_size.x - panel_size.x - padding)
+		panel_pos.y = clamp(panel_pos.y, padding, screen_size.y - panel_size.y - padding)
+		
+		info_panel.global_position = panel_pos
+	
 	info_panel.visible = true
 
 func show_detailed_zone_info(zone_id: String):
