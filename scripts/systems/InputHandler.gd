@@ -462,6 +462,12 @@ func is_mouse_over_ui(mouse_pos: Vector2) -> bool:
 		if blueprint_builder is Control and blueprint_builder.get_global_rect().has_point(mouse_pos):
 			return true
 	
+	# Check CosmoteerShipBuilderUI
+	var cosmoteer_builder = get_tree().root.find_child("CosmoteerShipBuilderUI", true, false)
+	if cosmoteer_builder and cosmoteer_builder.visible:
+		if cosmoteer_builder is Control and cosmoteer_builder.get_global_rect().has_point(mouse_pos):
+			return true
+	
 	# Check WormholeInfoPanel
 	var wormhole_info_panel = get_tree().root.find_child("WormholeInfoPanel", true, false)
 	if wormhole_info_panel and wormhole_info_panel.visible:

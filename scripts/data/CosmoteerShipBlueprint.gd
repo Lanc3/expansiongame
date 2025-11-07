@@ -37,20 +37,25 @@ func remove_component_at(pos: Vector2i):
 		var comp_pos = comp.get("grid_position", Vector2i.ZERO)
 		var comp_size = comp.get("size", Vector2i.ONE)
 		
-		# Check if position is within component bounds
-		if pos.x >= comp_pos.x and pos.x < comp_pos.x + comp_size.x:
-			if pos.y >= comp_pos.y and pos.y < comp_pos.y + comp_size.y:
-				components.remove_at(i)
-				return
+		# Get hex cells occupied by this component
+		var hex_cells = HexGrid.get_component_hex_cells(comp_pos, comp_size)
+		
+		# Check if pos is in hex_cells
+		if pos in hex_cells:
+			components.remove_at(i)
+			return
 
 func get_component_at(pos: Vector2i) -> Dictionary:
 	for comp in components:
 		var comp_pos = comp.get("grid_position", Vector2i.ZERO)
 		var comp_size = comp.get("size", Vector2i.ONE)
 		
-		if pos.x >= comp_pos.x and pos.x < comp_pos.x + comp_size.x:
-			if pos.y >= comp_pos.y and pos.y < comp_pos.y + comp_size.y:
-				return comp
+		# Get hex cells occupied by this component
+		var hex_cells = HexGrid.get_component_hex_cells(comp_pos, comp_size)
+		
+		# Check if pos is in hex_cells
+		if pos in hex_cells:
+			return comp
 	
 	return {}
 
@@ -111,13 +116,8 @@ func get_hull_islands() -> Array[Array]:
 			visited[current] = true
 			island.append(current)
 			
-			# Check 4-directional neighbors
-			var neighbors = [
-				current + Vector2i(1, 0),
-				current + Vector2i(-1, 0),
-				current + Vector2i(0, 1),
-				current + Vector2i(0, -1)
-			]
+			# Check 6-directional neighbors (hex grid)
+			var neighbors = HexGrid.get_hex_neighbors(current)
 			
 			for neighbor in neighbors:
 				if not visited.has(neighbor) and hull_cells.has(neighbor):
@@ -128,37 +128,46 @@ func get_hull_islands() -> Array[Array]:
 	return islands
 
 func get_ship_bounds() -> Rect2:
-	"""Returns the bounding box of all hull cells"""
+	"""Returns the bounding box of all hull cells in pixel coordinates"""
 	if hull_cells.is_empty():
 		return Rect2(0, 0, 0, 0)
 	
+	var cell_size = 15.0  # CELL_SIZE from CosmoteerShipGrid
 	var min_x = INF
 	var max_x = -INF
 	var min_y = INF
 	var max_y = -INF
 	
+	# Convert hex positions to pixel positions and find bounds
 	for cell_pos in hull_cells.keys():
-		min_x = min(min_x, cell_pos.x)
-		max_x = max(max_x, cell_pos.x)
-		min_y = min(min_y, cell_pos.y)
-		max_y = max(max_y, cell_pos.y)
+		var pixel_pos = HexGrid.hex_to_pixel(cell_pos, cell_size)
+		var hex_vertices = HexGrid.get_hex_vertices(pixel_pos, cell_size)
+		# Check all vertices of hexagon for bounds
+		for vertex in hex_vertices:
+			min_x = min(min_x, vertex.x)
+			max_x = max(max_x, vertex.x)
+			min_y = min(min_y, vertex.y)
+			max_y = max(max_y, vertex.y)
 	
-	return Rect2(min_x, min_y, max_x - min_x + 1, max_y - min_y + 1)
+	return Rect2(min_x, min_y, max_x - min_x, max_y - min_y)
 
 func calculate_center_of_mass() -> Vector2:
-	"""Calculate the weighted center of mass of the ship"""
+	"""Calculate the weighted center of mass of the ship in pixel coordinates"""
 	if hull_cells.is_empty() and components.is_empty():
 		return Vector2.ZERO
 	
 	var total_mass: float = 0.0
 	var weighted_position: Vector2 = Vector2.ZERO
+	var cell_size = 15.0  # CELL_SIZE from CosmoteerShipGrid
 	
-	# Add hull mass
+	# Add hull mass - convert hex positions to pixel positions
 	for cell_pos in hull_cells.keys():
 		var hull_type = get_hull_type(cell_pos)
 		var mass = CosmoteerComponentDefs.get_hull_weight(hull_type)
 		total_mass += mass
-		weighted_position += Vector2(cell_pos) * mass
+		# Convert hex coordinate to pixel position
+		var pixel_pos = HexGrid.hex_to_pixel(cell_pos, cell_size)
+		weighted_position += pixel_pos * mass
 	
 	# Add component mass
 	for comp_data in components:
@@ -171,10 +180,16 @@ func calculate_center_of_mass() -> Vector2:
 		var comp_pos = comp_data.get("grid_position", Vector2i.ZERO)
 		var comp_size = comp_data.get("size", Vector2i.ONE)
 		
-		# Use center of component
-		var center = Vector2(comp_pos) + Vector2(comp_size) * 0.5
+		# Get hex cells occupied by component, calculate center in pixel space
+		var hex_cells = HexGrid.get_component_hex_cells(comp_pos, comp_size)
+		var center_hex = Vector2.ZERO
+		for hex_pos in hex_cells:
+			center_hex += Vector2(hex_pos)
+		center_hex /= hex_cells.size()
+		var center_px = HexGrid.hex_to_pixel(Vector2i(int(center_hex.x), int(center_hex.y)), cell_size)
+		
 		total_mass += mass
-		weighted_position += center * mass
+		weighted_position += center_px * mass
 	
 	if total_mass > 0:
 		return weighted_position / total_mass

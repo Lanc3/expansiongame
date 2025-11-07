@@ -72,6 +72,7 @@ anchors_preset = 15
 anchor_right = 0.25
 anchor_bottom = 1.0
 grow_vertical = 2
+z_index = 10
 theme_override_styles/panel = SubResource("StyleBoxFlat_left_panel")
 
 [node name="VBox" type="VBoxContainer" parent="LeftPanel"]
@@ -158,10 +159,12 @@ anchor_right = 0.75
 anchor_bottom = 1.0
 grow_horizontal = 2
 grow_vertical = 2
+mouse_filter = 2
 theme_override_styles/panel = SubResource("StyleBoxFlat_center_panel")
 
 [node name="MarginContainer" type="MarginContainer" parent="CenterPanel"]
 layout_mode = 2
+mouse_filter = 2
 theme_override_constants/margin_left = 20
 theme_override_constants/margin_top = 20
 theme_override_constants/margin_right = 20
@@ -169,9 +172,12 @@ theme_override_constants/margin_bottom = 20
 
 [node name="VBox" type="VBoxContainer" parent="CenterPanel/MarginContainer"]
 layout_mode = 2
+mouse_filter = 2
 
 [node name="GridTitle" type="Label" parent="CenterPanel/MarginContainer/VBox"]
 layout_mode = 2
+z_index = 10
+mouse_filter = 2
 theme_override_colors/font_color = Color(0, 0.898, 1, 1)
 theme_override_font_sizes/font_size = 16
 text = "SHIP DESIGN GRID (40x40)"
@@ -179,27 +185,38 @@ horizontal_alignment = 1
 
 [node name="InstructionLabel" type="Label" parent="CenterPanel/MarginContainer/VBox"]
 layout_mode = 2
+z_index = 10
+mouse_filter = 2
 theme_override_font_sizes/font_size = 10
 text = "Paint hull, place components, rotate with Q/E"
 horizontal_alignment = 1
 
-[node name="GridContainer" type="CenterContainer" parent="CenterPanel/MarginContainer/VBox"]
+[node name="GridContainer" type="Control" parent="CenterPanel/MarginContainer/VBox"]
 layout_mode = 2
 size_flags_vertical = 3
+mouse_filter = 2
 
 [node name="ShipGrid" type="Control" parent="CenterPanel/MarginContainer/VBox/GridContainer"]
-layout_mode = 2
-mouse_filter = 1
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+mouse_filter = 0
+z_index = 1
 script = ExtResource("2_grid")
 
 [node name="RotationControls" type="HBoxContainer" parent="CenterPanel/MarginContainer/VBox"]
 layout_mode = 2
+z_index = 10
+mouse_filter = 0
 alignment = 1
 
 [node name="RotateCCWBtn" type="Button" parent="CenterPanel/MarginContainer/VBox/RotationControls"]
 custom_minimum_size = Vector2(120, 30)
 layout_mode = 2
-text = "◄ Rotate [Q]"
+text = "◄ Rotate 60° [Q]"
 
 [node name="Spacer" type="Control" parent="CenterPanel/MarginContainer/VBox/RotationControls"]
 custom_minimum_size = Vector2(20, 0)
@@ -208,10 +225,12 @@ layout_mode = 2
 [node name="RotateCWBtn" type="Button" parent="CenterPanel/MarginContainer/VBox/RotationControls"]
 custom_minimum_size = Vector2(120, 30)
 layout_mode = 2
-text = "Rotate [E] ►"
+text = "Rotate 60° [E] ►"
 
 [node name="LegendBox" type="PanelContainer" parent="CenterPanel/MarginContainer/VBox"]
 layout_mode = 2
+z_index = 10
+mouse_filter = 2
 
 [node name="LegendHBox" type="HBoxContainer" parent="CenterPanel/MarginContainer/VBox/LegendBox"]
 layout_mode = 2
@@ -242,8 +261,10 @@ text = "🟥 Invalid"
 
 [node name="ShortcutsLabel" type="Label" parent="CenterPanel/MarginContainer/VBox"]
 layout_mode = 2
+z_index = 10
+mouse_filter = 2
 theme_override_font_sizes/font_size = 9
-text = "Q/E: Rotate | Ctrl+Z/Y: Undo/Redo | Ctrl+S: Save | ESC: Exit"
+text = "Q/E: Rotate 60° | Ctrl+Z/Y: Undo/Redo | Ctrl+S: Save | ESC: Exit"
 horizontal_alignment = 1
 
 [node name="RightPanel" type="PanelContainer" parent="."]
@@ -254,6 +275,7 @@ anchor_right = 1.0
 anchor_bottom = 1.0
 grow_horizontal = 0
 grow_vertical = 2
+z_index = 10
 theme_override_styles/panel = SubResource("StyleBoxFlat_right_panel")
 
 [node name="VBox" type="VBoxContainer" parent="RightPanel"]
@@ -304,9 +326,22 @@ text = "⚖ Weight: 0"
 layout_mode = 2
 text = "🏃 Speed: 0"
 
-[node name="CostLabel" type="Label" parent="RightPanel/VBox"]
+[node name="CostTitle" type="Label" parent="RightPanel/VBox"]
 layout_mode = 2
-text = "💰 Cost: Free"
+theme_override_colors/font_color = Color(0.129, 0.588, 0.953, 1)
+theme_override_font_sizes/font_size = 12
+text = "═══ RESOURCE COST ═══"
+horizontal_alignment = 1
+
+[node name="CostScroll" type="ScrollContainer" parent="RightPanel/VBox"]
+layout_mode = 2
+custom_minimum_size = Vector2(0, 150)
+size_flags_vertical = 0
+
+[node name="CostList" type="VBoxContainer" parent="RightPanel/VBox/CostScroll"]
+layout_mode = 2
+size_flags_horizontal = 3
+theme_override_constants/separation = 2
 
 [node name="HSeparator2" type="HSeparator" parent="RightPanel/VBox"]
 layout_mode = 2

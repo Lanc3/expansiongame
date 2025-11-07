@@ -23,7 +23,7 @@ extends Control
 @onready var thrust_bar: ProgressBar = $RightPanel/VBox/ThrustBar
 @onready var weight_label: Label = $RightPanel/VBox/WeightLabel
 @onready var speed_label: Label = $RightPanel/VBox/SpeedLabel
-@onready var cost_label: Label = $RightPanel/VBox/CostLabel
+@onready var cost_list: VBoxContainer = $RightPanel/VBox/CostScroll/CostList
 @onready var validation_label: Label = $RightPanel/VBox/ValidationScroll/ValidationLabel
 
 # Action buttons
@@ -86,8 +86,8 @@ func _ready():
 	undo_btn.tooltip_text = "Undo last change (Ctrl+Z)"
 	redo_btn.tooltip_text = "Redo last undone change (Ctrl+Y)"
 	exit_btn.tooltip_text = "Close blueprint builder (ESC)"
-	rotate_ccw_btn.tooltip_text = "Rotate ship counter-clockwise (Q)"
-	rotate_cw_btn.tooltip_text = "Rotate ship clockwise (E)"
+	rotate_ccw_btn.tooltip_text = "Rotate ship counter-clockwise 60° (Q)"
+	rotate_cw_btn.tooltip_text = "Rotate ship clockwise 60° (E)"
 	
 	# Connect grid signals
 	ship_grid.grid_changed.connect(_on_grid_changed)
@@ -98,6 +98,10 @@ func _ready():
 	
 	# Build component palette
 	build_component_palette()
+	
+	# Connect to resource changes to update cost display
+	if ResourceManager:
+		ResourceManager.resource_count_changed.connect(_on_resource_count_changed)
 	
 	# Initial state
 	record_undo_state()
@@ -291,9 +295,9 @@ func update_stats():
 	var speed = CosmoteerShipStatsCalculator.calculate_speed(blueprint)
 	speed_label.text = "🏃 Speed: %.1f" % speed
 	
-	# Cost
+	# Cost - Display as color-coded resource list
 	var cost = CosmoteerShipStatsCalculator.calculate_cost(blueprint)
-	cost_label.text = "💰 Cost: " + CosmoteerShipStatsCalculator.format_cost(cost)
+	_update_cost_display(cost)
 	
 	# Validation - Enhanced with severity
 	var validation_results = CosmoteerShipStatsCalculator.validate_ship(blueprint)
@@ -350,6 +354,104 @@ func update_stats():
 			validation_text += " • " + warning + "\n"
 	
 	validation_label.text = validation_text
+
+func _update_cost_display(cost: Dictionary):
+	"""Update the resource cost display with color-coded, sorted resources"""
+	if not cost_list:
+		return
+	
+	# Clear existing items
+	for child in cost_list.get_children():
+		child.queue_free()
+	
+	if cost.is_empty():
+		var empty_label = Label.new()
+		empty_label.text = "Free"
+		empty_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+		cost_list.add_child(empty_label)
+		return
+	
+	# Get ResourceManager for availability checking
+	var resource_manager = ResourceManager if ResourceManager else null
+	
+	# Sort resources by tier, then by resource ID
+	var sorted_resources = []
+	for resource_id in cost.keys():
+		var amount = cost[resource_id]
+		var resource_data = ResourceDatabase.get_resource_by_id(resource_id) if ResourceDatabase else {}
+		var tier = resource_data.get("tier", 0) if not resource_data.is_empty() else 0
+		var name = resource_data.get("name", "Unknown") if not resource_data.is_empty() else "Resource %d" % resource_id
+		var color = resource_data.get("color", Color.WHITE) if not resource_data.is_empty() else Color.WHITE
+		
+		# Get current amount from ResourceManager
+		var current_amount = 0
+		if resource_manager:
+			current_amount = resource_manager.get_resource_count(resource_id)
+		
+		sorted_resources.append({
+			"id": resource_id,
+			"amount": amount,
+			"current": current_amount,
+			"tier": tier,
+			"name": name,
+			"color": color
+		})
+	
+	# Sort by tier (ascending), then by name
+	sorted_resources.sort_custom(func(a, b):
+		if a.tier != b.tier:
+			return a.tier < b.tier
+		return a.name < b.name
+	)
+	
+	# Group by tier and create labels
+	var current_tier = -1
+	for resource in sorted_resources:
+		# Add tier separator if tier changed
+		if resource.tier != current_tier:
+			if current_tier != -1:
+				# Add spacing between tiers
+				var spacer = Control.new()
+				spacer.custom_minimum_size = Vector2(0, 4)
+				cost_list.add_child(spacer)
+			
+			# Add tier header
+			var tier_label = Label.new()
+			tier_label.text = "Tier %d:" % resource.tier
+			tier_label.add_theme_color_override("font_color", Color(0.7, 0.7, 0.7, 1))
+			tier_label.add_theme_font_size_override("font_size", 11)
+			cost_list.add_child(tier_label)
+			
+			current_tier = resource.tier
+		
+		# Create resource item (HBoxContainer with colored background)
+		var resource_item = HBoxContainer.new()
+		resource_item.custom_minimum_size = Vector2(0, 20)
+		
+		# Color indicator (small colored square)
+		var color_indicator = ColorRect.new()
+		color_indicator.custom_minimum_size = Vector2(4, 20)
+		color_indicator.color = resource.color
+		resource_item.add_child(color_indicator)
+		
+		# Resource name and amount label
+		var resource_label = Label.new()
+		resource_label.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+		resource_label.text = "%s: %d" % [resource.name, resource.amount]
+		
+		# Color code based on availability
+		if resource_manager:
+			if resource.current >= resource.amount:
+				resource_label.add_theme_color_override("font_color", Color(0.4, 1.0, 0.4, 1))  # Green
+			else:
+				resource_label.add_theme_color_override("font_color", Color(1.0, 0.4, 0.4, 1))  # Red
+				# Show current/needed
+				resource_label.text = "%s: %d/%d" % [resource.name, resource.current, resource.amount]
+		else:
+			resource_label.add_theme_color_override("font_color", Color.WHITE)
+		
+		resource_item.add_child(resource_label)
+		cost_list.add_child(resource_item)
 
 func update_undo_redo_buttons():
 	"""Update undo/redo button states"""
@@ -465,3 +567,11 @@ func _on_build_pressed():
 
 func _on_exit_pressed():
 	queue_free()
+
+func _on_resource_count_changed(resource_id: int, new_count: int):
+	"""Refresh cost display when resources change"""
+	# Only refresh if we have a blueprint with costs
+	var blueprint = ship_grid.get_current_blueprint()
+	var cost = CosmoteerShipStatsCalculator.calculate_cost(blueprint)
+	if cost.has(resource_id):
+		_update_cost_display(cost)

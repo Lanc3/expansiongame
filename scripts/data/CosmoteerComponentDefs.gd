@@ -10,14 +10,14 @@ const COMPONENT_TYPES = {
 		"description": "Generates power for ship systems",
 		"levels": [
 			{"level": 1, "size": Vector2i(1, 1), "power_generated": 5, "power_consumed": 0, "weight": 8.0, "cost": {0: 25, 1: 10}},
-			{"level": 2, "size": Vector2i(1, 2), "power_generated": 7, "power_consumed": 0, "weight": 10.0, "cost": {0: 35, 1: 14}},
-			{"level": 3, "size": Vector2i(2, 1), "power_generated": 10, "power_consumed": 0, "weight": 13.0, "cost": {0: 50, 1: 20}},
-			{"level": 4, "size": Vector2i(2, 2), "power_generated": 15, "power_consumed": 0, "weight": 16.0, "cost": {0: 70, 1: 28}},
-			{"level": 5, "size": Vector2i(2, 2), "power_generated": 20, "power_consumed": 0, "weight": 20.0, "cost": {0: 100, 1: 40}},
-			{"level": 6, "size": Vector2i(2, 3), "power_generated": 30, "power_consumed": 0, "weight": 26.0, "cost": {0: 140, 1: 56}},
-			{"level": 7, "size": Vector2i(3, 2), "power_generated": 40, "power_consumed": 0, "weight": 33.0, "cost": {0: 200, 1: 80}},
-			{"level": 8, "size": Vector2i(3, 3), "power_generated": 60, "power_consumed": 0, "weight": 43.0, "cost": {0: 280, 1: 112}},
-			{"level": 9, "size": Vector2i(3, 3), "power_generated": 80, "power_consumed": 0, "weight": 56.0, "cost": {0: 400, 1: 160}}
+			{"level": 2, "size": Vector2i(1, 2), "power_generated": 7, "power_consumed": 0, "weight": 10.0, "cost": {0: 20, 10: 15}},
+			{"level": 3, "size": Vector2i(2, 1), "power_generated": 10, "power_consumed": 0, "weight": 13.0, "cost": {10: 30, 20: 20}},
+			{"level": 4, "size": Vector2i(2, 2), "power_generated": 15, "power_consumed": 0, "weight": 16.0, "cost": {20: 40, 30: 30}},
+			{"level": 5, "size": Vector2i(2, 2), "power_generated": 20, "power_consumed": 0, "weight": 20.0, "cost": {30: 50, 40: 40}},
+			{"level": 6, "size": Vector2i(2, 3), "power_generated": 30, "power_consumed": 0, "weight": 26.0, "cost": {40: 60, 50: 50}},
+			{"level": 7, "size": Vector2i(3, 2), "power_generated": 40, "power_consumed": 0, "weight": 33.0, "cost": {50: 70, 60: 60}},
+			{"level": 8, "size": Vector2i(3, 3), "power_generated": 60, "power_consumed": 0, "weight": 43.0, "cost": {60: 80, 70: 70}},
+			{"level": 9, "size": Vector2i(3, 3), "power_generated": 80, "power_consumed": 0, "weight": 56.0, "cost": {70: 100, 80: 80}}
 		]
 	},
 	"engine": {
@@ -26,14 +26,14 @@ const COMPONENT_TYPES = {
 		"description": "Provides thrust for movement",
 		"levels": [
 			{"level": 1, "size": Vector2i(1, 1), "power_consumed": 2, "thrust": 30.0, "speed_boost": 25, "weight": 10.0, "cost": {0: 15, 2: 5}},
-			{"level": 2, "size": Vector2i(1, 2), "power_consumed": 2, "thrust": 50.0, "speed_boost": 35, "weight": 13.0, "cost": {0: 21, 2: 7}},
-			{"level": 3, "size": Vector2i(2, 2), "power_consumed": 3, "thrust": 100.0, "speed_boost": 50, "weight": 20.0, "cost": {0: 30, 2: 10}},
-			{"level": 4, "size": Vector2i(2, 2), "power_consumed": 4, "thrust": 150.0, "speed_boost": 70, "weight": 26.0, "cost": {0: 42, 2: 14}},
-			{"level": 5, "size": Vector2i(2, 2), "power_consumed": 5, "thrust": 220.0, "speed_boost": 90, "weight": 34.0, "cost": {0: 60, 2: 20}},
-			{"level": 6, "size": Vector2i(2, 3), "power_consumed": 7, "thrust": 320.0, "speed_boost": 120, "weight": 44.0, "cost": {0: 84, 2: 28}},
-			{"level": 7, "size": Vector2i(3, 2), "power_consumed": 9, "thrust": 450.0, "speed_boost": 160, "weight": 57.0, "cost": {0: 120, 2: 40}},
-			{"level": 8, "size": Vector2i(3, 3), "power_consumed": 12, "thrust": 650.0, "speed_boost": 210, "weight": 75.0, "cost": {0: 168, 2: 56}},
-			{"level": 9, "size": Vector2i(3, 3), "power_consumed": 16, "thrust": 900.0, "speed_boost": 280, "weight": 97.0, "cost": {0: 235, 2: 78}}
+			{"level": 2, "size": Vector2i(1, 2), "power_consumed": 2, "thrust": 50.0, "speed_boost": 35, "weight": 13.0, "cost": {0: 12, 10: 8}},
+			{"level": 3, "size": Vector2i(2, 2), "power_consumed": 3, "thrust": 100.0, "speed_boost": 50, "weight": 20.0, "cost": {10: 18, 20: 12}},
+			{"level": 4, "size": Vector2i(2, 2), "power_consumed": 4, "thrust": 150.0, "speed_boost": 70, "weight": 26.0, "cost": {20: 25, 30: 18}},
+			{"level": 5, "size": Vector2i(2, 2), "power_consumed": 5, "thrust": 220.0, "speed_boost": 90, "weight": 34.0, "cost": {30: 35, 40: 25}},
+			{"level": 6, "size": Vector2i(2, 3), "power_consumed": 7, "thrust": 320.0, "speed_boost": 120, "weight": 44.0, "cost": {40: 50, 50: 35}},
+			{"level": 7, "size": Vector2i(3, 2), "power_consumed": 9, "thrust": 450.0, "speed_boost": 160, "weight": 57.0, "cost": {50: 70, 60: 50}},
+			{"level": 8, "size": Vector2i(3, 3), "power_consumed": 12, "thrust": 650.0, "speed_boost": 210, "weight": 75.0, "cost": {60: 100, 70: 70}},
+			{"level": 9, "size": Vector2i(3, 3), "power_consumed": 16, "thrust": 900.0, "speed_boost": 280, "weight": 97.0, "cost": {70: 140, 80: 100}}
 		]
 	},
 	"laser_weapon": {
@@ -44,14 +44,14 @@ const COMPONENT_TYPES = {
 		"arc_direction": "forward",
 		"levels": [
 			{"level": 1, "size": Vector2i(1, 1), "power_consumed": 1, "damage": 5, "weight": 4.0, "cost": {0: 10, 1: 8}},
-			{"level": 2, "size": Vector2i(1, 2), "power_consumed": 2, "damage": 8, "weight": 6.0, "cost": {0: 14, 1: 11}},
-			{"level": 3, "size": Vector2i(1, 2), "power_consumed": 2, "damage": 10, "weight": 8.0, "cost": {0: 20, 1: 15}},
-			{"level": 4, "size": Vector2i(2, 2), "power_consumed": 3, "damage": 15, "weight": 10.0, "cost": {0: 28, 1: 21}},
-			{"level": 5, "size": Vector2i(2, 2), "power_consumed": 4, "damage": 22, "weight": 13.0, "cost": {0: 40, 1: 30}},
-			{"level": 6, "size": Vector2i(2, 2), "power_consumed": 6, "damage": 32, "weight": 17.0, "cost": {0: 56, 1: 42}},
-			{"level": 7, "size": Vector2i(2, 3), "power_consumed": 8, "damage": 45, "weight": 22.0, "cost": {0: 78, 1: 59}},
-			{"level": 8, "size": Vector2i(3, 2), "power_consumed": 12, "damage": 65, "weight": 29.0, "cost": {0: 110, 1: 82}},
-			{"level": 9, "size": Vector2i(3, 3), "power_consumed": 16, "damage": 90, "weight": 38.0, "cost": {0: 154, 1: 115}}
+			{"level": 2, "size": Vector2i(1, 2), "power_consumed": 2, "damage": 8, "weight": 6.0, "cost": {0: 8, 10: 10}},
+			{"level": 3, "size": Vector2i(1, 2), "power_consumed": 2, "damage": 10, "weight": 8.0, "cost": {10: 12, 20: 15}},
+			{"level": 4, "size": Vector2i(2, 2), "power_consumed": 3, "damage": 15, "weight": 10.0, "cost": {20: 18, 30: 20}},
+			{"level": 5, "size": Vector2i(2, 2), "power_consumed": 4, "damage": 22, "weight": 13.0, "cost": {30: 25, 40: 28}},
+			{"level": 6, "size": Vector2i(2, 2), "power_consumed": 6, "damage": 32, "weight": 17.0, "cost": {40: 35, 50: 40}},
+			{"level": 7, "size": Vector2i(2, 3), "power_consumed": 8, "damage": 45, "weight": 22.0, "cost": {50: 50, 60: 55}},
+			{"level": 8, "size": Vector2i(3, 2), "power_consumed": 12, "damage": 65, "weight": 29.0, "cost": {60: 70, 70: 75}},
+			{"level": 9, "size": Vector2i(3, 3), "power_consumed": 16, "damage": 90, "weight": 38.0, "cost": {70: 100, 80: 110}}
 		]
 	},
 	"missile_launcher": {
@@ -62,14 +62,14 @@ const COMPONENT_TYPES = {
 		"arc_direction": "forward",
 		"levels": [
 			{"level": 1, "size": Vector2i(1, 1), "power_consumed": 1, "damage": 20, "weight": 10.0, "cost": {0: 20, 4: 10}},
-			{"level": 2, "size": Vector2i(1, 2), "power_consumed": 2, "damage": 30, "weight": 13.0, "cost": {0: 28, 4: 14}},
-			{"level": 3, "size": Vector2i(2, 2), "power_consumed": 3, "damage": 50, "weight": 17.0, "cost": {0: 40, 4: 20}},
-			{"level": 4, "size": Vector2i(2, 2), "power_consumed": 4, "damage": 75, "weight": 22.0, "cost": {0: 56, 4: 28}},
-			{"level": 5, "size": Vector2i(2, 2), "power_consumed": 5, "damage": 110, "weight": 29.0, "cost": {0: 78, 4: 39}},
-			{"level": 6, "size": Vector2i(2, 3), "power_consumed": 7, "damage": 160, "weight": 38.0, "cost": {0: 110, 4: 55}},
-			{"level": 7, "size": Vector2i(3, 2), "power_consumed": 10, "damage": 230, "weight": 49.0, "cost": {0: 154, 4: 77}},
-			{"level": 8, "size": Vector2i(3, 3), "power_consumed": 14, "damage": 330, "weight": 64.0, "cost": {0: 216, 4: 108}},
-			{"level": 9, "size": Vector2i(3, 3), "power_consumed": 20, "damage": 470, "weight": 83.0, "cost": {0: 302, 4: 151}}
+			{"level": 2, "size": Vector2i(1, 2), "power_consumed": 2, "damage": 30, "weight": 13.0, "cost": {0: 15, 10: 12}},
+			{"level": 3, "size": Vector2i(2, 2), "power_consumed": 3, "damage": 50, "weight": 17.0, "cost": {10: 25, 20: 20}},
+			{"level": 4, "size": Vector2i(2, 2), "power_consumed": 4, "damage": 75, "weight": 22.0, "cost": {20: 35, 30: 30}},
+			{"level": 5, "size": Vector2i(2, 2), "power_consumed": 5, "damage": 110, "weight": 29.0, "cost": {30: 50, 40: 45}},
+			{"level": 6, "size": Vector2i(2, 3), "power_consumed": 7, "damage": 160, "weight": 38.0, "cost": {40: 70, 50: 65}},
+			{"level": 7, "size": Vector2i(3, 2), "power_consumed": 10, "damage": 230, "weight": 49.0, "cost": {50: 100, 60: 90}},
+			{"level": 8, "size": Vector2i(3, 3), "power_consumed": 14, "damage": 330, "weight": 64.0, "cost": {60: 140, 70: 130}},
+			{"level": 9, "size": Vector2i(3, 3), "power_consumed": 20, "damage": 470, "weight": 83.0, "cost": {70: 200, 80: 180}}
 		]
 	},
 	"shield_generator": {
@@ -78,14 +78,14 @@ const COMPONENT_TYPES = {
 		"description": "Generates protective energy shield",
 		"levels": [
 			{"level": 1, "size": Vector2i(1, 1), "power_consumed": 2, "shield_hp": 50, "weight": 6.0, "cost": {1: 20, 3: 5}},
-			{"level": 2, "size": Vector2i(2, 1), "power_consumed": 3, "shield_hp": 75, "weight": 8.0, "cost": {1: 28, 3: 7}},
-			{"level": 3, "size": Vector2i(2, 1), "power_consumed": 4, "shield_hp": 100, "weight": 10.0, "cost": {1: 40, 3: 10}},
-			{"level": 4, "size": Vector2i(2, 2), "power_consumed": 6, "shield_hp": 150, "weight": 13.0, "cost": {1: 56, 3: 14}},
-			{"level": 5, "size": Vector2i(2, 2), "power_consumed": 9, "shield_hp": 220, "weight": 17.0, "cost": {1: 78, 3: 20}},
-			{"level": 6, "size": Vector2i(2, 2), "power_consumed": 13, "shield_hp": 320, "weight": 22.0, "cost": {1: 110, 3: 28}},
-			{"level": 7, "size": Vector2i(2, 3), "power_consumed": 18, "shield_hp": 460, "weight": 29.0, "cost": {1: 154, 3: 39}},
-			{"level": 8, "size": Vector2i(3, 2), "power_consumed": 26, "shield_hp": 660, "weight": 38.0, "cost": {1: 216, 3: 54}},
-			{"level": 9, "size": Vector2i(3, 3), "power_consumed": 36, "shield_hp": 950, "weight": 49.0, "cost": {1: 302, 3: 76}}
+			{"level": 2, "size": Vector2i(2, 1), "power_consumed": 3, "shield_hp": 75, "weight": 8.0, "cost": {1: 15, 10: 10}},
+			{"level": 3, "size": Vector2i(2, 1), "power_consumed": 4, "shield_hp": 100, "weight": 10.0, "cost": {10: 25, 20: 15}},
+			{"level": 4, "size": Vector2i(2, 2), "power_consumed": 6, "shield_hp": 150, "weight": 13.0, "cost": {20: 35, 30: 25}},
+			{"level": 5, "size": Vector2i(2, 2), "power_consumed": 9, "shield_hp": 220, "weight": 17.0, "cost": {30: 50, 40: 40}},
+			{"level": 6, "size": Vector2i(2, 2), "power_consumed": 13, "shield_hp": 320, "weight": 22.0, "cost": {40: 70, 50: 60}},
+			{"level": 7, "size": Vector2i(2, 3), "power_consumed": 18, "shield_hp": 460, "weight": 29.0, "cost": {50: 100, 60: 85}},
+			{"level": 8, "size": Vector2i(3, 2), "power_consumed": 26, "shield_hp": 660, "weight": 38.0, "cost": {60: 140, 70: 120}},
+			{"level": 9, "size": Vector2i(3, 3), "power_consumed": 36, "shield_hp": 950, "weight": 49.0, "cost": {70: 200, 80: 170}}
 		]
 	},
 	"repair_bot": {
@@ -94,14 +94,14 @@ const COMPONENT_TYPES = {
 		"description": "Repairs hull damage over time",
 		"levels": [
 			{"level": 1, "size": Vector2i(1, 1), "power_consumed": 1, "repair_rate": 2, "weight": 3.0, "cost": {0: 8, 1: 5}},
-			{"level": 2, "size": Vector2i(1, 1), "power_consumed": 1, "repair_rate": 3, "weight": 4.0, "cost": {0: 11, 1: 7}},
-			{"level": 3, "size": Vector2i(1, 1), "power_consumed": 2, "repair_rate": 5, "weight": 5.0, "cost": {0: 15, 1: 10}},
-			{"level": 4, "size": Vector2i(1, 2), "power_consumed": 3, "repair_rate": 8, "weight": 7.0, "cost": {0: 21, 1: 14}},
-			{"level": 5, "size": Vector2i(2, 1), "power_consumed": 4, "repair_rate": 12, "weight": 9.0, "cost": {0: 30, 1: 20}},
-			{"level": 6, "size": Vector2i(2, 2), "power_consumed": 6, "repair_rate": 18, "weight": 12.0, "cost": {0: 42, 1: 28}},
-			{"level": 7, "size": Vector2i(2, 2), "power_consumed": 8, "repair_rate": 26, "weight": 16.0, "cost": {0: 59, 1: 39}},
-			{"level": 8, "size": Vector2i(2, 3), "power_consumed": 12, "repair_rate": 38, "weight": 21.0, "cost": {0: 83, 1: 55}},
-			{"level": 9, "size": Vector2i(3, 3), "power_consumed": 16, "repair_rate": 55, "weight": 27.0, "cost": {0: 116, 1: 77}}
+			{"level": 2, "size": Vector2i(1, 1), "power_consumed": 1, "repair_rate": 3, "weight": 4.0, "cost": {0: 6, 10: 7}},
+			{"level": 3, "size": Vector2i(1, 1), "power_consumed": 2, "repair_rate": 5, "weight": 5.0, "cost": {10: 10, 20: 10}},
+			{"level": 4, "size": Vector2i(1, 2), "power_consumed": 3, "repair_rate": 8, "weight": 7.0, "cost": {20: 15, 30: 12}},
+			{"level": 5, "size": Vector2i(2, 1), "power_consumed": 4, "repair_rate": 12, "weight": 9.0, "cost": {30: 20, 40: 18}},
+			{"level": 6, "size": Vector2i(2, 2), "power_consumed": 6, "repair_rate": 18, "weight": 12.0, "cost": {40: 28, 50: 25}},
+			{"level": 7, "size": Vector2i(2, 2), "power_consumed": 8, "repair_rate": 26, "weight": 16.0, "cost": {50: 40, 60: 35}},
+			{"level": 8, "size": Vector2i(2, 3), "power_consumed": 12, "repair_rate": 38, "weight": 21.0, "cost": {60: 55, 70: 50}},
+			{"level": 9, "size": Vector2i(3, 3), "power_consumed": 16, "repair_rate": 55, "weight": 27.0, "cost": {70: 80, 80: 70}}
 		]
 	}
 }

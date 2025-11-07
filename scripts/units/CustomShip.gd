@@ -2,7 +2,7 @@ extends BaseUnit
 ## Runtime-assembled ship from a blueprint layout
 
 var placements: Array = []
-var cell_px: int = 32
+var cell_px: float = 7.5  # Half of CELL_SIZE from CosmoteerShipGrid (15.0 / 2)
 var cosmoteer_blueprint: CosmoteerShipBlueprint = null
 
 # Weapon system
@@ -15,8 +15,9 @@ var weapon_turrets: Array[Sprite2D] = []  # Visual turret sprites
 var shield_component: ShieldComponent = null
 var shield_bar: ProgressBar = null
 
-# Range indicator
-var range_indicator: WeaponRangeIndicator = null
+# Range indicators (one per weapon)
+var weapon_range_indicators: Array[WeaponRangeIndicator] = []
+var weapon_targets: Array[Node2D] = []  # Target for each weapon (independent targeting)
 
 # Weapon panel UI
 var weapon_panel: ShipWeaponPanel = null
@@ -32,6 +33,17 @@ func _ready():
 	# Add to proper groups for selection and combat
 	add_to_group("units")
 	add_to_group("player_units")
+
+func _process(delta: float):
+	"""Process per-weapon targeting and firing"""
+	super._process(delta)
+	
+	# Process weapon targeting and firing independently
+	_process_weapon_targeting(delta)
+	_process_weapon_firing(delta)
+	
+	# Update turret rotations based on per-weapon targets
+	_update_turret_rotations(delta)
 
 func initialize_from_blueprint(data: Dictionary):
 	"""Legacy blueprint system"""
@@ -54,7 +66,7 @@ func initialize_from_cosmoteer_blueprint(blueprint: CosmoteerShipBlueprint):
 	_instantiate_shield_components(blueprint)
 	_instantiate_engine_particles(blueprint)
 	
-	# Create UI elements
+	# Create UI elements (range indicators need weapons to be instantiated first)
 	_create_shield_bar()
 	_create_weapon_range_indicator(blueprint)
 	
@@ -108,59 +120,80 @@ func _build_visuals_cosmoteer(blueprint: CosmoteerShipBlueprint):
 	visual_container.rotation = default_rotation - (forward_angle - default_forward_angle) + PI
 	add_child(visual_container)
 	
-	# Calculate bounding box to properly center the ship
+	# Calculate bounding box to properly center the ship (using hex coordinates)
 	var min_x = INF
 	var max_x = -INF
 	var min_y = INF
 	var max_y = -INF
 	
+	# Convert hex positions to pixel positions to find bounds
 	for hull_pos in blueprint.hull_cells.keys():
-		min_x = min(min_x, hull_pos.x)
-		max_x = max(max_x, hull_pos.x)
-		min_y = min(min_y, hull_pos.y)
-		max_y = max(max_y, hull_pos.y)
+		var pixel_pos = HexGrid.hex_to_pixel(hull_pos, cell_px)
+		var hex_vertices = HexGrid.get_hex_vertices(pixel_pos, cell_px)
+		# Check all vertices of hexagon for bounds
+		for vertex in hex_vertices:
+			min_x = min(min_x, vertex.x)
+			max_x = max(max_x, vertex.x)
+			min_y = min(min_y, vertex.y)
+			max_y = max(max_y, vertex.y)
 	
-	# Calculate center offset
+	# Calculate center offset from pixel bounds
 	var center_offset = Vector2(
-		(min_x + max_x) * 0.5 * cell_px + cell_px * 0.5,
-		(min_y + max_y) * 0.5 * cell_px + cell_px * 0.5
+		(min_x + max_x) * 0.5,
+		(min_y + max_y) * 0.5
 	)
 	
-	# Render hull cells in the visual container
+	# Render hull cells in the visual container (using hex grid)
 	for hull_pos in blueprint.hull_cells.keys():
 		var hull_type = blueprint.get_hull_type(hull_pos)
 		var texture_path = CosmoteerComponentDefs.get_hull_texture(hull_type)
 		
-		# Try to use texture, fallback to colored rectangle
+		# Convert hex coordinates to pixel position
+		var pixel_pos = HexGrid.hex_to_pixel(hull_pos, cell_px)
+		var hex_vertices = HexGrid.get_hex_vertices(pixel_pos, cell_px)
+		
+		# Adjust vertices relative to center offset
+		var adjusted_vertices = PackedVector2Array()
+		for vertex in hex_vertices:
+			adjusted_vertices.append(vertex - center_offset)
+		
+		# Try to use texture, fallback to colored hexagon
 		if texture_path and ResourceLoader.exists(texture_path):
 			var texture = load(texture_path)
 			if texture:
-				var hull_sprite = Sprite2D.new()
-				hull_sprite.texture = texture
-				hull_sprite.position = Vector2(hull_pos.x * cell_px, hull_pos.y * cell_px) - center_offset
-				hull_sprite.position += Vector2(cell_px * 0.5, cell_px * 0.5)  # Center sprite
-				hull_sprite.centered = true
-				# Scale to fit cell size
-				var texture_size = texture.get_size()
-				hull_sprite.scale = Vector2(cell_px / texture_size.x, cell_px / texture_size.y)
-				hull_sprite.z_index = -1
-				visual_container.add_child(hull_sprite)
+				# Use Node2D with _draw() to render textured hexagon (like CosmoteerShipGrid does)
+				var hull_drawer = Node2D.new()
+				hull_drawer.set_script(load("res://scripts/units/HullHexDrawer.gd"))
+				hull_drawer.z_index = -1
+				
+				# Calculate UV coordinates for texture mapping
+				var bounds = _get_hex_bounds_from_vertices(adjusted_vertices)
+				var uv_coords = PackedVector2Array()
+				for vertex in adjusted_vertices:
+					var uv_x = (vertex.x - bounds.position.x) / bounds.size.x if bounds.size.x > 0 else 0.5
+					var uv_y = (vertex.y - bounds.position.y) / bounds.size.y if bounds.size.y > 0 else 0.5
+					uv_coords.append(Vector2(uv_x, uv_y))
+				
+				# Set data for drawing
+				hull_drawer.set_meta("vertices", adjusted_vertices)
+				hull_drawer.set_meta("uv_coords", uv_coords)
+				hull_drawer.set_meta("texture", texture)
+				hull_drawer.set_meta("hull_type", hull_type)
+				visual_container.add_child(hull_drawer)
 			else:
-				# Fallback to color rect
-				var hull_rect = ColorRect.new()
-				hull_rect.color = CosmoteerComponentDefs.get_hull_color(hull_type)
-				hull_rect.size = Vector2(cell_px, cell_px)
-				hull_rect.position = Vector2(hull_pos.x * cell_px, hull_pos.y * cell_px) - center_offset
-				hull_rect.z_index = -1
-				visual_container.add_child(hull_rect)
+				# Fallback to colored hexagon
+				var hull_polygon = Polygon2D.new()
+				hull_polygon.polygon = adjusted_vertices
+				hull_polygon.color = CosmoteerComponentDefs.get_hull_color(hull_type)
+				hull_polygon.z_index = -1
+				visual_container.add_child(hull_polygon)
 		else:
-			# Fallback to color rect
-			var hull_rect = ColorRect.new()
-			hull_rect.color = CosmoteerComponentDefs.get_hull_color(hull_type)
-			hull_rect.size = Vector2(cell_px, cell_px)
-			hull_rect.position = Vector2(hull_pos.x * cell_px, hull_pos.y * cell_px) - center_offset
-			hull_rect.z_index = -1
-			visual_container.add_child(hull_rect)
+			# Fallback to colored hexagon
+			var hull_polygon = Polygon2D.new()
+			hull_polygon.polygon = adjusted_vertices
+			hull_polygon.color = CosmoteerComponentDefs.get_hull_color(hull_type)
+			hull_polygon.z_index = -1
+			visual_container.add_child(hull_polygon)
 	
 	# Render components on top in the visual container
 	for comp_data in blueprint.components:
@@ -174,19 +207,39 @@ func _build_visuals_cosmoteer(blueprint: CosmoteerShipBlueprint):
 		
 		var sprite_path = comp_def.get("sprite", "")
 		
+		# Get hex cells occupied by this component
+		var hex_cells = HexGrid.get_component_hex_cells(comp_pos, comp_size)
+		
+		# Calculate center position from hex cells
+		var center_hex = Vector2.ZERO
+		for hex_pos in hex_cells:
+			center_hex += HexGrid.hex_to_pixel(hex_pos, cell_px)
+		center_hex /= hex_cells.size()
+		
 		# Try to use texture, fallback to colored rectangle
 		if sprite_path and ResourceLoader.exists(sprite_path):
 			var texture = load(sprite_path)
 			if texture:
 				var comp_sprite = Sprite2D.new()
 				comp_sprite.texture = texture
-				# Position at center of component area
-				comp_sprite.position = Vector2(comp_pos.x * cell_px, comp_pos.y * cell_px) - center_offset
-				comp_sprite.position += Vector2(comp_size.x * cell_px * 0.5, comp_size.y * cell_px * 0.5)
+				# Position at center of component hex cells
+				comp_sprite.position = center_hex - center_offset
 				comp_sprite.centered = true
-				# Scale to fit component size
+				# Calculate bounding box from hex cells for scaling
+				var comp_min_x = INF
+				var comp_max_x = -INF
+				var comp_min_y = INF
+				var comp_max_y = -INF
+				for hex_pos in hex_cells:
+					var pixel_pos = HexGrid.hex_to_pixel(hex_pos, cell_px)
+					var hex_vertices = HexGrid.get_hex_vertices(pixel_pos, cell_px)
+					for vertex in hex_vertices:
+						comp_min_x = min(comp_min_x, vertex.x)
+						comp_max_x = max(comp_max_x, vertex.x)
+						comp_min_y = min(comp_min_y, vertex.y)
+						comp_max_y = max(comp_max_y, vertex.y)
+				var target_size = Vector2(comp_max_x - comp_min_x, comp_max_y - comp_min_y)
 				var texture_size = texture.get_size()
-				var target_size = Vector2(comp_size.x * cell_px, comp_size.y * cell_px)
 				comp_sprite.scale = Vector2(target_size.x / texture_size.x, target_size.y / texture_size.y)
 				
 				# Set z_index: weapons go below turret, others at 0
@@ -207,8 +260,7 @@ func _build_visuals_cosmoteer(blueprint: CosmoteerShipBlueprint):
 	_generate_collision_from_hull(blueprint)
 
 func _create_component_colorrect(comp_type: String, comp_pos: Vector2i, comp_size: Vector2i, center_offset: Vector2, visual_container: Node2D):
-	"""Create a colored rectangle fallback for components without textures"""
-	var comp_rect = ColorRect.new()
+	"""Create colored hexagons fallback for components without textures"""
 	var color = Color(0.5, 0.5, 0.8, 0.8)
 	
 	# Color by component type
@@ -224,11 +276,42 @@ func _create_component_colorrect(comp_type: String, comp_pos: Vector2i, comp_siz
 		"repair_bot":
 			color = Color(0.7, 0.7, 0.7, 0.9)
 	
-	comp_rect.color = color
-	comp_rect.size = Vector2(comp_size.x * cell_px, comp_size.y * cell_px)
-	comp_rect.position = Vector2(comp_pos.x * cell_px, comp_pos.y * cell_px) - center_offset
-	comp_rect.z_index = 0
-	visual_container.add_child(comp_rect)
+	# Get hex cells occupied by this component
+	var hex_cells = HexGrid.get_component_hex_cells(comp_pos, comp_size)
+	
+	# Draw hexagon for each cell
+	for hex_pos in hex_cells:
+		var pixel_pos = HexGrid.hex_to_pixel(hex_pos, cell_px)
+		var hex_vertices = HexGrid.get_hex_vertices(pixel_pos, cell_px)
+		
+		# Adjust vertices relative to center offset
+		var adjusted_vertices = PackedVector2Array()
+		for vertex in hex_vertices:
+			adjusted_vertices.append(vertex - center_offset)
+		
+		var comp_polygon = Polygon2D.new()
+		comp_polygon.polygon = adjusted_vertices
+		comp_polygon.color = color
+		comp_polygon.z_index = 0
+		visual_container.add_child(comp_polygon)
+
+func _get_hex_bounds_from_vertices(hex_vertices: PackedVector2Array) -> Rect2:
+	"""Get bounding rectangle for hex vertices"""
+	if hex_vertices.is_empty():
+		return Rect2()
+	
+	var min_x = hex_vertices[0].x
+	var max_x = hex_vertices[0].x
+	var min_y = hex_vertices[0].y
+	var max_y = hex_vertices[0].y
+	
+	for vertex in hex_vertices:
+		min_x = min(min_x, vertex.x)
+		max_x = max(max_x, vertex.x)
+		min_y = min(min_y, vertex.y)
+		max_y = max(max_y, vertex.y)
+	
+	return Rect2(min_x, min_y, max_x - min_x, max_y - min_y)
 
 func _generate_collision_from_hull(blueprint: CosmoteerShipBlueprint):
 	"""Create collision shape based on hull cells"""
@@ -237,8 +320,24 @@ func _generate_collision_from_hull(blueprint: CosmoteerShipBlueprint):
 	if hull_count == 0:
 		return
 	
-	# Calculate approximate radius
-	var radius = sqrt(hull_count) * cell_px * 0.5
+	# Calculate approximate radius from hex grid bounds
+	var min_x = INF
+	var max_x = -INF
+	var min_y = INF
+	var max_y = -INF
+	
+	for hull_pos in blueprint.hull_cells.keys():
+		var pixel_pos = HexGrid.hex_to_pixel(hull_pos, cell_px)
+		var hex_vertices = HexGrid.get_hex_vertices(pixel_pos, cell_px)
+		for vertex in hex_vertices:
+			min_x = min(min_x, vertex.x)
+			max_x = max(max_x, vertex.x)
+			min_y = min(min_y, vertex.y)
+			max_y = max(max_y, vertex.y)
+	
+	var width = max_x - min_x
+	var height = max_y - min_y
+	var radius = max(width, height) * 0.5
 	
 	# Create collision shape if it doesn't exist
 	var collision_shape = get_node_or_null("CollisionShape2D")
@@ -267,26 +366,36 @@ func _instantiate_engine_particles(blueprint: CosmoteerShipBlueprint):
 		var forward_angle = blueprint.forward_direction.angle()
 		var default_forward_angle = Vector2(0, -1).angle()  # -PI/2
 		var default_rotation = -PI / 2.0
-		container_rotation = default_rotation - (forward_angle - default_forward_angle)
+		container_rotation = default_rotation - (forward_angle - default_forward_angle) + PI  # Match _build_visuals_cosmoteer
 	
 	# Rotate thrust direction to match VisualContainer coordinate system
-	engine_thrust_direction = blueprint_thrust_direction.rotated(container_rotation)
+	# Since particles are children of VisualContainer (which rotates the ship visuals),
+	# the thrust direction should be in VisualContainer's local space.
+	# In VisualContainer space, the ship always faces the same direction (up),
+	# so thrust should always be down (0, 1) in VisualContainer space.
+	# The VisualContainer's rotation handles rotating everything to world space.
+	engine_thrust_direction = Vector2(0, 1)  # Always down in VisualContainer local space
 	
-	# Calculate the same center offset used for visuals
+	# Calculate the same center offset used for visuals (using hex coordinates)
 	var min_x = INF
 	var max_x = -INF
 	var min_y = INF
 	var max_y = -INF
 	
+	# Convert hex positions to pixel positions to find bounds
 	for hull_pos in blueprint.hull_cells.keys():
-		min_x = min(min_x, hull_pos.x)
-		max_x = max(max_x, hull_pos.x)
-		min_y = min(min_y, hull_pos.y)
-		max_y = max(max_y, hull_pos.y)
+		var pixel_pos = HexGrid.hex_to_pixel(hull_pos, cell_px)
+		var hex_vertices = HexGrid.get_hex_vertices(pixel_pos, cell_px)
+		# Check all vertices of hexagon for bounds
+		for vertex in hex_vertices:
+			min_x = min(min_x, vertex.x)
+			max_x = max(max_x, vertex.x)
+			min_y = min(min_y, vertex.y)
+			max_y = max(max_y, vertex.y)
 	
 	var center_offset = Vector2(
-		(min_x + max_x) * 0.5 * cell_px + cell_px * 0.5,
-		(min_y + max_y) * 0.5 * cell_px + cell_px * 0.5
+		(min_x + max_x) * 0.5,
+		(min_y + max_y) * 0.5
 	)
 	
 	# visual_container already retrieved at the start of function
@@ -305,9 +414,13 @@ func _instantiate_engine_particles(blueprint: CosmoteerShipBlueprint):
 		var comp_pos = comp_data.get("grid_position", Vector2i.ZERO)
 		var comp_size = comp_data.get("size", Vector2i.ONE)
 		
-		# Calculate engine center in local coordinates
-		var engine_local_pos = Vector2(comp_pos.x * cell_px, comp_pos.y * cell_px) - center_offset
-		engine_local_pos += Vector2(comp_size.x * cell_px * 0.5, comp_size.y * cell_px * 0.5)
+		# Calculate engine center in local coordinates (using hex grid)
+		var hex_cells = HexGrid.get_component_hex_cells(comp_pos, comp_size)
+		var center_hex = Vector2.ZERO
+		for hex_pos in hex_cells:
+			center_hex += HexGrid.hex_to_pixel(hex_pos, cell_px)
+		center_hex /= hex_cells.size()
+		var engine_local_pos = center_hex - center_offset
 		
 		# Scale particle count with engine level
 		var num_streams = 2  # Base for levels 1-3
@@ -458,21 +571,26 @@ func _instantiate_weapon_components(blueprint: CosmoteerShipBlueprint):
 	"""Create functional weapon components from blueprint data"""
 	var weapon_index = 0
 	
-	# Calculate the same center offset used for visuals
+	# Calculate the same center offset used for visuals (using hex coordinates)
 	var min_x = INF
 	var max_x = -INF
 	var min_y = INF
 	var max_y = -INF
 	
+	# Convert hex positions to pixel positions to find bounds
 	for hull_pos in blueprint.hull_cells.keys():
-		min_x = min(min_x, hull_pos.x)
-		max_x = max(max_x, hull_pos.x)
-		min_y = min(min_y, hull_pos.y)
-		max_y = max(max_y, hull_pos.y)
+		var pixel_pos = HexGrid.hex_to_pixel(hull_pos, cell_px)
+		var hex_vertices = HexGrid.get_hex_vertices(pixel_pos, cell_px)
+		# Check all vertices of hexagon for bounds
+		for vertex in hex_vertices:
+			min_x = min(min_x, vertex.x)
+			max_x = max(max_x, vertex.x)
+			min_y = min(min_y, vertex.y)
+			max_y = max(max_y, vertex.y)
 	
 	var center_offset = Vector2(
-		(min_x + max_x) * 0.5 * cell_px + cell_px * 0.5,
-		(min_y + max_y) * 0.5 * cell_px + cell_px * 0.5
+		(min_x + max_x) * 0.5,
+		(min_y + max_y) * 0.5
 	)
 	
 	for comp_data in blueprint.components:
@@ -511,8 +629,13 @@ func _instantiate_weapon_components(blueprint: CosmoteerShipBlueprint):
 		# Calculate weapon position at component grid location (centered, matching visual offset)
 		var comp_pos = comp_data.get("grid_position", Vector2i.ZERO)
 		var comp_size = comp_data.get("size", Vector2i.ONE)
-		var local_pos = Vector2(comp_pos.x * cell_px, comp_pos.y * cell_px) - center_offset
-		local_pos += Vector2(comp_size.x * cell_px * 0.5, comp_size.y * cell_px * 0.5)  # Center of component
+		# Use hex grid to calculate center position
+		var hex_cells = HexGrid.get_component_hex_cells(comp_pos, comp_size)
+		var center_hex = Vector2.ZERO
+		for hex_pos in hex_cells:
+			center_hex += HexGrid.hex_to_pixel(hex_pos, cell_px)
+		center_hex /= hex_cells.size()
+		var local_pos = center_hex - center_offset
 		
 		add_child(weapon)
 		weapon_components.append(weapon)
@@ -590,44 +713,53 @@ func _create_shield_bar():
 		shield_bar.visible = false
 
 func _create_weapon_range_indicator(blueprint: CosmoteerShipBlueprint):
-	"""Create weapon range indicator"""
-	# Find max weapon range
-	var max_range = 0.0
-	var has_laser = false
-	var has_missile = false
+	"""Create individual range indicators for each weapon"""
+	var visual_container = get_node_or_null("VisualContainer")
+	if not visual_container:
+		return
 	
-	for weapon in weapon_components:
-		max_range = max(max_range, weapon.rangeAim)
+	# Clear existing indicators
+	for indicator in weapon_range_indicators:
+		if is_instance_valid(indicator):
+			indicator.queue_free()
+	weapon_range_indicators.clear()
+	
+	# Create one indicator per weapon
+	for i in range(weapon_components.size()):
+		var weapon = weapon_components[i]
+		var indicator = WeaponRangeIndicator.new()
+		indicator.name = "WeaponRangeIndicator_%d" % i
+		indicator.range_radius = weapon.rangeAim
+		
+		# Set color based on weapon type
 		if weapon.weapon_type == WeaponComponent.WeaponType.LASER:
-			has_laser = true
+			indicator.weapon_type = WeaponRangeIndicator.WeaponType.LASER
 		elif weapon.weapon_type == WeaponComponent.WeaponType.MISSILE:
-			has_missile = true
-	
-	if max_range > 0:
-		range_indicator = WeaponRangeIndicator.new()
-		range_indicator.name = "WeaponRangeIndicator"
-		range_indicator.range_radius = max_range
-		
-		# Set weapon type based on what weapons we have
-		if has_laser and has_missile:
-			range_indicator.weapon_type = WeaponRangeIndicator.WeaponType.MIXED
-		elif has_missile:
-			range_indicator.weapon_type = WeaponRangeIndicator.WeaponType.MISSILE
+			indicator.weapon_type = WeaponRangeIndicator.WeaponType.MISSILE
 		else:
-			range_indicator.weapon_type = WeaponRangeIndicator.WeaponType.LASER
+			indicator.weapon_type = WeaponRangeIndicator.WeaponType.LASER
 		
-		range_indicator.z_index = -10
-		add_child(range_indicator)
+		# Position at weapon location in VisualContainer space
+		indicator.position = weapon_positions[i]
+		indicator.z_index = -10
 		
-		# Initially hidden, shown when selected
-		range_indicator.visible = false
+		visual_container.add_child(indicator)
+		# Set visible after adding to tree (after _ready() runs)
+		# Use call_deferred to ensure _ready() has completed
+		indicator.call_deferred("show_range")
+		weapon_range_indicators.append(indicator)
+	
+	# Initialize weapon targets array
+	weapon_targets.resize(weapon_components.size())
+	for i in range(weapon_targets.size()):
+		weapon_targets[i] = null
 
 # ============================================================================
 # COMBAT OVERRIDE
 # ============================================================================
 
 func process_combat_state(delta: float):
-	"""Override combat behavior for multi-weapon ships"""
+	"""Override combat behavior - simplified to only handle movement"""
 	if not is_instance_valid(target_entity):
 		complete_current_command()
 		return
@@ -644,9 +776,6 @@ func process_combat_state(delta: float):
 	
 	var distance = global_position.distance_to(target_entity.global_position)
 	
-	# Update turret rotations to track target (always, even when moving)
-	_update_turret_rotations(target_entity, delta)
-	
 	# Move to optimal range (80% of max weapon range)
 	if distance > max_range * 0.8:
 		# Move closer
@@ -655,24 +784,15 @@ func process_combat_state(delta: float):
 		desired_velocity = direction * move_speed
 		velocity = velocity.move_toward(desired_velocity, acceleration * delta)
 	else:
-		# In range - slow down and fire
+		# In range - slow down
 		velocity = velocity.move_toward(Vector2.ZERO, acceleration * delta * 2.0)
 		
 		# Rotate to face target
 		var direction_to_target = (target_entity.global_position - global_position).normalized()
 		var target_rotation = direction_to_target.angle()
 		rotation = lerp_angle(rotation, target_rotation, rotation_speed * delta)
-		
-		# Fire all enabled weapons that are in range
-		for i in range(weapon_components.size()):
-			if weapon_enabled[i]:
-				var weapon = weapon_components[i]
-				if distance <= weapon.get_range():
-					# Calculate weapon world position using stored position
-					# Apply -90 degree offset for visual rotation, then apply ship rotation
-					var rotated_pos = weapon_positions[i].rotated(-PI / 2.0)
-					var weapon_world_pos = global_position + rotated_pos.rotated(rotation)
-					weapon.fire_at(target_entity, weapon_world_pos)
+	
+	# Weapon firing is now handled independently in _process_weapon_firing()
 
 # ============================================================================
 # DAMAGE HANDLING
@@ -728,15 +848,10 @@ func _update_engine_particles():
 # ============================================================================
 
 func set_selected(selected: bool):
-	"""Override to show/hide range indicator on selection"""
+	"""Override selection behavior"""
 	super.set_selected(selected)
 	
-	# Show/hide weapon range indicator
-	if range_indicator:
-		if selected:
-			range_indicator.show_range()
-		else:
-			range_indicator.hide_range()
+	# Range indicators are always visible now, no need to show/hide
 	
 	# Handle weapon panel - only for player ships with weapons
 	if selected and team_id == 0 and weapon_components.size() > 0:
@@ -796,38 +911,130 @@ func get_weapon_count() -> int:
 	"""Get total number of weapons"""
 	return weapon_components.size()
 
-func _update_turret_rotations(target: Node2D, delta: float):
-	"""Update all weapon turrets to rotate toward target"""
-	if not is_instance_valid(target):
+func _process_weapon_targeting(delta: float):
+	"""Process per-weapon targeting - each weapon independently finds enemies in range"""
+	if not EntityManager or not ZoneManager:
 		return
 	
+	# Ensure weapon_targets array is correct size
+	if weapon_targets.size() != weapon_components.size():
+		weapon_targets.resize(weapon_components.size())
+		for i in range(weapon_targets.size()):
+			weapon_targets[i] = null
+	
+	var current_zone_id = ZoneManager.get_unit_zone(self)
+	if current_zone_id.is_empty():
+		# Clear all targets if not in a zone
+		for i in range(weapon_targets.size()):
+			weapon_targets[i] = null
+		return
+	
+	# Get VisualContainer for coordinate space
+	var visual_container = get_node_or_null("VisualContainer")
+	if not visual_container:
+		return
+	
+	# For each weapon, find nearest enemy in range
+	for i in range(weapon_components.size()):
+		if not weapon_enabled[i]:
+			weapon_targets[i] = null
+			continue
+		
+		var weapon = weapon_components[i]
+		var weapon_range = weapon.get_range()
+		
+		# Calculate weapon world position
+		var container_global_rotation = rotation + visual_container.rotation
+		var weapon_world_pos = global_position + weapon_positions[i].rotated(container_global_rotation)
+		
+		# Find nearest enemy in zone within weapon range
+		var nearest_enemy = null
+		var min_distance_sq = weapon_range * weapon_range  # Use squared for comparison
+		
+		if EntityManager.has_method("get_units_in_radius_zone"):
+			# Get all enemies within weapon range
+			var enemies_in_range = EntityManager.get_units_in_radius_zone(weapon_world_pos, weapon_range, 1, current_zone_id)  # team_id 1 = enemies
+			
+			# Find nearest enemy from those in range
+			for enemy in enemies_in_range:
+				if not is_instance_valid(enemy) or enemy == self:
+					continue
+				var distance_sq = weapon_world_pos.distance_squared_to(enemy.global_position)
+				if distance_sq < min_distance_sq:
+					min_distance_sq = distance_sq
+					nearest_enemy = enemy
+		
+		weapon_targets[i] = nearest_enemy
+
+func _process_weapon_firing(delta: float):
+	"""Process per-weapon firing - weapons fire independently when targets are in range"""
+	# Ensure arrays are correct size
+	if weapon_targets.size() != weapon_components.size():
+		return
+	
+	var visual_container = get_node_or_null("VisualContainer")
+	if not visual_container:
+		return
+	
+	# For each weapon, fire if target is in range
+	for i in range(weapon_components.size()):
+		if not weapon_enabled[i]:
+			continue
+		
+		var weapon = weapon_components[i]
+		var target = weapon_targets[i]
+		
+		if not target or not is_instance_valid(target):
+			continue
+		
+		# Check if target is still in range
+		var container_global_rotation = rotation + visual_container.rotation
+		var weapon_world_pos = global_position + weapon_positions[i].rotated(container_global_rotation)
+		var distance = weapon_world_pos.distance_to(target.global_position)
+		
+		if distance <= weapon.get_range() and weapon.can_fire():
+			# Fire weapon at target
+			weapon.fire_at(target, weapon_world_pos)
+
+func _update_turret_rotations(delta: float):
+	"""Update all weapon turrets to rotate toward their individual targets"""
 	# Get VisualContainer for coordinate space reference
 	var visual_container = get_node_or_null("VisualContainer")
 	if not visual_container:
 		return
 	
+	# Ensure arrays are correct size
+	if weapon_targets.size() != weapon_turrets.size():
+		return
+	
 	for i in range(weapon_turrets.size()):
-		if i >= weapon_turrets.size():
+		if i >= weapon_turrets.size() or i >= weapon_targets.size():
 			continue
 		
 		var turret = weapon_turrets[i]
 		if not is_instance_valid(turret):
 			continue
 		
-		# Get turret's global position (Godot handles parent transformations)
-		var turret_world_pos = turret.global_position
+		var target = weapon_targets[i]
 		
-		# Calculate direction from turret to target in world space
-		var direction_to_target = (target.global_position - turret_world_pos).normalized()
-		var target_angle_world = direction_to_target.angle()
-		
-		# Calculate what rotation the turret needs in its local space (VisualContainer space)
-		# VisualContainer's global rotation = ship.rotation + VisualContainer.rotation
-		var container_global_rotation = rotation + visual_container.rotation
-		var turret_local_rotation = target_angle_world - container_global_rotation
-		
-		# Smoothly rotate turret (2x faster than ship rotation for responsive tracking)
-		turret.rotation = lerp_angle(turret.rotation, turret_local_rotation, rotation_speed * 2.0 * delta)
+		if target and is_instance_valid(target):
+			# Get turret's global position (Godot handles parent transformations)
+			var turret_world_pos = turret.global_position
+			
+			# Calculate direction from turret to target in world space
+			var direction_to_target = (target.global_position - turret_world_pos).normalized()
+			var target_angle_world = direction_to_target.angle()
+			
+			# Calculate what rotation the turret needs in its local space (VisualContainer space)
+			# VisualContainer's global rotation = ship.rotation + VisualContainer.rotation
+			var container_global_rotation = rotation + visual_container.rotation
+			var turret_local_rotation = target_angle_world - container_global_rotation
+			
+			# Smoothly rotate turret (2x faster than ship rotation for responsive tracking)
+			turret.rotation = lerp_angle(turret.rotation, turret_local_rotation, rotation_speed * 2.0 * delta)
+		else:
+			# No target - return turret to neutral position (0 rotation)
+			turret.rotation = lerp_angle(turret.rotation, 0.0, rotation_speed * delta)
 
 func get_weapon_info(weapon_index: int) -> Dictionary:
 	"""Get information about a specific weapon"""
