@@ -14,6 +14,7 @@ var tabs: HBoxContainer
 var list: GridContainer
 var footer: HBoxContainer
 var stats_container: VBoxContainer  # Container for component stats display
+var cooldown_overlays: Array = []  # Array of ColorRect overlays for manual tab cooldown display
 
 const ICONS_DIR := "res://assets/ui/Ship Component Ui/"
 const TYPE_TO_ICON := {
@@ -51,7 +52,7 @@ const COMPONENT_ORDER = ["scanner", "miner", "weapons", "shield_generator", "eng
 const HOTKEY_MAPPING = {
 	KEY_Q: "scanner",
 	KEY_W: "miner",
-	KEY_E: "weapons",
+	KEY_E: "manual",
 	KEY_R: "weapons",
 	KEY_T: "shield_generator",
 	KEY_Y: "engine",
@@ -63,13 +64,14 @@ const HOTKEY_MAPPING = {
 const TAB_LABELS = {
 	"scanner": "Scanner",
 	"miner": "Miner",
+	"manual": "Manual",
 	"weapons": "Weapons",
 	"laser_weapon": "Laser",
 	"missile_launcher": "Missile"
 }
 
 # Selectable component types (shown in tabs) - weapons are now grouped
-const SELECTABLE_TYPES = ["scanner", "miner", "weapons"]
+const SELECTABLE_TYPES = ["scanner", "miner", "manual", "weapons"]
 
 # All weapon type IDs that should be counted under "weapons" tab
 const ALL_WEAPON_TYPES = [
@@ -265,6 +267,10 @@ func _process(delta: float) -> void:
 	
 	# Update component stats
 	_update_component_stats()
+	
+	# Update cooldown overlays for manual tab
+	if current_type == "manual":
+		_update_cooldown_overlays()
 
 func set_ship(s):
 	ship = s
@@ -284,6 +290,10 @@ func _rebuild_list() -> void:
 		return
 	for c in list.get_children():
 		c.queue_free()
+	
+	# Clear cooldown overlays array
+	cooldown_overlays.clear()
+	
 	var items_count = _get_component_count(current_type)
 	
 	for i in range(items_count):
@@ -293,6 +303,13 @@ func _rebuild_list() -> void:
 		
 		var is_selected = i in selected_indices.get(current_type, [])
 		
+		# For manual tab, check cooldown state for visual styling
+		var cooldown_percent = 0.0
+		var is_ready = true
+		if current_type == "manual" and ship.has_method("get_weapon_cooldown_percent"):
+			cooldown_percent = ship.get_weapon_cooldown_percent(i)
+			is_ready = cooldown_percent <= 0.0
+		
 		# Create stylebox for background glow effect
 		var style = StyleBoxFlat.new()
 		style.corner_radius_top_left = 6
@@ -300,7 +317,23 @@ func _rebuild_list() -> void:
 		style.corner_radius_bottom_right = 6
 		style.corner_radius_bottom_left = 6
 		
-		if is_selected:
+		if current_type == "manual":
+			# Manual tab: bright when ready, dim when on cooldown
+			if is_ready:
+				style.bg_color = Color(0.2, 0.6, 0.3, 0.6)  # Green ready
+				style.border_width_left = 2
+				style.border_width_top = 2
+				style.border_width_right = 2
+				style.border_width_bottom = 2
+				style.border_color = Color(0.4, 1.0, 0.5, 0.9)
+			else:
+				style.bg_color = Color(0.2, 0.15, 0.1, 0.5)  # Orange cooldown
+				style.border_width_left = 1
+				style.border_width_top = 1
+				style.border_width_right = 1
+				style.border_width_bottom = 1
+				style.border_color = Color(0.5, 0.3, 0.2, 0.6)
+		elif is_selected:
 			# Bright glow for selected/ON
 			style.bg_color = Color(0.2, 0.5, 0.8, 0.6)
 			style.border_width_left = 2
@@ -321,13 +354,13 @@ func _rebuild_list() -> void:
 		
 		# Button inside the container
 		var toggle := Button.new()
-		toggle.toggle_mode = true
+		toggle.toggle_mode = current_type != "manual"  # Manual tab doesn't use toggle mode
 		
-		# For weapons tab, show weapon type name instead of just number
+		# For weapons/manual tab, show weapon type name instead of just number
 		var display_text = "%d" % [i + 1]
 		var icon_type = current_type
 		
-		if current_type == "weapons" and "weapon_components" in ship and i < ship.weapon_components.size():
+		if (current_type == "weapons" or current_type == "manual") and "weapon_components" in ship and i < ship.weapon_components.size():
 			var weapon = ship.weapon_components[i]
 			# Get short weapon type name
 			var type_name = weapon.get_display_name() if weapon.has_method("get_display_name") else "Wpn"
@@ -356,7 +389,14 @@ func _rebuild_list() -> void:
 		toggle.add_theme_font_size_override("font_size", 9)  # Smaller font for longer labels
 		
 		# Color modulation for glow effect
-		if is_selected:
+		if current_type == "manual":
+			if is_ready:
+				toggle.modulate = Color(1.4, 1.4, 1.4)  # Bright when ready
+				toggle.add_theme_color_override("font_color", Color.WHITE)
+			else:
+				toggle.modulate = Color(0.6, 0.6, 0.6, 0.9)  # Dimmed during cooldown
+				toggle.add_theme_color_override("font_color", Color(0.7, 0.7, 0.7))
+		elif is_selected:
 			toggle.modulate = Color(1.4, 1.4, 1.4)  # Bright glow
 			toggle.add_theme_color_override("font_color", Color.WHITE)
 		else:
@@ -365,6 +405,17 @@ func _rebuild_list() -> void:
 		
 		toggle.connect("pressed", Callable(self, "_on_toggle_pressed").bind(i))
 		item_container.add_child(toggle)
+		
+		# Add cooldown overlay for manual tab
+		if current_type == "manual":
+			var overlay = ColorRect.new()
+			overlay.name = "CooldownOverlay_%d" % i
+			overlay.mouse_filter = Control.MOUSE_FILTER_IGNORE
+			overlay.set_anchors_preset(Control.PRESET_FULL_RECT)
+			overlay.color = Color(0.0, 0.0, 0.0, 0.0)  # Start transparent, updated in _process
+			item_container.add_child(overlay)
+			cooldown_overlays.append(overlay)
+		
 		list.add_child(item_container)
 
 func _get_component_count(type: String) -> int:
@@ -375,8 +426,8 @@ func _get_component_count(type: String) -> int:
 			return ship.get_scanner_components().size() if ship.has_method("get_scanner_components") else 0
 		"miner":
 			return ship.get_mining_components().size() if ship.has_method("get_mining_components") else 0
-		"weapons":
-			# Count all weapon types
+		"manual", "weapons":
+			# Count all weapon types (manual and weapons tabs show same weapons)
 			if "weapon_components" in ship:
 				return ship.weapon_components.size()
 			return 0
@@ -403,6 +454,11 @@ func _get_component_count(type: String) -> int:
 	return 0
 
 func _on_toggle_pressed(idx: int) -> void:
+	# Manual tab: fire weapon instead of selecting
+	if current_type == "manual":
+		_fire_manual_weapon(idx)
+		return
+	
 	var sel = selected_indices.get(current_type, []).duplicate()
 	if Input.is_key_pressed(KEY_CTRL):
 		if idx in sel:
@@ -421,6 +477,98 @@ func _on_toggle_pressed(idx: int) -> void:
 	_rebuild_list()
 	_update_footer_content()
 
+func _fire_manual_weapon(weapon_index: int) -> void:
+	"""Fire a weapon manually at mouse position"""
+	if not is_instance_valid(ship) or not ship.has_method("manual_fire_weapon"):
+		return
+	
+	var mouse_pos = ship.get_global_mouse_position()
+	var fired = ship.manual_fire_weapon(weapon_index, mouse_pos)
+	
+	if fired:
+		# Visual feedback: flash the button briefly
+		_flash_weapon_button(weapon_index)
+	# Always rebuild to update cooldown visuals
+	_rebuild_list()
+
+func _flash_weapon_button(weapon_index: int) -> void:
+	"""Flash a weapon button to show it fired"""
+	if weapon_index >= list.get_child_count():
+		return
+	
+	var item_container = list.get_child(weapon_index)
+	if not item_container:
+		return
+	
+	# Brief white flash
+	var original_modulate = item_container.modulate
+	item_container.modulate = Color(2.0, 2.0, 2.0, 1.0)
+	
+	# Restore after brief delay
+	var tween = create_tween()
+	tween.tween_property(item_container, "modulate", original_modulate, 0.15)
+
+func _update_cooldown_overlays() -> void:
+	"""Update cooldown overlay visuals for manual tab"""
+	if not is_instance_valid(ship) or not ship.has_method("get_weapon_cooldown_percent"):
+		return
+	
+	for i in range(cooldown_overlays.size()):
+		var overlay = cooldown_overlays[i]
+		if not is_instance_valid(overlay):
+			continue
+		
+		var cooldown_percent = ship.get_weapon_cooldown_percent(i)
+		
+		if cooldown_percent > 0.0:
+			# Show dark overlay with opacity based on cooldown remaining
+			# More opacity = more cooldown remaining
+			overlay.color = Color(0.0, 0.0, 0.0, cooldown_percent * 0.7)
+		else:
+			# Ready to fire - transparent overlay
+			overlay.color = Color(0.0, 0.0, 0.0, 0.0)
+		
+		# Also update the button styling based on ready state
+		if i < list.get_child_count():
+			var item_container = list.get_child(i) as PanelContainer
+			if item_container:
+				_update_manual_button_style(item_container, i, cooldown_percent <= 0.0)
+
+func _update_manual_button_style(container: PanelContainer, weapon_index: int, is_ready: bool) -> void:
+	"""Update the visual style of a manual tab button based on ready state"""
+	var style = StyleBoxFlat.new()
+	style.corner_radius_top_left = 6
+	style.corner_radius_top_right = 6
+	style.corner_radius_bottom_right = 6
+	style.corner_radius_bottom_left = 6
+	
+	if is_ready:
+		style.bg_color = Color(0.2, 0.6, 0.3, 0.6)  # Green ready
+		style.border_width_left = 2
+		style.border_width_top = 2
+		style.border_width_right = 2
+		style.border_width_bottom = 2
+		style.border_color = Color(0.4, 1.0, 0.5, 0.9)
+	else:
+		style.bg_color = Color(0.2, 0.15, 0.1, 0.5)  # Orange cooldown
+		style.border_width_left = 1
+		style.border_width_top = 1
+		style.border_width_right = 1
+		style.border_width_bottom = 1
+		style.border_color = Color(0.5, 0.3, 0.2, 0.6)
+	
+	container.add_theme_stylebox_override("panel", style)
+	
+	# Update button modulate
+	for child in container.get_children():
+		if child is Button:
+			if is_ready:
+				child.modulate = Color(1.4, 1.4, 1.4)
+				child.add_theme_color_override("font_color", Color.WHITE)
+			else:
+				child.modulate = Color(0.6, 0.6, 0.6, 0.9)
+				child.add_theme_color_override("font_color", Color(0.7, 0.7, 0.7))
+
 func _update_footer_content() -> void:
 	if footer == null: return
 	for c in footer.get_children():
@@ -433,8 +581,8 @@ func _update_footer_content() -> void:
 	var all_stats = _get_component_stats()
 	var stats = all_stats.get(current_type, {})
 	
-	# For "weapons" tab, aggregate stats from all weapon types
-	if current_type == "weapons":
+	# For "weapons" or "manual" tab, aggregate stats from all weapon types
+	if current_type == "weapons" or current_type == "manual":
 		stats = _get_all_weapons_stats()
 	
 	# Create stats label
@@ -451,6 +599,11 @@ func _update_footer_content() -> void:
 		info.modulate = Color(0.6, 0.6, 0.6)
 	else:
 		match current_type:
+			"manual":
+				# Manual tab: show hint text plus weapon count
+				info.text = "Press 1-%d or click to fire  |  Weapons: %d" % [min(count, 9), count]
+				info.modulate = Color(0.9, 1.0, 0.85)  # Slightly different color
+			
 			"weapons":
 				var total_dps = stats.get("total_dps", 0.0)
 				var power = stats.get("power_consumed", 0)
@@ -883,19 +1036,19 @@ func _unhandled_input(event: InputEvent) -> void:
 				get_viewport().set_input_as_handled()
 				return
 		
-		# Number Selection (1-9) - Toggles individual weapons or selects for others
+		# Number keys (1-9)
 		if event.keycode >= KEY_1 and event.keycode <= KEY_9:
 			var idx = event.keycode - KEY_1
 			var count = _get_component_count(current_type)
 			if idx < count:
-				# Toggle logic: If present, remove. If absent, add.
-				# This matches user request "toggle on or off"
-				var sel = selected_indices.get(current_type, []).duplicate()
+				# Manual tab: fire weapon on key press
+				if current_type == "manual":
+					_fire_manual_weapon(idx)
+					get_viewport().set_input_as_handled()
+					return
 				
-				# Check if user is holding CTRL or if we are in weapon mode (multi-select default)
-				# User requested toggling, so we treat it as multi-select toggle always for weapons?
-				# Or stick to CTRL convention?
-				# "press the key 1 or 2 or 3 ... the icon toggles" implies direct toggle.
+				# Other tabs: toggle selection
+				var sel = selected_indices.get(current_type, []).duplicate()
 				
 				if idx in sel:
 					sel.erase(idx)

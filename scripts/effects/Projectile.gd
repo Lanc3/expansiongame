@@ -24,6 +24,27 @@ var chain_range: float = 100.0
 var chain_damage_falloff: float = 0.7
 var already_hit: Array[Node2D] = []  # For pierce/chain tracking
 
+# Flak projectile properties
+var is_flak_projectile: bool = false
+var target_destination: Vector2 = Vector2.ZERO  # Where flak/torpedo/mine aims to explode
+var flak_mini_aoe: float = 22.0  # Small explosion radius for flak bullets
+
+# Torpedo projectile properties
+var is_torpedo_projectile: bool = false
+var torpedo_aoe_radius: float = 50.0  # Full explosion radius for torpedo
+
+# Mine projectile properties
+var is_mine_projectile: bool = false
+var mine_armed: bool = false  # True when mine has reached destination and is waiting
+var mine_timer: float = 30.0  # Countdown timer (30 seconds default)
+var mine_max_timer: float = 30.0  # Store initial value for urgency calculation
+var mine_proximity_radius: float = 50.0  # Same as explosion radius
+var mine_timer_label: Label = null  # Floating timer display
+
+# Mortar projectile properties
+var is_mortar_projectile: bool = false
+var mortar_mini_aoe: float = 40.0  # Large explosion radius for mortar shells
+
 @onready var sprite: Sprite2D = $Sprite2D
 
 var trail_effect: Line2D = null
@@ -110,7 +131,7 @@ const WEAPON_SCALES = {
 	WT_PARTICLE_BEAM: Vector2(0.6, 0.6),
 	WT_TESLA_COIL: Vector2(0.5, 0.5),
 	WT_DISRUPTOR: Vector2(0.7, 0.7),
-	WT_FLAK_CANNON: Vector2(0.8, 0.8),
+	WT_FLAK_CANNON: Vector2(0.3, 1.2),  # Thin, elongated tracer
 	WT_TORPEDO: Vector2(0.08, 0.08),
 	WT_ROCKET_POD: Vector2(0.04, 0.04),
 	WT_MORTAR: Vector2(0.9, 0.9),
@@ -166,6 +187,205 @@ func setup_extended(wep_type: int, dmg: float, start_pos: Vector2, target_pos: V
 	
 	# Set visual based on weapon type
 	_apply_weapon_visuals()
+
+func setup_flak(dmg: float, start_pos: Vector2, destination: Vector2, spd: float, owner: Node2D, mini_aoe: float):
+	"""Setup specifically for flak cannon bullets - destination-based with small AOE"""
+	global_position = start_pos
+	damage = dmg
+	speed = spd
+	direction = (destination - start_pos).normalized()
+	rotation = direction.angle()
+	weapon_type = WT_FLAK_CANNON
+	homing_target = null
+	owner_unit = owner
+	
+	# Flak-specific properties
+	is_flak_projectile = true
+	target_destination = destination
+	flak_mini_aoe = mini_aoe
+	aoe_radius = mini_aoe  # Small AOE per bullet
+	aoe_type = AOE_CIRCLE
+	
+	# Reset other properties
+	special_effect = SE_NONE
+	effect_duration = 0.0
+	effect_strength = 0.0
+	chain_count = 0
+	already_hit.clear()
+	
+	# Store owner's team_id for friendly fire prevention
+	if owner and "team_id" in owner:
+		owner_team_id = owner.team_id
+	
+	# Store zone for visibility filtering
+	if ZoneManager:
+		if owner and ZoneManager.has_method("get_unit_zone"):
+			owner_zone_id = ZoneManager.get_unit_zone(owner)
+		else:
+			owner_zone_id = ZoneManager.current_zone_id
+	
+	# Set z_index early to ensure proper rendering order
+	z_index = 10
+	z_as_relative = false
+	
+	# Set visual based on weapon type
+	_apply_weapon_visuals()
+
+func setup_torpedo(dmg: float, start_pos: Vector2, destination: Vector2, spd: float, owner: Node2D, full_aoe_radius: float):
+	"""Setup specifically for torpedo - destination-based with full AOE explosion"""
+	global_position = start_pos
+	damage = dmg
+	speed = spd
+	direction = (destination - start_pos).normalized()
+	rotation = direction.angle()
+	weapon_type = WT_TORPEDO
+	homing_target = null
+	owner_unit = owner
+	
+	# Torpedo-specific properties
+	is_torpedo_projectile = true
+	target_destination = destination
+	torpedo_aoe_radius = full_aoe_radius
+	aoe_radius = full_aoe_radius  # Full AOE explosion
+	aoe_type = AOE_CIRCLE
+	
+	# Reset other properties
+	special_effect = SE_NONE
+	effect_duration = 0.0
+	effect_strength = 0.0
+	chain_count = 0
+	already_hit.clear()
+	
+	# Store owner's team_id for friendly fire prevention
+	if owner and "team_id" in owner:
+		owner_team_id = owner.team_id
+	
+	# Store zone for visibility filtering
+	if ZoneManager:
+		if owner and ZoneManager.has_method("get_unit_zone"):
+			owner_zone_id = ZoneManager.get_unit_zone(owner)
+		else:
+			owner_zone_id = ZoneManager.current_zone_id
+	
+	# Set z_index early to ensure proper rendering order
+	z_index = 10
+	z_as_relative = false
+	
+	# Set visual based on weapon type
+	_apply_weapon_visuals()
+
+func setup_mine(dmg: float, start_pos: Vector2, destination: Vector2, spd: float, owner: Node2D, proximity_radius: float, timer_duration: float = 30.0):
+	"""Setup specifically for proximity mine - travels to destination, then waits for enemies"""
+	global_position = start_pos
+	damage = dmg
+	speed = spd
+	direction = (destination - start_pos).normalized()
+	rotation = direction.angle()
+	weapon_type = WT_MINE_LAYER
+	homing_target = null
+	owner_unit = owner
+	
+	# Mine-specific properties
+	is_mine_projectile = true
+	mine_armed = false  # Not armed until reaching destination
+	mine_timer = timer_duration
+	mine_max_timer = timer_duration
+	mine_proximity_radius = proximity_radius
+	target_destination = destination
+	aoe_radius = proximity_radius  # Explosion radius matches proximity
+	aoe_type = AOE_CIRCLE
+	
+	# Longer lifetime for mines (timer + travel time)
+	lifetime = timer_duration + 60.0  # Extra time for travel
+	
+	# Reset other properties
+	special_effect = SE_NONE
+	effect_duration = 0.0
+	effect_strength = 0.0
+	chain_count = 0
+	already_hit.clear()
+	
+	# Store owner's team_id for friendly fire prevention
+	if owner and "team_id" in owner:
+		owner_team_id = owner.team_id
+	
+	# Store zone for visibility filtering
+	if ZoneManager:
+		if owner and ZoneManager.has_method("get_unit_zone"):
+			owner_zone_id = ZoneManager.get_unit_zone(owner)
+		else:
+			owner_zone_id = ZoneManager.current_zone_id
+	
+	# Set z_index early to ensure proper rendering order
+	z_index = 10
+	z_as_relative = false
+	
+	# Set visual based on weapon type
+	_apply_weapon_visuals()
+	
+	# Create timer label for mine countdown
+	_create_mine_timer_label()
+
+func setup_mortar(dmg: float, start_pos: Vector2, destination: Vector2, spd: float, owner: Node2D, mini_aoe: float):
+	"""Setup specifically for mortar shells - destination-based with large AOE explosion"""
+	global_position = start_pos
+	damage = dmg
+	speed = spd
+	direction = (destination - start_pos).normalized()
+	rotation = direction.angle()
+	weapon_type = WT_MORTAR
+	homing_target = null
+	owner_unit = owner
+	
+	# Mortar-specific properties
+	is_mortar_projectile = true
+	target_destination = destination
+	mortar_mini_aoe = mini_aoe
+	aoe_radius = mini_aoe  # Large AOE per shell
+	aoe_type = AOE_CIRCLE
+	
+	# Reset other properties
+	special_effect = SE_NONE
+	effect_duration = 0.0
+	effect_strength = 0.0
+	chain_count = 0
+	already_hit.clear()
+	
+	# Store owner's team_id for friendly fire prevention
+	if owner and "team_id" in owner:
+		owner_team_id = owner.team_id
+	
+	# Store zone for visibility filtering
+	if ZoneManager:
+		if owner and ZoneManager.has_method("get_unit_zone"):
+			owner_zone_id = ZoneManager.get_unit_zone(owner)
+		else:
+			owner_zone_id = ZoneManager.current_zone_id
+	
+	# Set z_index early to ensure proper rendering order
+	z_index = 10
+	z_as_relative = false
+	
+	# Set visual based on weapon type
+	_apply_weapon_visuals()
+
+func _create_mine_timer_label():
+	"""Create floating label to show mine countdown timer"""
+	if mine_timer_label:
+		return  # Already exists
+	
+	mine_timer_label = Label.new()
+	mine_timer_label.name = "MineTimerLabel"
+	mine_timer_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	mine_timer_label.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
+	mine_timer_label.add_theme_font_size_override("font_size", 14)
+	mine_timer_label.add_theme_color_override("font_color", Color.WHITE)
+	mine_timer_label.add_theme_color_override("font_outline_color", Color.BLACK)
+	mine_timer_label.add_theme_constant_override("outline_size", 3)
+	mine_timer_label.position = Vector2(-20, -40)  # Above the mine
+	mine_timer_label.size = Vector2(40, 20)
+	mine_timer_label.visible = false  # Hidden until armed
+	add_child(mine_timer_label)
 
 func _apply_weapon_visuals():
 	"""Apply color, scale, and shaders based on weapon type"""
@@ -223,6 +443,14 @@ func _get_shader_for_weapon_type(wtype: int) -> String:
 			return "res://shaders/projectile_repair_beam.gdshader"
 		WT_RAILGUN:
 			return "res://shaders/projectile_railgun.gdshader"
+		WT_FLAK_CANNON:
+			return "res://shaders/projectile_flak.gdshader"
+		WT_TORPEDO:
+			return "res://shaders/projectile_torpedo.gdshader"
+		WT_MINE_LAYER:
+			return "res://shaders/projectile_mine.gdshader"
+		WT_MORTAR:
+			return "res://shaders/projectile_mine.gdshader"  # Reuse mine visual for mortar
 		_:
 			return ""
 
@@ -299,6 +527,60 @@ func _apply_shader_visual(shader_path: String, color: Color, scale_val: Vector2)
 			mat.set_shader_parameter("core_color", Color(1.0, 1.0, 1.0, 1.0))
 			mat.set_shader_parameter("streak_speed", 35.0)
 			scale_val = Vector2(1.5, 4.0)  # Long streak
+		
+		WT_FLAK_CANNON:
+			# Yellow-hot glowing tracer
+			mat.set_shader_parameter("core_color", Color(1.0, 1.0, 0.9, 1.0))  # White-hot
+			mat.set_shader_parameter("hot_color", Color(1.0, 0.9, 0.3, 1.0))   # Yellow
+			mat.set_shader_parameter("glow_color", Color(1.0, 0.5, 0.1, 1.0))  # Orange
+			mat.set_shader_parameter("elongation", 4.0)
+			mat.set_shader_parameter("core_size", 0.08)
+			mat.set_shader_parameter("glow_falloff", 0.35)
+			mat.set_shader_parameter("shimmer_speed", 15.0)
+			scale_val = Vector2(0.5, 1.5)  # Thin, elongated tracer
+		
+		WT_TORPEDO:
+			# Heavy torpedo with blue exhaust trail
+			mat.set_shader_parameter("body_color", Color(0.4, 0.5, 0.6, 1.0))      # Dark metallic
+			mat.set_shader_parameter("engine_color", Color(0.5, 0.8, 1.0, 1.0))   # Blue-white
+			mat.set_shader_parameter("exhaust_color", Color(0.3, 0.6, 1.0, 1.0))  # Blue trail
+			mat.set_shader_parameter("glow_color", Color(0.4, 0.7, 1.0, 0.6))     # Ambient glow
+			mat.set_shader_parameter("body_length", 0.25)
+			mat.set_shader_parameter("body_width", 0.08)
+			mat.set_shader_parameter("trail_length", 0.5)
+			mat.set_shader_parameter("glow_intensity", 1.5)
+			mat.set_shader_parameter("pulse_speed", 4.0)
+			scale_val = Vector2(1.5, 2.5)  # Large torpedo
+		
+		WT_MINE_LAYER:
+			# Proximity mine with pulsing red core
+			mat.set_shader_parameter("core_color", Color(0.9, 0.2, 0.1, 1.0))     # Red core
+			mat.set_shader_parameter("shell_color", Color(0.3, 0.3, 0.35, 1.0))  # Dark shell
+			mat.set_shader_parameter("ring_color", Color(0.8, 0.2, 0.2, 0.4))    # Proximity ring
+			mat.set_shader_parameter("warning_color", Color(1.0, 0.3, 0.1, 1.0)) # Warning blink
+			mat.set_shader_parameter("core_size", 0.12)
+			mat.set_shader_parameter("shell_size", 0.22)
+			mat.set_shader_parameter("ring_radius", 0.4)
+			mat.set_shader_parameter("ring_thickness", 0.03)
+			mat.set_shader_parameter("pulse_speed", 3.0)
+			mat.set_shader_parameter("armed", 0.0 if not is_mine_projectile or not mine_armed else 1.0)
+			mat.set_shader_parameter("urgency", 0.0)
+			scale_val = Vector2(2.0, 2.0)  # Medium size mine
+		
+		WT_MORTAR:
+			# Mortar shell - brown/orange colors, larger, always "armed" look
+			mat.set_shader_parameter("core_color", Color(1.0, 0.6, 0.2, 1.0))     # Orange core
+			mat.set_shader_parameter("shell_color", Color(0.5, 0.4, 0.3, 1.0))   # Brown shell
+			mat.set_shader_parameter("ring_color", Color(1.0, 0.5, 0.2, 0.3))    # Orange ring (subtle)
+			mat.set_shader_parameter("warning_color", Color(1.0, 0.7, 0.3, 1.0)) # Yellow-orange
+			mat.set_shader_parameter("core_size", 0.15)
+			mat.set_shader_parameter("shell_size", 0.25)
+			mat.set_shader_parameter("ring_radius", 0.35)
+			mat.set_shader_parameter("ring_thickness", 0.02)
+			mat.set_shader_parameter("pulse_speed", 2.0)
+			mat.set_shader_parameter("armed", 1.0)  # Always looks armed
+			mat.set_shader_parameter("urgency", 0.3)  # Slight urgency for visual interest
+			scale_val = Vector2(2.5, 2.5)  # Larger than mine
 	
 	sprite.material = mat
 	sprite.modulate = Color.WHITE  # Let shader handle colors
@@ -310,9 +592,9 @@ func _apply_shader_visual(shader_path: String, color: Color, scale_val: Vector2)
 	sprite.z_index = 10  # Sprite z_index (above ship components z_index 0 and turrets z_index 5)
 	z_as_relative = false  # Use absolute z_index for proper rendering across different parent hierarchies
 	
-	# Use a simple white texture as base for shader
-	if not sprite.texture or sprite.texture.get_size().x < 32:
-		sprite.texture = _create_shader_base_texture()
+	# Always use the shader base texture for shader-based projectiles
+	# This ensures consistent rendering regardless of what texture was previously set
+	sprite.texture = _create_shader_base_texture()
 
 # Cache for shader base texture
 static var _shader_base_texture: ImageTexture = null
@@ -385,8 +667,13 @@ func _process(delta: float):
 		else:
 			visible = true
 	
-	# Homing behavior (for missiles, torpedoes)
-	if homing_target and is_instance_valid(homing_target):
+	# Mine processing (handles armed state, timer, proximity)
+	if is_mine_projectile:
+		_process_mine(delta)
+		return  # Mine handles its own movement
+	
+	# Homing behavior (for missiles, non-AOE torpedoes)
+	if homing_target and is_instance_valid(homing_target) and not is_torpedo_projectile:
 		var target_direction = (homing_target.global_position - global_position).normalized()
 		var turn_speed = 2.0
 		# Torpedoes turn slower
@@ -397,6 +684,27 @@ func _process(delta: float):
 	
 	# Move
 	global_position += direction * speed * delta
+	
+	# Torpedo projectile destination check - explode when reaching target
+	if is_torpedo_projectile and target_destination != Vector2.ZERO:
+		var dist_to_dest = global_position.distance_to(target_destination)
+		if dist_to_dest < speed * delta * 1.5:  # Close enough to destination
+			_explode_torpedo()
+			return
+	
+	# Flak projectile destination check - explode when reaching target
+	if is_flak_projectile and target_destination != Vector2.ZERO:
+		var dist_to_dest = global_position.distance_to(target_destination)
+		if dist_to_dest < speed * delta * 1.5:  # Close enough to destination
+			_explode_flak()
+			return
+	
+	# Mortar projectile destination check - explode when reaching target
+	if is_mortar_projectile and target_destination != Vector2.ZERO:
+		var dist_to_dest = global_position.distance_to(target_destination)
+		if dist_to_dest < speed * delta * 1.5:  # Close enough to destination
+			_explode_mortar()
+			return
 	
 	# Trail effect
 	if trail_effect and is_instance_valid(trail_effect):
@@ -417,16 +725,208 @@ func _process(delta: float):
 	if age >= lifetime:
 		_on_lifetime_expired()
 
+func _process_mine(delta: float):
+	"""Process mine behavior - travel, arm, proximity detect, countdown"""
+	if not mine_armed:
+		# Still traveling to destination
+		global_position += direction * speed * delta
+		
+		# Check if reached destination
+		var dist_to_dest = global_position.distance_to(target_destination)
+		if dist_to_dest < speed * delta * 1.5:
+			# Arrived at destination - arm the mine
+			global_position = target_destination
+			mine_armed = true
+			speed = 0.0  # Stop moving
+			
+			# Update shader to show armed state
+			_update_mine_shader_state()
+			
+			# Show timer label
+			if mine_timer_label:
+				mine_timer_label.visible = true
+			
+			# Play arming sound if available
+			if AudioManager:
+				AudioManager.play_weapon_sound(global_position)
+	else:
+		# Mine is armed - check proximity and countdown
+		
+		# Update timer
+		mine_timer -= delta
+		
+		# Update timer label
+		_update_mine_timer_label()
+		
+		# Update shader urgency based on remaining time
+		_update_mine_shader_state()
+		
+		# Check for timer expiration
+		if mine_timer <= 0:
+			_explode_mine()
+			return
+		
+		# Check for enemies in proximity
+		if _check_mine_proximity():
+			_explode_mine()
+			return
+
+func _update_mine_timer_label():
+	"""Update the mine's floating timer label"""
+	if not mine_timer_label:
+		return
+	
+	# Format time as integer seconds
+	var seconds_left = int(ceil(mine_timer))
+	mine_timer_label.text = str(seconds_left) + "s"
+	
+	# Color based on urgency
+	if mine_timer > 15.0:
+		mine_timer_label.add_theme_color_override("font_color", Color.WHITE)
+	elif mine_timer > 5.0:
+		mine_timer_label.add_theme_color_override("font_color", Color.YELLOW)
+	else:
+		# Blink red when critical
+		var blink = fmod(mine_timer * 4.0, 1.0) > 0.5
+		if blink:
+			mine_timer_label.add_theme_color_override("font_color", Color.RED)
+		else:
+			mine_timer_label.add_theme_color_override("font_color", Color(1.0, 0.5, 0.5))
+
+func _update_mine_shader_state():
+	"""Update mine shader parameters for armed state and urgency"""
+	if not sprite or not sprite.material:
+		return
+	
+	var mat = sprite.material as ShaderMaterial
+	if not mat:
+		return
+	
+	# Set armed state
+	mat.set_shader_parameter("armed", 1.0 if mine_armed else 0.0)
+	
+	# Calculate urgency (0 = full time, 1 = about to explode)
+	var urgency = 1.0 - (mine_timer / mine_max_timer)
+	urgency = clampf(urgency, 0.0, 1.0)
+	mat.set_shader_parameter("urgency", urgency)
+
+func _check_mine_proximity() -> bool:
+	"""Check if any enemy is within mine proximity radius"""
+	if not mine_armed:
+		return false
+	
+	# Query physics space for enemies in proximity
+	var space_state = get_world_2d().direct_space_state
+	var query = PhysicsShapeQueryParameters2D.new()
+	var circle_shape = CircleShape2D.new()
+	circle_shape.radius = mine_proximity_radius
+	query.shape = circle_shape
+	query.transform = Transform2D(0, global_position)
+	query.collision_mask = 1 + 2  # Units and resources
+	
+	var results = space_state.intersect_shape(query, 16)
+	
+	for result in results:
+		var body = result.collider
+		if body == owner_unit:
+			continue
+		
+		# Check if enemy (different team)
+		if "team_id" in body and body.team_id != owner_team_id:
+			return true
+	
+	return false
+
+func _explode_torpedo():
+	"""Handle torpedo reaching destination - large AOE explosion"""
+	# Store values before returning to pool
+	var explosion_pos = global_position
+	
+	# Apply AOE damage (this handles visual effect via _spawn_aoe_effect)
+	_apply_aoe_damage(explosion_pos)
+	
+	# Return to pool
+	if ProjectilePool:
+		ProjectilePool.return_projectile(self)
+	else:
+		queue_free()
+
+func _explode_mine():
+	"""Handle mine detonation - proximity or timer triggered"""
+	# Store values before returning to pool
+	var explosion_pos = global_position
+	
+	# Apply AOE damage (this handles visual effect via _spawn_aoe_effect)
+	_apply_aoe_damage(explosion_pos)
+	
+	# Play explosion sound if available
+	if AudioManager:
+		AudioManager.play_weapon_sound(explosion_pos)
+	
+	# Return to pool
+	if ProjectilePool:
+		ProjectilePool.return_projectile(self)
+	else:
+		queue_free()
+
 func _on_lifetime_expired():
 	"""Handle projectile expiring (can trigger AOE for mines, mortars, etc)"""
 	# Some weapons detonate at end of life
-	if weapon_type in [WT_MINE_LAYER, WT_MORTAR, WT_GRAVITY_WELL]:
+	if weapon_type in [WT_MINE_LAYER, WT_GRAVITY_WELL]:
 		_apply_aoe_damage(global_position)
+	
+	# Flak projectiles also explode at end of life
+	if is_flak_projectile:
+		_explode_flak()
+		return
+	
+	# Mortar projectiles explode at end of life
+	if is_mortar_projectile:
+		_explode_mortar()
+		return
 	
 	if ProjectilePool:
 		ProjectilePool.return_projectile(self)
 	else:
 		queue_free()
+
+func _explode_flak():
+	"""Handle flak projectile reaching destination - small AOE explosion"""
+	# Apply small AOE damage at destination (this spawns AOE visual via _spawn_aoe_effect)
+	_apply_aoe_damage(global_position)
+	
+	# Note: Don't call _spawn_flak_impact_effect here - _apply_aoe_damage already spawns
+	# the visual effect via _spawn_aoe_effect. Calling both creates double effects.
+	
+	# Return to pool
+	if ProjectilePool:
+		ProjectilePool.return_projectile(self)
+	else:
+		queue_free()
+
+func _explode_mortar():
+	"""Handle mortar shell reaching destination - large AOE explosion"""
+	# Store values before returning to pool
+	var explosion_pos = global_position
+	
+	# Apply AOE damage (this handles visual effect via _spawn_aoe_effect)
+	_apply_aoe_damage(explosion_pos)
+	
+	# Return to pool
+	if ProjectilePool:
+		ProjectilePool.return_projectile(self)
+	else:
+		queue_free()
+
+func _spawn_flak_impact_effect():
+	"""Spawn a small explosion effect for flak bullet impact"""
+	if not VfxDirector:
+		return
+	
+	# Small AOE circle for flak - keep it visually subtle
+	# flak_mini_aoe is typically 18-26, so this creates small 9-13 pixel circles
+	var flak_color = Color(1.0, 0.6, 0.2, 0.7)  # Orange-yellow with some transparency
+	VfxDirector.spawn_aoe_circle(global_position, flak_mini_aoe * 0.4, flak_color, 0.12)
 
 func _on_body_entered(body: Node2D):
 	if body == owner_unit:
@@ -622,11 +1122,19 @@ func _spawn_impact_effect():
 	if not VfxDirector and not FeedbackManager:
 		return
 	
+	# Flak projectiles use their own smaller impact effect, skip full explosion
+	if is_flak_projectile:
+		_spawn_flak_impact_effect()
+		return
+	
 	var explosion_scale = 0.6
 	
-	# Larger explosions for explosive weapons
-	if weapon_type in [WT_MISSILE, WT_TORPEDO, WT_FLAK_CANNON, WT_MORTAR, WT_MINE_LAYER, WT_ROCKET_POD]:
+	# Larger explosions for explosive weapons (but NOT flak - handled above)
+	if weapon_type in [WT_MISSILE, WT_TORPEDO, WT_MORTAR, WT_MINE_LAYER, WT_ROCKET_POD]:
 		explosion_scale = 1.0 + (aoe_radius / 100.0)
+	
+	# Clamp explosion scale to reasonable values to prevent screen-filling effects
+	explosion_scale = clampf(explosion_scale, 0.3, 3.0)
 	
 	if VfxDirector and get_tree().current_scene:
 		VfxDirector.spawn_explosion(get_tree().current_scene, global_position, explosion_scale)
@@ -642,11 +1150,16 @@ func _spawn_aoe_effect(center: Vector2):
 	
 	match aoe_type:
 		AOE_CIRCLE:
-			VfxDirector.spawn_aoe_circle(center, aoe_radius, color, 0.3)
+			# Clamp radius to prevent oversized circles
+			var clamped_radius = clampf(aoe_radius, 5.0, 200.0)
+			VfxDirector.spawn_aoe_circle(center, clamped_radius, color, 0.3)
 		AOE_RING:
-			VfxDirector.spawn_aoe_ring(center, aoe_radius, color, 0.4)
+			var clamped_radius = clampf(aoe_radius, 5.0, 200.0)
+			VfxDirector.spawn_aoe_ring(center, clamped_radius, color, 0.4)
 		_:
-			VfxDirector.spawn_explosion(get_tree().current_scene, center, 1.0 + (aoe_radius / 100.0))
+			# Clamp explosion scale to prevent screen-filling effects
+			var explosion_scale = clampf(1.0 + (aoe_radius / 100.0), 0.5, 3.0)
+			VfxDirector.spawn_explosion(get_tree().current_scene, center, explosion_scale)
 
 func _on_area_entered(_area: Area2D):
 	# Handle area collisions if needed
@@ -663,6 +1176,9 @@ func reset_for_pool():
 	
 	# Reset all properties
 	age = 0.0
+	lifetime = 3.0  # Reset lifetime to default (mines set it very high)
+	speed = 500.0  # Reset speed (mines set it to 0 when armed)
+	damage = 0.0  # Reset damage
 	homing_target = null
 	owner_unit = null
 	owner_team_id = 0
@@ -670,6 +1186,7 @@ func reset_for_pool():
 	direction = Vector2.ZERO
 	global_position = Vector2.ZERO
 	rotation = 0.0
+	weapon_type = 0  # Reset weapon type
 	
 	# Reset extended properties
 	aoe_radius = 0.0
@@ -678,4 +1195,38 @@ func reset_for_pool():
 	effect_duration = 0.0
 	effect_strength = 0.0
 	chain_count = 0
+	chain_range = 100.0
+	chain_damage_falloff = 0.7
 	already_hit.clear()
+	
+	# Reset flak properties
+	is_flak_projectile = false
+	target_destination = Vector2.ZERO
+	flak_mini_aoe = 22.0
+	
+	# Reset torpedo properties
+	is_torpedo_projectile = false
+	torpedo_aoe_radius = 50.0
+	
+	# Reset mine properties
+	is_mine_projectile = false
+	mine_armed = false
+	mine_timer = 30.0
+	mine_max_timer = 30.0
+	mine_proximity_radius = 50.0
+	
+	# Remove and cleanup mine timer label
+	if mine_timer_label and is_instance_valid(mine_timer_label):
+		mine_timer_label.queue_free()
+	mine_timer_label = null
+	
+	# Reset mortar properties
+	is_mortar_projectile = false
+	mortar_mini_aoe = 40.0
+	
+	# Reset sprite visual properties to prevent shader/scale carryover
+	if sprite:
+		sprite.material = null  # Clear shader material
+		sprite.scale = Vector2(0.8, 0.8)  # Reset to default scale
+		sprite.modulate = Color.WHITE  # Reset modulate
+		# Keep the default texture, it will be set by _apply_weapon_visuals

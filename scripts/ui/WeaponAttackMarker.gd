@@ -11,7 +11,8 @@ var weapon_type: int = 0  # WeaponComponent.WeaponType enum value
 var ship: Node2D = null  # Reference to owning CustomShip
 
 # AOE properties
-var aoe_radius: float = 0.0  # 0 = non-AOE weapon
+var aoe_radius: float = 0.0  # Base AOE radius (0 = non-AOE weapon)
+var current_aoe_radius: float = 0.0  # Adjustable AOE radius
 var is_aoe_weapon: bool = false
 
 # Visual components
@@ -148,6 +149,7 @@ func setup(p_weapon_index: int, p_weapon_type: int, p_label: String, p_ship: Nod
 	weapon_type = p_weapon_type
 	ship = p_ship
 	aoe_radius = p_aoe_radius
+	current_aoe_radius = p_aoe_radius  # Initialize adjustable radius to base
 	is_aoe_weapon = p_aoe_radius > 0
 	
 	# Ensure nodes are created (in case setup is called before _ready)
@@ -184,7 +186,7 @@ func setup(p_weapon_index: int, p_weapon_type: int, p_label: String, p_ship: Nod
 	
 	# Update AOE circle
 	if is_aoe_weapon:
-		_create_aoe_circle(aoe_radius, weapon_color)
+		_create_aoe_circle(current_aoe_radius, weapon_color)
 		aoe_circle.visible = true
 	else:
 		aoe_circle.visible = false
@@ -311,8 +313,19 @@ func set_weapon_selected(selected: bool):
 		targeting_line.width = 2.0
 
 func get_aoe_radius() -> float:
-	"""Get the AOE radius for this marker's weapon"""
+	"""Get the base AOE radius for this marker's weapon"""
 	return aoe_radius
+
+func get_current_aoe_radius() -> float:
+	"""Get the current adjustable AOE radius"""
+	return current_aoe_radius if current_aoe_radius > 0 else aoe_radius
+
+func set_aoe_radius(new_radius: float):
+	"""Set a new AOE radius and update the visual circle"""
+	current_aoe_radius = new_radius
+	if is_aoe_weapon and aoe_circle:
+		var weapon_color = WEAPON_COLORS.get(weapon_type, Color(1.0, 0.5, 0.2, 0.6))
+		_create_aoe_circle(new_radius, weapon_color)
 
 func is_aoe() -> bool:
 	"""Check if this marker is for an AOE weapon"""

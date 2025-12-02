@@ -4,7 +4,13 @@ extends Control
 # Node references
 @onready var ship_grid: CosmoteerShipGrid = $CenterPanel/MarginContainer/VBox/GridContainer/ShipGrid
 @onready var component_list: VBoxContainer = $LeftPanel/VBox/ComponentScroll/ComponentList
+@onready var component_scroll: ScrollContainer = $LeftPanel/VBox/ComponentScroll
 @onready var ship_name_edit: LineEdit = $LeftPanel/VBox/ShipNameEdit
+@onready var left_vbox: VBoxContainer = $LeftPanel/VBox
+
+# Search filter
+var search_filter: LineEdit
+var clear_search_btn: Button
 
 # Hull buttons
 @onready var light_btn: Button = $LeftPanel/VBox/HullButtons/LightBtn
@@ -96,6 +102,9 @@ func _ready():
 	save_dialog.file_selected.connect(_on_save_dialog_confirmed)
 	load_dialog.file_selected.connect(_on_load_dialog_confirmed)
 	
+	# Create search filter UI
+	_create_search_filter()
+	
 	# Build component palette
 	build_component_palette()
 	
@@ -149,6 +158,76 @@ func _on_ship_name_changed(new_name: String):
 	"""Update blueprint name when user edits the field"""
 	current_blueprint.blueprint_name = new_name
 
+func _create_search_filter():
+	"""Create the search filter UI above the component scroll"""
+	# Create container for search with clear button
+	var search_container = HBoxContainer.new()
+	search_container.add_theme_constant_override("separation", 4)
+	
+	# Create search icon/label
+	var search_icon = Label.new()
+	search_icon.text = "🔍"
+	search_icon.add_theme_font_size_override("font_size", 14)
+	search_container.add_child(search_icon)
+	
+	# Create search input
+	search_filter = LineEdit.new()
+	search_filter.placeholder_text = "Search components..."
+	search_filter.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	search_filter.custom_minimum_size = Vector2(0, 28)
+	search_filter.clear_button_enabled = true
+	search_filter.text_changed.connect(_on_search_filter_changed)
+	search_container.add_child(search_filter)
+	
+	# Style the search box
+	var search_style = StyleBoxFlat.new()
+	search_style.bg_color = Color(0.1, 0.12, 0.16, 0.9)
+	search_style.border_width_bottom = 2
+	search_style.border_color = Color(0.3, 0.35, 0.4, 0.8)
+	search_style.corner_radius_top_left = 4
+	search_style.corner_radius_top_right = 4
+	search_style.corner_radius_bottom_right = 4
+	search_style.corner_radius_bottom_left = 4
+	search_style.content_margin_left = 8
+	search_style.content_margin_right = 8
+	search_filter.add_theme_stylebox_override("normal", search_style)
+	
+	# Insert search container before component scroll
+	var scroll_index = component_scroll.get_index()
+	left_vbox.add_child(search_container)
+	left_vbox.move_child(search_container, scroll_index)
+
+func _on_search_filter_changed(new_text: String):
+	"""Filter components based on search text"""
+	var search = new_text.strip_edges().to_lower()
+	
+	# Iterate through all children in component list
+	for child in component_list.get_children():
+		if child is ComponentLevelButton:
+			# Use the button's filter method
+			child.visible = child.matches_filter(search)
+		elif child is Label:
+			# Category labels - check if any components in this category are visible
+			var category_name = child.text.trim_suffix(":")
+			var has_visible_components = false
+			
+			# Look ahead to find components in this category
+			var idx = child.get_index()
+			for i in range(idx + 1, component_list.get_child_count()):
+				var next_child = component_list.get_child(i)
+				if next_child is Label:
+					# Hit next category, stop
+					break
+				elif next_child is ComponentLevelButton:
+					if next_child.matches_filter(search):
+						has_visible_components = true
+						break
+			
+			child.visible = has_visible_components or search.is_empty()
+		elif child is Control and child.custom_minimum_size.y > 0:
+			# Spacers - hide if search is active
+			child.visible = search.is_empty()
+
 func _on_rotate_ccw_pressed():
 	"""Rotate ship direction counter-clockwise"""
 	ship_grid.rotate_ship_direction(false)
@@ -180,24 +259,21 @@ func build_component_palette():
 		if not categories.has(category_name):
 			continue
 			
-		# Add category label
+		# Add category label with styling
 		var category_label = Label.new()
-		category_label.text = category_name + ":"
+		category_label.text = category_name
+		category_label.add_theme_font_size_override("font_size", 13)
 		
-		# Color code weapon categories
-		var label_color = Color(0.7, 0.7, 0.7, 1)
-		match category_name:
-			"Kinetic Weapons":
-				label_color = Color(0.9, 0.8, 0.4, 1)  # Brass/yellow
-			"Energy Weapons":
-				label_color = Color(0.4, 0.7, 1.0, 1)  # Blue
-			"Explosive Weapons":
-				label_color = Color(1.0, 0.6, 0.3, 1)  # Orange
-			"Special Weapons":
-				label_color = Color(0.8, 0.4, 1.0, 1)  # Purple
-		
+		# Get category color from definitions
+		var label_color = CosmoteerComponentDefs.get_category_color(category_name)
 		category_label.add_theme_color_override("font_color", label_color)
 		component_list.add_child(category_label)
+		
+		# Add subtle separator line
+		var separator = HSeparator.new()
+		separator.modulate = label_color
+		separator.modulate.a = 0.4
+		component_list.add_child(separator)
 		
 		# Add components in this category with level selectors
 		for comp_type in categories[category_name]:

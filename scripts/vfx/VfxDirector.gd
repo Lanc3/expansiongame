@@ -106,6 +106,9 @@ func spawn_shield_hit(parent: Node, position: Vector2, radius: float = 128.0, co
 	return effect
 
 func spawn_explosion(parent: Node, position: Vector2, scale_multiplier: float = 1.0) -> void:
+	# Safety clamp scale to prevent screen-filling explosions
+	scale_multiplier = clampf(scale_multiplier, 0.1, 5.0)
+	
 	var flash := _spawn_effect(&"explosion_flash", parent, position)
 	var core := _spawn_effect(&"explosion_core", parent, position)
 	var smoke := _spawn_effect(&"explosion_smoke", parent, position)
@@ -269,10 +272,12 @@ func _return_to_pool(effect_id: StringName, instance: Node) -> void:
 	for emitter in _collect_emitters(instance):
 		emitter.emitting = false
 		emitter.speed_scale = 1.0
+		# Reset particle amount from stored original to prevent accumulation
+		if emitter.has_meta("original_amount"):
+			emitter.amount = emitter.get_meta("original_amount")
 		# Reset material to original (will be re-duplicated on next spawn)
 		# Note: The original material is stored in the scene, so we can't easily restore it here
 		# But since we duplicate it each time in _scale_particles, this should be fine
-		# Particle amounts will be reset by _apply_profile_recursive below
 	if instance.has_meta("pending_emitters"):
 		instance.remove_meta("pending_emitters")
 	if instance.has_meta("effect_id"):
@@ -331,9 +336,13 @@ func _scale_particles(instance: Node, multiplier: float) -> void:
 	# GPU particles with local_coords=false don't respect node scale well
 	# We need to duplicate the material to avoid modifying shared resources
 	for emitter in _collect_emitters(instance):
-		# Scale particle amount (reduces density for smaller explosions)
-		# Note: This scales the current amount (which may have been set by quality profile)
-		emitter.amount = max(1, int(emitter.amount * multiplier))
+		# Store original amount before modification (for later restoration)
+		if not emitter.has_meta("original_amount"):
+			emitter.set_meta("original_amount", emitter.amount)
+		
+		# Scale particle amount from the ORIGINAL value (not current, to prevent accumulation)
+		var original_amount: int = emitter.get_meta("original_amount")
+		emitter.amount = max(1, int(original_amount * multiplier))
 		
 		if emitter.process_material is ParticleProcessMaterial:
 			var original_material = emitter.process_material as ParticleProcessMaterial
@@ -572,90 +581,146 @@ func spawn_cryo_beam(start_pos: Vector2, end_pos: Vector2, width: float = 5.0) -
 	return spawn_beam_effect(start_pos, end_pos, Color(0.6, 0.9, 1.0, 1.0), width, 0.25)
 
 func spawn_tesla_beam(start_pos: Vector2, end_pos: Vector2, width: float = 6.0, duration: float = 0.2) -> Node2D:
-	"""Lightning beam for Tesla Coil with shader effect"""
+	"""Legacy lightning beam - redirects to new jagged lightning"""
+	return spawn_tesla_lightning(start_pos, end_pos, width, duration)
+
+func spawn_tesla_lightning(start_pos: Vector2, end_pos: Vector2, width: float = 6.0, duration: float = 0.3) -> Node2D:
+	"""Jagged branching lightning bolt for Tesla Coil with new shader"""
 	var direction := (end_pos - start_pos)
 	var length := direction.length()
-	if length < 1.0:
-		length = 1.0  # Avoid division by zero
-		push_warning("Tesla beam: length too short, using minimum")
+	
+	# Debug - remove after confirming it works
+	print("Tesla Lightning: ", start_pos, " -> ", end_pos, " length=", length)
+	
+	if length < 5.0:
+		length = 5.0  # Minimum visible length
 	direction = direction.normalized()
-	var perp := Vector2(-direction.y, direction.x)  # Perpendicular for width
 	
-	# Debug output
-	print("Tesla beam: start=", start_pos, " end=", end_pos, " length=", length, " width=", width)
+	# Calculate beam height based on width for proper aspect ratio
+	# Height needs to be significant enough to show the jagged lightning
+	var beam_height: float = maxf(width * 4.0, 30.0)
 	
-	# Create a Polygon2D for the shader (beam is a rectangle)
-	var beam_poly := Polygon2D.new()
-	var half_width := width * 0.5
+	# Create a Sprite2D with the shader (more reliable than Polygon2D)
+	var beam_sprite := Sprite2D.new()
 	
-	# Create rectangle vertices in local space (along +X axis, width along +Y)
-	# The polygon will be rotated to match the beam direction
-	var vertices := PackedVector2Array([
-		Vector2(0.0, -half_width),  # Start left (UV: 0,0)
-		Vector2(0.0, half_width),  # Start right (UV: 1,0)
-		Vector2(length, half_width),  # End right (UV: 1,1)
-		Vector2(length, -half_width)  # End left (UV: 0,1)
-	])
-	beam_poly.polygon = vertices
+	# Create a texture sized for the beam
+	var tex_width: int = int(maxf(length, 64.0))
+	var tex_height: int = int(maxf(beam_height, 32.0))
+	var img := Image.create(tex_width, tex_height, false, Image.FORMAT_RGBA8)
+	img.fill(Color.WHITE)
+	var tex := ImageTexture.create_from_image(img)
+	beam_sprite.texture = tex
 	
-	# Create UV coordinates for shader (0,0 to 1,1) - UV.x goes along beam length, UV.y across width
-	beam_poly.uv = PackedVector2Array([
-		Vector2(0.0, 0.0),  # Start left
-		Vector2(0.0, 1.0),  # Start right
-		Vector2(1.0, 1.0),  # End right
-		Vector2(1.0, 0.0)   # End left
-	])
-	
-	# Load and apply shader
-	var shader := load("res://shaders/beam_lightning.gdshader") as Shader
+	# Load new jagged lightning shader
+	var shader := load("res://shaders/tesla_lightning.gdshader") as Shader
 	if not shader:
-		push_error("Failed to load tesla beam shader at res://shaders/beam_lightning.gdshader")
+		push_error("Failed to load tesla lightning shader at res://shaders/tesla_lightning.gdshader")
 		# Fallback to simple beam
 		return spawn_beam_effect(start_pos, end_pos, Color(0.4, 0.8, 1.0, 1.0), width, duration)
 	
 	var mat := ShaderMaterial.new()
 	mat.shader = shader
 	
-	# Get or create noise textures
-	var noise_textures = _get_tesla_noise_textures()
-	if noise_textures.size() < 2 or not noise_textures[0] or not noise_textures[1]:
-		push_error("Failed to create tesla beam noise textures")
-		return spawn_beam_effect(start_pos, end_pos, Color(0.4, 0.8, 1.0, 1.0), width, duration)
+	# Configure shader parameters for jagged lightning - more visible settings
+	mat.set_shader_parameter("core_color", Color(1.0, 1.0, 1.0, 1.0))  # White-hot core
+	mat.set_shader_parameter("glow_color", Color(0.4, 0.8, 1.0, 1.0))  # Electric blue
+	mat.set_shader_parameter("outer_color", Color(0.2, 0.5, 1.0, 0.6))  # Blue outer
+	mat.set_shader_parameter("bolt_thickness", 0.08)  # Thicker bolt
+	mat.set_shader_parameter("glow_size", 0.2)  # Larger glow
+	mat.set_shader_parameter("jaggedness", 0.15)  # More jagged
+	mat.set_shader_parameter("segment_count", 12.0)
+	mat.set_shader_parameter("fork_chance", 0.4)
+	mat.set_shader_parameter("fork_length", 0.25)
+	mat.set_shader_parameter("flicker_speed", 25.0)
+	mat.set_shader_parameter("intensity", 2.0)  # Brighter
 	
-	mat.set_shader_parameter("lightning_noise", noise_textures[0])
-	mat.set_shader_parameter("background_noise", noise_textures[1])
-	mat.set_shader_parameter("use_color_gradient", false)
-	mat.set_shader_parameter("color_effect_mod", 0.3)  # Reduced to make more visible
-	mat.set_shader_parameter("intensive", 1.2)  # Increased for more visible lightning
-	mat.set_shader_parameter("lightning_thin", 1.5)  # Reduced for thicker lightning
-	mat.set_shader_parameter("number_lightning", 8)
-	mat.set_shader_parameter("speed", 2.0)
-	mat.set_shader_parameter("position", 0.5)
+	beam_sprite.material = mat
+	beam_sprite.z_index = 15
+	beam_sprite.z_as_relative = false
 	
-	# Create a white texture for the shader to use as base color
-	var base_texture := ImageTexture.new()
-	var img := Image.create(1, 1, false, Image.FORMAT_RGBA8)
-	img.fill(Color.WHITE)
-	base_texture.set_image(img)
-	beam_poly.texture = base_texture
+	# Position at midpoint, rotated toward target
+	var midpoint := (start_pos + end_pos) * 0.5
+	beam_sprite.global_position = midpoint
+	beam_sprite.rotation = direction.angle()
 	
-	beam_poly.material = mat
-	beam_poly.color = Color(1.0, 1.0, 1.0, 1.0)  # White base for shader to tint
-	beam_poly.z_index = 10
-	beam_poly.z_as_relative = false
-	beam_poly.position = start_pos
-	beam_poly.rotation = direction.angle()
+	# Scale to match beam length
+	beam_sprite.scale = Vector2(length / tex_width, beam_height / tex_height)
 	
 	# Add to scene
 	if get_tree().current_scene:
-		get_tree().current_scene.add_child(beam_poly)
+		get_tree().current_scene.add_child(beam_sprite)
 	
-	# Animate fade out (longer duration for visibility - 0.5 seconds)
-	var tween := beam_poly.create_tween()
-	tween.tween_property(beam_poly, "modulate:a", 0.0, max(duration, 0.5))
-	tween.tween_callback(beam_poly.queue_free)
+	# Also spawn a simple Line2D as a visible backup/base layer
+	var backup_line := _spawn_jagged_line(start_pos, end_pos, Color(0.4, 0.8, 1.0, 0.8), width * 0.5)
 	
-	return beam_poly
+	# Animate with quick flash then fade
+	var tween := beam_sprite.create_tween()
+	# Start bright
+	beam_sprite.modulate = Color(1.5, 1.5, 1.5, 1.0)
+	# Quick bright flash
+	tween.tween_property(beam_sprite, "modulate", Color(1.0, 1.0, 1.0, 1.0), 0.05)
+	# Then fade out
+	tween.tween_property(beam_sprite, "modulate:a", 0.0, duration)
+	tween.tween_callback(beam_sprite.queue_free)
+	
+	# Fade backup line too
+	if backup_line:
+		var line_tween := backup_line.create_tween()
+		line_tween.tween_property(backup_line, "modulate:a", 0.0, duration * 1.2)
+		line_tween.tween_callback(backup_line.queue_free)
+	
+	return beam_sprite
+
+func _spawn_jagged_line(start_pos: Vector2, end_pos: Vector2, color: Color, width: float) -> Line2D:
+	"""Spawn a jagged line as lightning effect (fallback/backup visual)"""
+	var line := Line2D.new()
+	line.width = width
+	line.default_color = color
+	line.begin_cap_mode = Line2D.LINE_CAP_ROUND
+	line.end_cap_mode = Line2D.LINE_CAP_ROUND
+	line.antialiased = true
+	line.z_index = 12
+	
+	# Generate jagged points between start and end
+	var direction := (end_pos - start_pos)
+	var length := direction.length()
+	var perpendicular := Vector2(-direction.y, direction.x).normalized()
+	var segments := int(max(length / 20.0, 4))  # ~20px per segment
+	
+	line.add_point(start_pos)
+	
+	for i in range(1, segments):
+		var t: float = float(i) / float(segments)
+		var base_point: Vector2 = start_pos.lerp(end_pos, t)
+		# Random offset perpendicular to direction
+		var jag_amount: float = randf_range(-15.0, 15.0) * (1.0 - abs(t - 0.5) * 2.0)  # Less jag at ends
+		var jagged_point: Vector2 = base_point + perpendicular * jag_amount
+		line.add_point(jagged_point)
+	
+	line.add_point(end_pos)
+	
+	# Add glow effect with gradient
+	var gradient := Gradient.new()
+	gradient.set_color(0, Color(color.r, color.g, color.b, 0.3))
+	gradient.set_color(1, Color(1.0, 1.0, 1.0, 1.0))
+	gradient.add_point(0.5, color)
+	line.gradient = gradient
+	line.width_curve = _get_lightning_width_curve()
+	
+	if get_tree().current_scene:
+		get_tree().current_scene.add_child(line)
+	
+	return line
+
+func _get_lightning_width_curve() -> Curve:
+	"""Get a curve that makes lightning thicker in middle, thinner at ends"""
+	var curve := Curve.new()
+	curve.add_point(Vector2(0.0, 0.3))
+	curve.add_point(Vector2(0.2, 0.8))
+	curve.add_point(Vector2(0.5, 1.0))
+	curve.add_point(Vector2(0.8, 0.8))
+	curve.add_point(Vector2(1.0, 0.3))
+	return curve
 
 # Cache for tesla beam noise textures
 static var _tesla_noise_1: NoiseTexture2D = null
@@ -720,6 +785,9 @@ func _spawn_simple_particle(position: Vector2, color: Color, duration: float) ->
 
 func spawn_aoe_circle(center: Vector2, radius: float, color: Color, duration: float = 0.3) -> Node2D:
 	"""Spawn a circular AOE explosion effect"""
+	# Safety clamp radius to prevent oversized effects
+	radius = clampf(radius, 5.0, 300.0)
+	
 	var container := Node2D.new()
 	container.position = center
 	container.z_index = 8

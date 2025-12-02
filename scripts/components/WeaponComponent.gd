@@ -100,7 +100,19 @@ enum WeaponCategory {
 @export var chain_range: float = 100.0  # Range for chain jumps
 @export var chain_damage_falloff: float = 0.7  # Damage multiplier per jump
 
+# Flak cannon properties
+@export var flak_bullet_count: int = 25  # Number of bullets per burst
+@export var flak_mini_aoe: float = 22.0  # Small explosion radius per bullet
+
+# Mine layer properties
+@export var mine_timer: float = 30.0  # Countdown timer before auto-detonation
+
+# Mortar properties
+@export var mortar_bullet_count: int = 8  # Number of shells per burst (fewer than flak)
+@export var mortar_mini_aoe: float = 40.0  # Explosion radius per shell (bigger than flak)
+
 var cooldown_timer: float = 0.0
+var current_target_aoe_radius: float = 0.0  # Adjustable AOE radius from marker
 
 # Category lookup
 const WEAPON_CATEGORIES: Dictionary = {
@@ -165,6 +177,15 @@ func _process(delta: float):
 func can_fire() -> bool:
 	return cooldown_timer <= 0
 
+func get_cooldown_percent() -> float:
+	"""Returns 0.0 when ready to fire, 1.0 when just fired (full cooldown)"""
+	if fire_rate <= 0:
+		return 0.0
+	if cooldown_timer <= 0:
+		return 0.0
+	var cooldown_time = 1.0 / fire_rate
+	return clampf(cooldown_timer / cooldown_time, 0.0, 1.0)
+
 func get_range() -> float:
 	return rangeAim
 
@@ -192,13 +213,23 @@ func fire_at(target: Node2D, from_position: Vector2):
 	if AudioManager:
 		AudioManager.play_weapon_sound(from_position)
 	
+	var target_pos = target.global_position if target else from_position + Vector2(100, 0)
+	
 	# Handle different weapon firing modes
 	if is_beam:
-		_fire_beam(target.global_position if target else from_position + Vector2(100, 0), from_position, target)
+		_fire_beam(target_pos, from_position, target)
+	elif weapon_type == WeaponType.FLAK_CANNON:
+		_fire_flak_burst(target_pos, from_position)
+	elif weapon_type == WeaponType.MORTAR:
+		_fire_mortar_burst(target_pos, from_position)
+	elif weapon_type == WeaponType.TORPEDO:
+		_fire_torpedo_aoe(target_pos, from_position)
+	elif weapon_type == WeaponType.MINE_LAYER:
+		_fire_mine(target_pos, from_position)
 	elif projectile_count > 1:
-		_fire_spread(target.global_position if target else Vector2.ZERO, from_position, target)
+		_fire_spread(target_pos, from_position, target)
 	else:
-		_fire_single_projectile(target.global_position if target else Vector2.ZERO, from_position, target if homing else null)
+		_fire_single_projectile(target_pos, from_position, target if homing else null)
 
 func fire_at_position(target_pos: Vector2, from_position: Vector2):
 	if not can_fire():
@@ -212,10 +243,22 @@ func fire_at_position(target_pos: Vector2, from_position: Vector2):
 	# Handle different weapon firing modes
 	if is_beam:
 		_fire_beam(target_pos, from_position, null)
+	elif weapon_type == WeaponType.FLAK_CANNON:
+		_fire_flak_burst(target_pos, from_position)
+	elif weapon_type == WeaponType.MORTAR:
+		_fire_mortar_burst(target_pos, from_position)
+	elif weapon_type == WeaponType.TORPEDO:
+		_fire_torpedo_aoe(target_pos, from_position)
+	elif weapon_type == WeaponType.MINE_LAYER:
+		_fire_mine(target_pos, from_position)
 	elif projectile_count > 1:
 		_fire_spread(target_pos, from_position, null)
 	else:
 		_fire_single_projectile(target_pos, from_position, null)
+
+func set_target_aoe_radius(radius: float):
+	"""Set the target AOE radius (used by marker adjustment)"""
+	current_target_aoe_radius = radius
 
 func _fire_single_projectile(target_pos: Vector2, from_position: Vector2, homing_target: Node2D):
 	var projectile: Projectile
@@ -291,17 +334,151 @@ func _fire_spread(target_pos: Vector2, from_position: Vector2, homing_target: No
 			0, 0, 0  # No chain for spread
 		)
 
+func _fire_flak_burst(target_center: Vector2, from_position: Vector2):
+	"""Fire multiple small projectiles that spread across the AOE circle"""
+	# Use adjusted radius if set, otherwise use base aoe_radius
+	var effective_radius = current_target_aoe_radius if current_target_aoe_radius > 0 else aoe_radius
+	if effective_radius <= 0:
+		effective_radius = 50.0  # Default fallback
+	
+	# Calculate bullet count - scale with radius, base ~25 at medium size
+	var bullet_count = flak_bullet_count
+	if bullet_count <= 0:
+		bullet_count = int(effective_radius / 2.5)  # ~25 bullets at radius 60
+	
+	# Damage per bullet (total damage divided among bullets)
+	var damage_per_bullet = damage / float(bullet_count)
+	
+	# Fire bullets to random positions within the AOE circle
+	for i in range(bullet_count):
+		# Random point within circle using rejection sampling alternative
+		var random_angle = randf() * TAU
+		var random_dist = sqrt(randf()) * effective_radius  # sqrt for uniform distribution
+		var offset = Vector2(cos(random_angle), sin(random_angle)) * random_dist
+		var bullet_target = target_center + offset
+		
+		var projectile: Projectile
+		if ProjectilePool:
+			projectile = ProjectilePool.get_projectile()
+		else:
+			var projectile_scene = preload("res://scenes/effects/Projectile.tscn")
+			projectile = projectile_scene.instantiate()
+			get_tree().root.add_child(projectile)
+		
+		# Setup as flak projectile with destination-based behavior
+		projectile.setup_flak(
+			damage_per_bullet,
+			from_position,
+			bullet_target,
+			projectile_speed,
+			get_parent(),
+			flak_mini_aoe  # Small AOE per bullet explosion
+		)
+
+func _fire_mortar_burst(target_center: Vector2, from_position: Vector2):
+	"""Fire heavy mortar shells that spread across the AOE circle - fewer but bigger explosions"""
+	# Use adjusted radius if set, otherwise use base aoe_radius
+	var effective_radius = current_target_aoe_radius if current_target_aoe_radius > 0 else aoe_radius
+	if effective_radius <= 0:
+		effective_radius = 80.0  # Default fallback (larger than flak)
+	
+	# Calculate shell count
+	var shell_count = mortar_bullet_count
+	if shell_count <= 0:
+		shell_count = int(effective_radius / 12.0)  # ~8 shells at radius 100
+	
+	# Damage per shell (total damage divided among shells)
+	var damage_per_shell = damage / float(shell_count)
+	
+	# Fire shells to random positions within the AOE circle
+	for i in range(shell_count):
+		# Random point within circle using rejection sampling alternative
+		var random_angle = randf() * TAU
+		var random_dist = sqrt(randf()) * effective_radius  # sqrt for uniform distribution
+		var offset = Vector2(cos(random_angle), sin(random_angle)) * random_dist
+		var shell_target = target_center + offset
+		
+		var projectile: Projectile
+		if ProjectilePool:
+			projectile = ProjectilePool.get_projectile()
+		else:
+			var projectile_scene = preload("res://scenes/effects/Projectile.tscn")
+			projectile = projectile_scene.instantiate()
+			get_tree().root.add_child(projectile)
+		
+		# Setup as mortar projectile with destination-based behavior
+		projectile.setup_mortar(
+			damage_per_shell,
+			from_position,
+			shell_target,
+			projectile_speed,
+			get_parent(),
+			mortar_mini_aoe  # Large AOE per shell explosion
+		)
+
+func _fire_torpedo_aoe(target_center: Vector2, from_position: Vector2):
+	"""Fire a single torpedo to target center with adjustable AOE explosion"""
+	# Use adjusted radius if set, otherwise use base aoe_radius
+	var effective_radius = current_target_aoe_radius if current_target_aoe_radius > 0 else aoe_radius
+	if effective_radius <= 0:
+		effective_radius = 50.0  # Default fallback
+	
+	var projectile: Projectile
+	if ProjectilePool:
+		projectile = ProjectilePool.get_projectile()
+	else:
+		var projectile_scene = preload("res://scenes/effects/Projectile.tscn")
+		projectile = projectile_scene.instantiate()
+		get_tree().root.add_child(projectile)
+	
+	# Setup as torpedo projectile with destination-based behavior
+	projectile.setup_torpedo(
+		damage,
+		from_position,
+		target_center,
+		projectile_speed,
+		get_parent(),
+		effective_radius  # Full AOE explosion radius
+	)
+
+func _fire_mine(target_center: Vector2, from_position: Vector2):
+	"""Deploy a proximity mine to target center with adjustable AOE"""
+	# Use adjusted radius if set, otherwise use base aoe_radius
+	var effective_radius = current_target_aoe_radius if current_target_aoe_radius > 0 else aoe_radius
+	if effective_radius <= 0:
+		effective_radius = 50.0  # Default fallback
+	
+	var projectile: Projectile
+	if ProjectilePool:
+		projectile = ProjectilePool.get_projectile()
+	else:
+		var projectile_scene = preload("res://scenes/effects/Projectile.tscn")
+		projectile = projectile_scene.instantiate()
+		get_tree().root.add_child(projectile)
+	
+	# Setup as mine projectile with destination-based behavior and timer
+	projectile.setup_mine(
+		damage,
+		from_position,
+		target_center,
+		projectile_speed,
+		get_parent(),
+		effective_radius,  # Proximity/explosion radius
+		mine_timer  # Countdown timer
+	)
+
 func _fire_beam(target_pos: Vector2, from_position: Vector2, target: Node2D):
-	"""Fire a beam weapon (ion cannon, particle beam, repair beam, tesla coil)"""
-	# Beam weapons use a different system - they create a beam effect
+	"""Fire a beam weapon (ion cannon, particle beam, repair beam)"""
+	# Tesla Coil uses separate method with raycasting
+	if weapon_type == WeaponType.TESLA_COIL:
+		_fire_tesla_coil(target_pos, from_position, target)
+		return
+	
+	# Other beam weapons use a different system - they create a beam effect
 	# and do instant or sustained damage
 	if VfxDirector:
-		# Tesla Coil uses special shader-based beam
-		if weapon_type == WeaponType.TESLA_COIL:
-			VfxDirector.spawn_tesla_beam(from_position, target_pos, beam_width, 0.5)
-		else:
-			var beam_color = _get_beam_color()
-			VfxDirector.spawn_beam_effect(from_position, target_pos, beam_color, beam_width, 0.2)
+		var beam_color = _get_beam_color()
+		VfxDirector.spawn_beam_effect(from_position, target_pos, beam_color, beam_width, 0.2)
 	
 	# Apply damage/effect at target
 	if is_support:
@@ -311,6 +488,149 @@ func _fire_beam(target_pos: Vector2, from_position: Vector2, target: Node2D):
 	else:
 		# Damage beam - find targets along beam path
 		_apply_beam_damage(from_position, target_pos, target)
+
+func _fire_tesla_coil(target_pos: Vector2, from_position: Vector2, target: Node2D):
+	"""Fire Tesla Coil with raycast hit detection and chain lightning"""
+	print("Tesla Coil firing from ", from_position, " to ", target_pos)  # Debug
+	
+	var owner_unit = get_parent()
+	var owner_team_id = owner_unit.team_id if owner_unit and "team_id" in owner_unit else 0
+	
+	# Raycast to find first enemy hit
+	var hit_result = _tesla_raycast(from_position, target_pos, owner_team_id)
+	var hit_pos = hit_result.position
+	var hit_entity = hit_result.entity
+	
+	print("Tesla hit result: pos=", hit_pos, " entity=", hit_entity)  # Debug
+	
+	# Spawn main lightning bolt visual
+	if VfxDirector:
+		VfxDirector.spawn_tesla_lightning(from_position, hit_pos, beam_width, 0.3)
+	else:
+		push_warning("VfxDirector not found for Tesla lightning!")
+	
+	# Apply damage to hit target
+	var current_damage = damage
+	var hit_targets: Array[Node2D] = []
+	
+	if hit_entity and is_instance_valid(hit_entity):
+		_apply_tesla_damage(hit_entity, current_damage, owner_unit)
+		hit_targets.append(hit_entity)
+		
+		# Chain lightning to nearby enemies
+		if chain_count > 0:
+			_apply_chain_lightning(hit_entity, current_damage, owner_team_id, owner_unit, hit_targets)
+
+func _tesla_raycast(from_pos: Vector2, to_pos: Vector2, owner_team_id: int) -> Dictionary:
+	"""Cast ray to find first enemy in path, returns {position, entity}"""
+	var result = {"position": to_pos, "entity": null}
+	
+	# Get physics space
+	var space_state = get_parent().get_world_2d().direct_space_state if get_parent() else null
+	if not space_state:
+		return result
+	
+	# Create raycast query
+	var query = PhysicsRayQueryParameters2D.create(from_pos, to_pos)
+	query.collision_mask = 1 + 2  # Units and resources (layers 1-2)
+	query.collide_with_areas = true
+	query.collide_with_bodies = true
+	
+	# Perform raycast
+	var ray_result = space_state.intersect_ray(query)
+	
+	if ray_result and ray_result.collider:
+		var collider = ray_result.collider
+		# Check if it's an enemy (different team)
+		if "team_id" in collider and collider.team_id != owner_team_id:
+			result.position = ray_result.position
+			result.entity = collider
+	
+	return result
+
+func _apply_tesla_damage(target: Node2D, dmg: float, attacker: Node2D):
+	"""Apply Tesla damage to a target"""
+	if not target or not is_instance_valid(target):
+		return
+	
+	if target.has_method("take_damage"):
+		target.take_damage(dmg, attacker, target.global_position)
+	
+	# Apply special effect (chain/EMP)
+	if special_effect != SpecialEffect.NONE and target.has_method("apply_status_effect"):
+		target.apply_status_effect(special_effect, effect_duration, effect_strength)
+	
+	# Spawn damage number
+	if FeedbackManager and FeedbackManager.has_method("spawn_damage_number"):
+		var is_player = attacker and "team_id" in attacker and attacker.team_id == 0
+		FeedbackManager.spawn_damage_number(target.global_position, dmg, is_player)
+
+func _apply_chain_lightning(from_target: Node2D, base_damage: float, owner_team_id: int, attacker: Node2D, already_hit: Array[Node2D]):
+	"""Chain lightning to nearby enemies with visual effect"""
+	var current_target = from_target
+	var current_damage = base_damage * chain_damage_falloff
+	var remaining_chains = chain_count
+	var chain_delay = 0.05  # Stagger timing for dramatic effect
+	
+	while remaining_chains > 0 and current_damage > 1.0:
+		# Find next chain target
+		var next_target = _find_chain_target(current_target, owner_team_id, already_hit)
+		if not next_target:
+			break
+		
+		# Spawn chain lightning visual with delay
+		if VfxDirector:
+			var from_pos = current_target.global_position
+			var to_pos = next_target.global_position
+			# Create a timer for staggered effect
+			var timer = get_tree().create_timer(chain_delay * (chain_count - remaining_chains + 1))
+			timer.timeout.connect(func(): 
+				if VfxDirector and is_instance_valid(next_target):
+					VfxDirector.spawn_tesla_lightning(from_pos, to_pos, beam_width * 0.7, 0.25)
+			)
+		
+		# Apply damage with delay
+		var delay_timer = get_tree().create_timer(chain_delay * (chain_count - remaining_chains + 1))
+		var captured_target = next_target
+		var captured_damage = current_damage
+		var captured_attacker = attacker
+		delay_timer.timeout.connect(func():
+			if is_instance_valid(captured_target):
+				_apply_tesla_damage(captured_target, captured_damage, captured_attacker)
+		)
+		
+		already_hit.append(next_target)
+		current_target = next_target
+		current_damage *= chain_damage_falloff
+		remaining_chains -= 1
+
+func _find_chain_target(from_target: Node2D, owner_team_id: int, already_hit: Array[Node2D]) -> Node2D:
+	"""Find nearest enemy for chain lightning within range"""
+	if not from_target or not is_instance_valid(from_target):
+		return null
+	
+	var nearest: Node2D = null
+	var nearest_dist := chain_range
+	
+	# Get units in chain range
+	if EntityManager:
+		var units_in_range = EntityManager.get_units_in_radius(from_target.global_position, chain_range, -1)
+		
+		for unit in units_in_range:
+			if unit == from_target:
+				continue
+			if unit in already_hit:
+				continue
+			# Check if enemy
+			if "team_id" in unit and unit.team_id == owner_team_id:
+				continue
+			
+			var dist = from_target.global_position.distance_to(unit.global_position)
+			if dist < nearest_dist:
+				nearest_dist = dist
+				nearest = unit
+	
+	return nearest
 
 func _apply_beam_damage(from_pos: Vector2, to_pos: Vector2, primary_target: Node2D):
 	"""Apply damage along beam path"""
@@ -368,3 +688,11 @@ static func configure_from_type(weapon: WeaponComponent, wep_type: WeaponType, l
 	weapon.chain_count = level_data.get("chain_count", 0)
 	weapon.chain_range = level_data.get("chain_range", 100.0)
 	weapon.chain_damage_falloff = level_data.get("chain_damage_falloff", 0.7)
+	# Flak cannon properties
+	weapon.flak_bullet_count = level_data.get("flak_bullet_count", 25)
+	weapon.flak_mini_aoe = level_data.get("flak_mini_aoe", 22.0)
+	# Mine layer properties
+	weapon.mine_timer = level_data.get("mine_timer", 30.0)
+	# Mortar properties
+	weapon.mortar_bullet_count = level_data.get("mortar_bullet_count", 8)
+	weapon.mortar_mini_aoe = level_data.get("mortar_mini_aoe", 40.0)

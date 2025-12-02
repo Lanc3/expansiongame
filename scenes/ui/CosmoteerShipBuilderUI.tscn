@@ -5,7 +5,7 @@
 [ext_resource type="Theme" uid="uid://bh3pao1yls74n" path="res://resources/themes/main_theme.tres" id="3_theme"]
 
 [sub_resource type="StyleBoxFlat" id="StyleBoxFlat_left_panel"]
-bg_color = Color(0.039, 0.059, 0.118, 0.85)
+bg_color = Color(0.039, 0.059, 0.118, 1.0)
 border_width_left = 2
 border_width_top = 2
 border_width_right = 2
@@ -33,7 +33,7 @@ shadow_color = Color(0, 0.898, 1, 0.3)
 shadow_size = 4
 
 [sub_resource type="StyleBoxFlat" id="StyleBoxFlat_right_panel"]
-bg_color = Color(0.039, 0.059, 0.118, 0.85)
+bg_color = Color(0.039, 0.059, 0.118, 1.0)
 border_width_left = 2
 border_width_top = 2
 border_width_right = 2

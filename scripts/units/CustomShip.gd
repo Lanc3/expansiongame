@@ -1023,7 +1023,10 @@ func _instantiate_weapon_components(blueprint: CosmoteerShipBlueprint):
 			"is_support": comp_def.get("is_support", CosmoteerComponentDefs.COMPONENT_TYPES.get(comp_type, {}).get("is_support", false)),
 			"chain_count": comp_def.get("chain_count", CosmoteerComponentDefs.COMPONENT_TYPES.get(comp_type, {}).get("chain_count", 0)),
 			"chain_range": comp_def.get("chain_range", CosmoteerComponentDefs.COMPONENT_TYPES.get(comp_type, {}).get("chain_range", 100.0)),
-			"chain_damage_falloff": comp_def.get("chain_damage_falloff", CosmoteerComponentDefs.COMPONENT_TYPES.get(comp_type, {}).get("chain_damage_falloff", 0.7))
+			"chain_damage_falloff": comp_def.get("chain_damage_falloff", CosmoteerComponentDefs.COMPONENT_TYPES.get(comp_type, {}).get("chain_damage_falloff", 0.7)),
+			# Flak cannon properties
+			"flak_bullet_count": comp_def.get("flak_bullet_count", 25),
+			"flak_mini_aoe": comp_def.get("flak_mini_aoe", 22.0)
 		}
 		
 		# Configure weapon with all properties
@@ -2264,6 +2267,43 @@ func _unhandled_input(event: InputEvent) -> void:
 			get_viewport().set_input_as_handled()
 			return
 	
+	# +/- keys adjust AOE radius for selected AOE weapons with active markers
+	if event is InputEventKey and event.pressed:
+		var adjust_amount = 0.0
+		if event.keycode == KEY_EQUAL or event.keycode == KEY_KP_ADD:  # + key
+			adjust_amount = 10.0
+		elif event.keycode == KEY_MINUS or event.keycode == KEY_KP_SUBTRACT:  # - key
+			adjust_amount = -10.0
+		
+		if adjust_amount != 0.0:
+			var adjusted_any = false
+			for weapon_idx in active_weapon_indices:
+				if _has_weapon_marker(weapon_idx) and weapon_idx < weapon_components.size():
+					var weapon = weapon_components[weapon_idx]
+					if weapon.is_aoe_weapon():
+						var marker = weapon_markers[weapon_idx]
+						if marker and is_instance_valid(marker):
+							# Get base and current radius
+							var base_radius = weapon.aoe_radius
+							var current_radius = marker.get_current_aoe_radius()
+							if current_radius <= 0:
+								current_radius = base_radius
+							
+							# Apply adjustment with narrow bounds (50% to 150% of base)
+							var new_radius = current_radius + adjust_amount
+							var min_radius = base_radius * 0.5
+							var max_radius = base_radius * 1.5
+							new_radius = clampf(new_radius, min_radius, max_radius)
+							
+							# Update marker and weapon
+							marker.set_aoe_radius(new_radius)
+							weapon.set_target_aoe_radius(new_radius)
+							adjusted_any = true
+			
+			if adjusted_any:
+				get_viewport().set_input_as_handled()
+				return
+	
 	# If no explicit mode set, infer from selection
 	if component_command_mode == "":
 		var any_scanner_selected := false
@@ -2522,6 +2562,10 @@ func _process_weapon_firing(delta: float):
 		if _has_weapon_marker(i):
 			target_pos = _get_weapon_marker_position(i)
 			has_target = true
+			# Update weapon's target AOE radius from marker (for flak cannon adjustments)
+			var marker = weapon_markers[i]
+			if marker and is_instance_valid(marker) and weapon.has_method("set_target_aoe_radius"):
+				weapon.set_target_aoe_radius(marker.get_current_aoe_radius())
 		# Priority 2: For non-manually-controlled weapons, check auto-acquired target
 		elif i not in active_weapon_indices:
 			var target = weapon_targets[i]
@@ -2677,6 +2721,49 @@ func get_weapon_info(weapon_index: int) -> Dictionary:
 		"fire_rate": weapon.fire_rate,
 		"enabled": weapon_enabled[weapon_index] if weapon_index < weapon_enabled.size() else true
 	}
+
+func manual_fire_weapon(weapon_index: int, target_pos: Vector2) -> bool:
+	"""Manually fire a single weapon at target position. Returns true if fired."""
+	if weapon_index < 0 or weapon_index >= weapon_components.size():
+		return false
+	if not weapon_enabled[weapon_index]:
+		return false
+	
+	var weapon = weapon_components[weapon_index]
+	if not weapon.can_fire():
+		return false  # On cooldown
+	
+	# Calculate weapon world position
+	var visual_container = get_node_or_null("VisualContainer")
+	if not visual_container:
+		return false
+	
+	var container_global_rotation = rotation + visual_container.rotation
+	var weapon_world_pos = global_position + weapon_positions[weapon_index].rotated(container_global_rotation)
+	
+	# Trigger recoil animation
+	if weapon_index < turret_recoil.size():
+		turret_recoil[weapon_index] = 1.0
+	
+	# Rotate turret toward target instantly for manual fire
+	if weapon_index < weapon_turrets.size():
+		var turret = weapon_turrets[weapon_index]
+		if is_instance_valid(turret):
+			var direction_to_target = (target_pos - weapon_world_pos).normalized()
+			var target_angle_world = direction_to_target.angle()
+			var turret_local_rotation = target_angle_world - container_global_rotation + PI / 2.0
+			turret.rotation = turret_local_rotation
+	
+	# Fire the weapon
+	weapon.fire_at_position(target_pos, weapon_world_pos)
+	return true
+
+func get_weapon_cooldown_percent(weapon_index: int) -> float:
+	"""Returns 0.0 when ready to fire, 1.0 when just fired (full cooldown)"""
+	if weapon_index < 0 or weapon_index >= weapon_components.size():
+		return 0.0
+	var weapon = weapon_components[weapon_index]
+	return weapon.get_cooldown_percent() if weapon.has_method("get_cooldown_percent") else 0.0
 
 # ============================================================================
 # SAVE/LOAD SYSTEM

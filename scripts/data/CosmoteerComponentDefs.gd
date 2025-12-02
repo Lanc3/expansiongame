@@ -286,31 +286,31 @@ const COMPONENT_TYPES = {
 	"flak_cannon": {
 		"name": "Flak Cannon",
 		"base_sprite": "res://assets/sprites/UI/WeaponTexture.png",
-		"description": "AOE explosive burst - damages all enemies in area",
+		"description": "Fires a burst of explosive rounds that blanket an area. Use +/- to adjust AOE size.",
 		"firing_arc": 180,
 		"arc_direction": "forward",
 		"weapon_type": "FLAK_CANNON",
 		"aoe_type": 1,
 		"levels": [
-			{"level": 1, "size": Vector2i(1, 2), "power_consumed": 2, "damage": 18, "fire_rate": 0.8, "range": 300, "aoe_radius": 50, "projectile_speed": 400, "weight": 8.0, "cost": {0: 18, 4: 10}},
-			{"level": 2, "size": Vector2i(2, 2), "power_consumed": 3, "damage": 26, "fire_rate": 0.85, "range": 320, "aoe_radius": 55, "projectile_speed": 420, "weight": 11.0, "cost": {10: 25, 20: 15}},
-			{"level": 3, "size": Vector2i(2, 2), "power_consumed": 4, "damage": 36, "fire_rate": 0.9, "range": 340, "aoe_radius": 60, "projectile_speed": 440, "weight": 14.0, "cost": {20: 35, 30: 22}},
-			{"level": 4, "size": Vector2i(2, 3), "power_consumed": 5, "damage": 50, "fire_rate": 0.95, "range": 360, "aoe_radius": 65, "projectile_speed": 460, "weight": 18.0, "cost": {30: 48, 40: 32}},
-			{"level": 5, "size": Vector2i(2, 3), "power_consumed": 7, "damage": 70, "fire_rate": 1.0, "range": 380, "aoe_radius": 70, "projectile_speed": 480, "weight": 24.0, "cost": {40: 66, 50: 44}},
-			{"level": 6, "size": Vector2i(3, 2), "power_consumed": 9, "damage": 97, "fire_rate": 1.05, "range": 400, "aoe_radius": 75, "projectile_speed": 500, "weight": 31.0, "cost": {50: 90, 60: 60}},
-			{"level": 7, "size": Vector2i(3, 3), "power_consumed": 12, "damage": 135, "fire_rate": 1.1, "range": 420, "aoe_radius": 80, "projectile_speed": 520, "weight": 40.0, "cost": {60: 122, 70: 82}},
-			{"level": 8, "size": Vector2i(3, 3), "power_consumed": 16, "damage": 187, "fire_rate": 1.15, "range": 440, "aoe_radius": 85, "projectile_speed": 540, "weight": 52.0, "cost": {70: 165, 80: 110}},
-			{"level": 9, "size": Vector2i(3, 3), "power_consumed": 21, "damage": 260, "fire_rate": 1.2, "range": 460, "aoe_radius": 90, "projectile_speed": 560, "weight": 67.0, "cost": {80: 222, 90: 150}}
+			{"level": 1, "size": Vector2i(1, 2), "power_consumed": 2, "damage": 25, "fire_rate": 0.8, "range": 300, "aoe_radius": 50, "projectile_speed": 450, "flak_bullet_count": 18, "flak_mini_aoe": 18, "weight": 8.0, "cost": {0: 18, 4: 10}},
+			{"level": 2, "size": Vector2i(2, 2), "power_consumed": 3, "damage": 35, "fire_rate": 0.85, "range": 320, "aoe_radius": 55, "projectile_speed": 470, "flak_bullet_count": 20, "flak_mini_aoe": 19, "weight": 11.0, "cost": {10: 25, 20: 15}},
+			{"level": 3, "size": Vector2i(2, 2), "power_consumed": 4, "damage": 48, "fire_rate": 0.9, "range": 340, "aoe_radius": 60, "projectile_speed": 490, "flak_bullet_count": 22, "flak_mini_aoe": 20, "weight": 14.0, "cost": {20: 35, 30: 22}},
+			{"level": 4, "size": Vector2i(2, 3), "power_consumed": 5, "damage": 65, "fire_rate": 0.95, "range": 360, "aoe_radius": 65, "projectile_speed": 510, "flak_bullet_count": 24, "flak_mini_aoe": 21, "weight": 18.0, "cost": {30: 48, 40: 32}},
+			{"level": 5, "size": Vector2i(2, 3), "power_consumed": 7, "damage": 88, "fire_rate": 1.0, "range": 380, "aoe_radius": 70, "projectile_speed": 530, "flak_bullet_count": 26, "flak_mini_aoe": 22, "weight": 24.0, "cost": {40: 66, 50: 44}},
+			{"level": 6, "size": Vector2i(3, 2), "power_consumed": 9, "damage": 120, "fire_rate": 1.05, "range": 400, "aoe_radius": 75, "projectile_speed": 550, "flak_bullet_count": 28, "flak_mini_aoe": 23, "weight": 31.0, "cost": {50: 90, 60: 60}},
+			{"level": 7, "size": Vector2i(3, 3), "power_consumed": 12, "damage": 165, "fire_rate": 1.1, "range": 420, "aoe_radius": 80, "projectile_speed": 570, "flak_bullet_count": 30, "flak_mini_aoe": 24, "weight": 40.0, "cost": {60: 122, 70: 82}},
+			{"level": 8, "size": Vector2i(3, 3), "power_consumed": 16, "damage": 225, "fire_rate": 1.15, "range": 440, "aoe_radius": 85, "projectile_speed": 590, "flak_bullet_count": 32, "flak_mini_aoe": 25, "weight": 52.0, "cost": {70: 165, 80: 110}},
+			{"level": 9, "size": Vector2i(3, 3), "power_consumed": 21, "damage": 310, "fire_rate": 1.2, "range": 460, "aoe_radius": 90, "projectile_speed": 610, "flak_bullet_count": 35, "flak_mini_aoe": 26, "weight": 67.0, "cost": {80: 222, 90: 150}}
 		]
 	},
 	"torpedo": {
 		"name": "Torpedo",
 		"base_sprite": "res://assets/sprites/UI/WeaponTexture.png",
-		"description": "Heavy homing explosive - slow but devastating",
+		"description": "Heavy explosive torpedo. Fires to target area center with adjustable AOE explosion. Use +/- to adjust blast radius.",
 		"firing_arc": 60,
 		"arc_direction": "forward",
 		"weapon_type": "TORPEDO",
-		"homing": true,
+		"homing": false,
 		"aoe_type": 1,
 		"levels": [
 			{"level": 1, "size": Vector2i(1, 2), "power_consumed": 3, "damage": 60, "fire_rate": 0.2, "range": 500, "aoe_radius": 40, "projectile_speed": 180, "weight": 12.0, "cost": {0: 25, 10: 15}},
@@ -348,41 +348,42 @@ const COMPONENT_TYPES = {
 	"mortar": {
 		"name": "Mortar",
 		"base_sprite": "res://assets/sprites/UI/WeaponTexture.png",
-		"description": "Arcing AOE projectile - ignores obstacles",
+		"description": "Fires heavy shells that blanket a large area. Fewer but bigger explosions than flak. Use +/- to adjust AOE size.",
 		"firing_arc": 360,
 		"arc_direction": "all",
 		"weapon_type": "MORTAR",
 		"aoe_type": 1,
 		"levels": [
-			{"level": 1, "size": Vector2i(1, 2), "power_consumed": 2, "damage": 28, "fire_rate": 0.5, "range": 400, "aoe_radius": 60, "projectile_speed": 250, "weight": 9.0, "cost": {0: 18, 10: 10}},
-			{"level": 2, "size": Vector2i(2, 2), "power_consumed": 3, "damage": 40, "fire_rate": 0.52, "range": 420, "aoe_radius": 65, "projectile_speed": 260, "weight": 12.0, "cost": {10: 25, 20: 15}},
-			{"level": 3, "size": Vector2i(2, 2), "power_consumed": 4, "damage": 56, "fire_rate": 0.54, "range": 440, "aoe_radius": 70, "projectile_speed": 270, "weight": 15.0, "cost": {20: 35, 30: 22}},
-			{"level": 4, "size": Vector2i(2, 3), "power_consumed": 5, "damage": 78, "fire_rate": 0.56, "range": 460, "aoe_radius": 75, "projectile_speed": 280, "weight": 20.0, "cost": {30: 48, 40: 30}},
-			{"level": 5, "size": Vector2i(2, 3), "power_consumed": 7, "damage": 109, "fire_rate": 0.58, "range": 480, "aoe_radius": 80, "projectile_speed": 290, "weight": 26.0, "cost": {40: 66, 50: 42}},
-			{"level": 6, "size": Vector2i(3, 2), "power_consumed": 9, "damage": 153, "fire_rate": 0.60, "range": 500, "aoe_radius": 85, "projectile_speed": 300, "weight": 34.0, "cost": {50: 92, 60: 58}},
-			{"level": 7, "size": Vector2i(3, 3), "power_consumed": 12, "damage": 214, "fire_rate": 0.62, "range": 520, "aoe_radius": 90, "projectile_speed": 310, "weight": 44.0, "cost": {60: 128, 70: 80}},
-			{"level": 8, "size": Vector2i(3, 3), "power_consumed": 16, "damage": 300, "fire_rate": 0.64, "range": 540, "aoe_radius": 95, "projectile_speed": 320, "weight": 57.0, "cost": {70: 175, 80: 110}},
-			{"level": 9, "size": Vector2i(3, 3), "power_consumed": 21, "damage": 420, "fire_rate": 0.66, "range": 560, "aoe_radius": 100, "projectile_speed": 330, "weight": 73.0, "cost": {80: 240, 90: 150}}
+			{"level": 1, "size": Vector2i(1, 2), "power_consumed": 2, "damage": 28, "fire_rate": 0.5, "range": 400, "aoe_radius": 80, "projectile_speed": 200, "mortar_bullet_count": 6, "mortar_mini_aoe": 35, "weight": 9.0, "cost": {0: 18, 10: 10}},
+			{"level": 2, "size": Vector2i(2, 2), "power_consumed": 3, "damage": 40, "fire_rate": 0.52, "range": 420, "aoe_radius": 85, "projectile_speed": 210, "mortar_bullet_count": 7, "mortar_mini_aoe": 37, "weight": 12.0, "cost": {10: 25, 20: 15}},
+			{"level": 3, "size": Vector2i(2, 2), "power_consumed": 4, "damage": 56, "fire_rate": 0.54, "range": 440, "aoe_radius": 90, "projectile_speed": 220, "mortar_bullet_count": 7, "mortar_mini_aoe": 39, "weight": 15.0, "cost": {20: 35, 30: 22}},
+			{"level": 4, "size": Vector2i(2, 3), "power_consumed": 5, "damage": 78, "fire_rate": 0.56, "range": 460, "aoe_radius": 95, "projectile_speed": 230, "mortar_bullet_count": 8, "mortar_mini_aoe": 41, "weight": 20.0, "cost": {30: 48, 40: 30}},
+			{"level": 5, "size": Vector2i(2, 3), "power_consumed": 7, "damage": 109, "fire_rate": 0.58, "range": 480, "aoe_radius": 100, "projectile_speed": 240, "mortar_bullet_count": 9, "mortar_mini_aoe": 43, "weight": 26.0, "cost": {40: 66, 50: 42}},
+			{"level": 6, "size": Vector2i(3, 2), "power_consumed": 9, "damage": 153, "fire_rate": 0.60, "range": 500, "aoe_radius": 105, "projectile_speed": 250, "mortar_bullet_count": 10, "mortar_mini_aoe": 45, "weight": 34.0, "cost": {50: 92, 60: 58}},
+			{"level": 7, "size": Vector2i(3, 3), "power_consumed": 12, "damage": 214, "fire_rate": 0.62, "range": 520, "aoe_radius": 110, "projectile_speed": 260, "mortar_bullet_count": 10, "mortar_mini_aoe": 47, "weight": 44.0, "cost": {60: 128, 70: 80}},
+			{"level": 8, "size": Vector2i(3, 3), "power_consumed": 16, "damage": 300, "fire_rate": 0.64, "range": 540, "aoe_radius": 115, "projectile_speed": 270, "mortar_bullet_count": 11, "mortar_mini_aoe": 49, "weight": 57.0, "cost": {70: 175, 80: 110}},
+			{"level": 9, "size": Vector2i(3, 3), "power_consumed": 21, "damage": 420, "fire_rate": 0.66, "range": 560, "aoe_radius": 120, "projectile_speed": 280, "mortar_bullet_count": 12, "mortar_mini_aoe": 50, "weight": 73.0, "cost": {80: 240, 90: 150}}
 		]
 	},
 	"mine_layer": {
 		"name": "Mine Layer",
 		"base_sprite": "res://assets/sprites/UI/WeaponTexture.png",
-		"description": "Deploys proximity mines that explode on contact",
+		"description": "Deploys proximity mines to target area. Mines arm on arrival, detect enemies, and explode. Timer shows countdown.",
 		"firing_arc": 360,
 		"arc_direction": "all",
 		"weapon_type": "MINE_LAYER",
 		"aoe_type": 1,
+		"mine_timer": 30.0,
 		"levels": [
-			{"level": 1, "size": Vector2i(1, 1), "power_consumed": 1, "damage": 45, "fire_rate": 0.3, "range": 200, "aoe_radius": 45, "projectile_speed": 150, "weight": 5.0, "cost": {0: 12, 4: 8}},
-			{"level": 2, "size": Vector2i(1, 2), "power_consumed": 2, "damage": 63, "fire_rate": 0.32, "range": 210, "aoe_radius": 50, "projectile_speed": 155, "weight": 7.0, "cost": {10: 18, 20: 12}},
-			{"level": 3, "size": Vector2i(2, 1), "power_consumed": 2, "damage": 88, "fire_rate": 0.34, "range": 220, "aoe_radius": 55, "projectile_speed": 160, "weight": 9.0, "cost": {20: 25, 30: 16}},
-			{"level": 4, "size": Vector2i(2, 2), "power_consumed": 3, "damage": 123, "fire_rate": 0.36, "range": 230, "aoe_radius": 60, "projectile_speed": 165, "weight": 12.0, "cost": {30: 35, 40: 22}},
-			{"level": 5, "size": Vector2i(2, 2), "power_consumed": 4, "damage": 172, "fire_rate": 0.38, "range": 240, "aoe_radius": 65, "projectile_speed": 170, "weight": 16.0, "cost": {40: 48, 50: 30}},
-			{"level": 6, "size": Vector2i(2, 2), "power_consumed": 5, "damage": 241, "fire_rate": 0.40, "range": 250, "aoe_radius": 70, "projectile_speed": 175, "weight": 20.0, "cost": {50: 66, 60: 42}},
-			{"level": 7, "size": Vector2i(2, 3), "power_consumed": 7, "damage": 337, "fire_rate": 0.42, "range": 260, "aoe_radius": 75, "projectile_speed": 180, "weight": 26.0, "cost": {60: 92, 70: 58}},
-			{"level": 8, "size": Vector2i(3, 2), "power_consumed": 9, "damage": 472, "fire_rate": 0.44, "range": 270, "aoe_radius": 80, "projectile_speed": 185, "weight": 34.0, "cost": {70: 128, 80: 80}},
-			{"level": 9, "size": Vector2i(3, 3), "power_consumed": 12, "damage": 661, "fire_rate": 0.46, "range": 280, "aoe_radius": 85, "projectile_speed": 190, "weight": 43.0, "cost": {80: 175, 90: 110}}
+			{"level": 1, "size": Vector2i(1, 1), "power_consumed": 1, "damage": 45, "fire_rate": 0.3, "range": 200, "aoe_radius": 45, "projectile_speed": 150, "mine_timer": 30.0, "weight": 5.0, "cost": {0: 12, 4: 8}},
+			{"level": 2, "size": Vector2i(1, 2), "power_consumed": 2, "damage": 63, "fire_rate": 0.32, "range": 210, "aoe_radius": 50, "projectile_speed": 155, "mine_timer": 30.0, "weight": 7.0, "cost": {10: 18, 20: 12}},
+			{"level": 3, "size": Vector2i(2, 1), "power_consumed": 2, "damage": 88, "fire_rate": 0.34, "range": 220, "aoe_radius": 55, "projectile_speed": 160, "mine_timer": 30.0, "weight": 9.0, "cost": {20: 25, 30: 16}},
+			{"level": 4, "size": Vector2i(2, 2), "power_consumed": 3, "damage": 123, "fire_rate": 0.36, "range": 230, "aoe_radius": 60, "projectile_speed": 165, "mine_timer": 30.0, "weight": 12.0, "cost": {30: 35, 40: 22}},
+			{"level": 5, "size": Vector2i(2, 2), "power_consumed": 4, "damage": 172, "fire_rate": 0.38, "range": 240, "aoe_radius": 65, "projectile_speed": 170, "mine_timer": 30.0, "weight": 16.0, "cost": {40: 48, 50: 30}},
+			{"level": 6, "size": Vector2i(2, 2), "power_consumed": 5, "damage": 241, "fire_rate": 0.40, "range": 250, "aoe_radius": 70, "projectile_speed": 175, "mine_timer": 30.0, "weight": 20.0, "cost": {50: 66, 60: 42}},
+			{"level": 7, "size": Vector2i(2, 3), "power_consumed": 7, "damage": 337, "fire_rate": 0.42, "range": 260, "aoe_radius": 75, "projectile_speed": 180, "mine_timer": 30.0, "weight": 26.0, "cost": {60: 92, 70: 58}},
+			{"level": 8, "size": Vector2i(3, 2), "power_consumed": 9, "damage": 472, "fire_rate": 0.44, "range": 270, "aoe_radius": 80, "projectile_speed": 185, "mine_timer": 30.0, "weight": 34.0, "cost": {70: 128, 80: 80}},
+			{"level": 9, "size": Vector2i(3, 3), "power_consumed": 12, "damage": 661, "fire_rate": 0.46, "range": 280, "aoe_radius": 85, "projectile_speed": 190, "mine_timer": 30.0, "weight": 43.0, "cost": {80: 175, 90: 110}}
 		]
 	},
 	# === SPECIAL WEAPONS ===
@@ -678,6 +679,62 @@ const WEAPON_CATEGORY_NAMES = {
 	"explosive": "Explosive",
 	"special": "Special"
 }
+
+# UI Category colors for component buttons
+const CATEGORY_COLORS = {
+	"Energy": Color(1.0, 0.85, 0.2, 1.0),        # Yellow/gold for power cores
+	"Propulsion": Color(0.2, 0.9, 0.95, 1.0),    # Cyan for engines
+	"Kinetic Weapons": Color(0.9, 0.75, 0.35, 1.0),  # Brass/amber
+	"Energy Weapons": Color(0.4, 0.7, 1.0, 1.0),  # Blue
+	"Explosive Weapons": Color(1.0, 0.5, 0.25, 1.0),  # Orange/red
+	"Special Weapons": Color(0.75, 0.45, 1.0, 1.0),  # Purple
+	"Defense": Color(0.35, 0.9, 0.45, 1.0),       # Green
+	"Operations": Color(0.3, 0.8, 0.75, 1.0)     # Teal
+}
+
+# Map component types to their UI categories
+const COMPONENT_CATEGORY_MAP = {
+	"power_core": "Energy",
+	"engine": "Propulsion",
+	"laser_weapon": "Kinetic Weapons",
+	"autocannon": "Kinetic Weapons",
+	"railgun": "Kinetic Weapons",
+	"gatling": "Kinetic Weapons",
+	"sniper_cannon": "Kinetic Weapons",
+	"shotgun": "Kinetic Weapons",
+	"ion_cannon": "Energy Weapons",
+	"plasma_cannon": "Energy Weapons",
+	"particle_beam": "Energy Weapons",
+	"tesla_coil": "Energy Weapons",
+	"disruptor": "Energy Weapons",
+	"missile_launcher": "Explosive Weapons",
+	"flak_cannon": "Explosive Weapons",
+	"torpedo": "Explosive Weapons",
+	"rocket_pod": "Explosive Weapons",
+	"mortar": "Explosive Weapons",
+	"mine_layer": "Explosive Weapons",
+	"cryo_cannon": "Special Weapons",
+	"emp_burst": "Special Weapons",
+	"gravity_well": "Special Weapons",
+	"repair_beam": "Special Weapons",
+	"shield_generator": "Defense",
+	"repair_bot": "Defense",
+	"scanner": "Operations",
+	"miner": "Operations"
+}
+
+static func get_component_category(comp_type: String) -> String:
+	"""Get the UI category for a component type"""
+	return COMPONENT_CATEGORY_MAP.get(comp_type, "")
+
+static func get_category_color(category: String) -> Color:
+	"""Get the color for a UI category"""
+	return CATEGORY_COLORS.get(category, Color.WHITE)
+
+static func get_component_category_color(comp_type: String) -> Color:
+	"""Get the category color for a component type"""
+	var category = get_component_category(comp_type)
+	return get_category_color(category)
 
 # Map component type IDs to WeaponComponent.WeaponType enum values
 const WEAPON_TYPE_MAP = {
