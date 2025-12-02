@@ -1,0 +1,46 @@
+[gd_scene load_steps=6 format=3]
+
+[ext_resource type="Script" path="res://scripts/vfx/ParticleProfile2D.gd" id="script_particle_profile"]
+[ext_resource type="Texture2D" path="res://assets/vfx_textures/fire_02.png" id="texture_fire"]
+
+[sub_resource type="Gradient" id="Gradient_core"]
+offsets = PackedFloat32Array(0, 0.3, 0.7, 1)
+colors = PackedColorArray(1, 0.45, 0, 1, 1, 0.25, 0, 0.85, 0.6, 0.1, 0.05, 0.4, 0, 0, 0, 0)
+
+[sub_resource type="Curve" id="Curve_core_scale"]
+_data = [Vector2(0, 0), 0.0, 0.0, 0, 0, Vector2(0.2, 1), 0.0, 0.0, 0, 0, Vector2(1, 0), 0.0, 0.0, 0, 0]
+
+[sub_resource type="ParticleProcessMaterial" id="Process_core"]
+emission_shape = 0
+initial_velocity_min = 120.0
+initial_velocity_max = 320.0
+angular_velocity = 5.0
+angular_velocity_random = 0.7
+radial_velocity = 30.0
+scale_min = 0.15
+scale_max = 0.25
+scale_curve = SubResource("Curve_core_scale")
+color_ramp = SubResource("Gradient_core")
+
+[node name="ExplosionCore" type="Node2D"]
+visible = false
+process_mode = 0
+script = ExtResource("script_particle_profile")
+particle_path = NodePath("CoreParticles")
+max_particles_low = 48
+max_particles_medium = 96
+max_particles_high = 132
+max_particles_ultra = 160
+lifetime = 0.6
+
+[node name="CoreParticles" type="GPUParticles2D" parent="."]
+amount = 96
+lifetime = 0.6
+explosiveness = 1.0
+one_shot = true
+preprocess = 0.05
+process_material = SubResource("Process_core")
+local_coords = false
+texture = ExtResource("texture_fire")
+emitting = false
+

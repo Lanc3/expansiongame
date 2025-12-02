@@ -23,10 +23,10 @@ func can_attack() -> bool:
 func can_mine() -> bool:
 	return false
 
-func take_damage(amount: float, attacker: Node2D = null):
+func take_damage(amount: float, attacker: Node2D = null, hit_position: Vector2 = Vector2.ZERO):
 	# Apply armor bonus - takes reduced damage
 	var reduced_damage = amount * (1.0 - armor_bonus)
-	super.take_damage(reduced_damage, attacker)
+	super.take_damage(reduced_damage, attacker, hit_position)
 
 func process_combat_state(delta: float):
 	if not is_instance_valid(target_entity):

@@ -12,7 +12,7 @@ var unit_count: int = 0
 # Unit type sprite mapping
 const UNIT_TYPE_SPRITES = {
 	"CommandShip": "res://assets/sprites/ufoRed.png",
-	"MiningDrone": "res://assets/sprites/UI/cursor.png",
+	"MiningDrone": "res://assets/sprites/units/MiningDrone.png",
 	"CombatDrone": "res://assets/sprites/playerShip1_blue.png",
 	"ScoutDrone": "res://assets/sprites/playerShip2_green.png",
 	"BuilderDrone": "res://assets/sprites/playerShip2_orange.png",

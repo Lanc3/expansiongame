@@ -82,7 +82,7 @@ func _create_shield_visual():
 	var shield_line = Line2D.new()
 	shield_line.name = "ShieldCircle"
 	shield_line.width = 3.0
-	shield_line.default_color = Color(0.3, 0.6, 1.0, 0.4)  # Blue with transparency
+	shield_line.default_color = Color(0.3, 0.6, 1.0, 0.2)  # Blue with transparency
 	shield_line.antialiased = true
 	
 	# Generate circle points
@@ -116,13 +116,13 @@ func _update_shield_visual(delta: float):
 	if hit_flash_timer > 0:
 		hit_flash_timer -= delta
 		var flash_intensity = hit_flash_timer / 0.2
-		shield_line.default_color = Color(1.0, 0.9, 1.0, 0.8 * flash_intensity)
+		shield_line.default_color = Color(1.0, 0.9, 1.0, 0.5 * flash_intensity)
 	else:
 		# Normal shield appearance with subtle pulse
 		pulse_timer += delta
-		var pulse = 0.3 + 0.1 * sin(pulse_timer * 3.0)
+		var pulse = 0.15 + 0.05 * sin(pulse_timer * 3.0)
 		var shield_pct = get_shield_percentage()
-		var alpha = 0.3 + (0.2 * shield_pct) + pulse
+		var alpha = 0.15 + (0.1 * shield_pct) + pulse
 		shield_line.default_color = Color(0.3, 0.6, 1.0, alpha)
 	
 	# Scale based on shield strength

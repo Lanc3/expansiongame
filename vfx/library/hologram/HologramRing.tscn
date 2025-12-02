@@ -1,0 +1,31 @@
+[gd_scene load_steps=6 format=3]
+
+[ext_resource type="Shader" path="res://vfx/shaders/hologram.gdshader" id="shader_hologram"]
+[ext_resource type="Texture2D" path="res://assets/vfx_masks/holo_hex_tile.png" id="texture_hex"]
+[ext_resource type="Texture2D" path="res://assets/vfx_masks/holo_noise_mask.png" id="texture_noise"]
+[ext_resource type="Texture2D" path="res://assets/vfx_masks/holo_ring_pattern.png" id="texture_ring"]
+
+[sub_resource type="ShaderMaterial" id="ShaderMaterial_hologram"]
+shader = ExtResource("shader_hologram")
+shader_parameter/base_color = Color(0.25, 0.8, 1, 1)
+shader_parameter/ring_radius = 0.65
+shader_parameter/pulse_speed = 1.6
+shader_parameter/grid_scale = 14.0
+shader_parameter/alpha_cutoff = 0.04
+shader_parameter/fresnel_power = 1.8
+shader_parameter/ring_scale = 1.0
+shader_parameter/hex_strength = 0.7
+shader_parameter/noise_strength = 0.35
+shader_parameter/hex_tex = ExtResource("texture_hex")
+shader_parameter/noise_tex = ExtResource("texture_noise")
+shader_parameter/ring_tex = ExtResource("texture_ring")
+
+[node name="HologramRing" type="Node2D"]
+visible = false
+
+[node name="Ring" type="Polygon2D" parent="."]
+polygon = PackedVector2Array(-128, -128, 128, -128, 128, 128, -128, 128)
+uv = PackedVector2Array(0, 0, 1, 0, 1, 1, 0, 1)
+z_index = 6
+material = SubResource("ShaderMaterial_hologram")
+

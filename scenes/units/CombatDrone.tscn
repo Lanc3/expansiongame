@@ -2,13 +2,12 @@
 
 [ext_resource type="PackedScene" uid="uid://cgdbgusf45058" path="res://scenes/units/BaseUnit.tscn" id="1_kisff"]
 [ext_resource type="Script" uid="uid://bavppooi3s3gb" path="res://scripts/units/CombatDrone.gd" id="2_0join"]
-[ext_resource type="Texture2D" uid="uid://cl5qwmvydlven" path="res://assets/sprites/playerShip1_blue.png" id="2_rgsfu"]
 [ext_resource type="Texture2D" uid="uid://bsg08g4ku3nr1" path="res://assets/sprites/effects/shield2.png" id="3_kx5kw"]
 [ext_resource type="Script" uid="uid://cnyap8loadx75" path="res://scripts/components/WeaponComponent.gd" id="4_0join"]
+[ext_resource type="Texture2D" uid="uid://ck85ufd2fm6is" path="res://assets/sprites/units/CombatDrone.png" id="4_kx5kw"]
 
 [node name="BaseUnit" instance=ExtResource("1_kisff")]
 script = ExtResource("2_0join")
-vision_range = 800.0
 attack_range = 300.0
 auto_attack = true
 
@@ -22,8 +21,8 @@ texture = ExtResource("3_kx5kw")
 
 [node name="Sprite2D2" type="Sprite2D" parent="." index="5"]
 rotation = 1.5707964
-scale = Vector2(0.37355998, 0.4539439)
-texture = ExtResource("2_rgsfu")
+scale = Vector2(0.092747, 0.05668333)
+texture = ExtResource("4_kx5kw")
 
 [node name="WeaponComponent" type="Node" parent="." index="6"]
 script = ExtResource("4_0join")

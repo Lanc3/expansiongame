@@ -35,10 +35,35 @@ var base_position: Vector2
 var current_size_tier: int = -1  # Initialize to -1 to force initial texture load, then 0=big, 1=med, 2=small, 3=tiny
 
 # Sprite variety
-var sprite_color_set: String = ""  # "Brown" or "Grey"
+var sprite_color_set: String = ""  # "Brown" or "Grey" (kept for backward compatibility, not used for new asteroids)
 var base_scale: float = 1.0  # Determined by total resources
+var selected_asteroid_image: String = ""  # Randomly selected asteroid image path
 
-# Updated sprite texture arrays - now 2D arrays [tier][variant]
+# Array of 20 asteroid images
+const ASTEROID_IMAGES: Array[String] = [
+	"asteroid_1.png",
+	"asteroid_2.png",
+	"asteroid_3.png",
+	"asteroid_4.png",
+	"asteroid_5.png",
+	"asteroid_6.png",
+	"asteroid_7.png",
+	"asteroid_8.png",
+	"asteroid_9.png",
+	"asteroid_10.png",
+	"asteroid_11.png",
+	"asteroid_ 12.png",  # Note: has a space in filename
+	"asteroid_13.png",
+	"asteroid_14.png",
+	"asteroid_15.png",
+	"asteroid_16.png",
+	"asteroid_17.png",
+	"asteroid_18.png",
+	"asteroid_19.png",
+	"asteroid_20.png"
+]
+
+# Updated sprite texture arrays - now 2D arrays [tier][variant] (kept for backward compatibility)
 var brown_sprites: Array = [
 	["meteorBrown_big1.png", "meteorBrown_big2.png", "meteorBrown_big3.png", "meteorBrown_big4.png"],
 	["meteorBrown_med1.png", "meteorBrown_med3.png"],
@@ -77,7 +102,11 @@ func _ready():
 	# Randomize animation timing to avoid synchronization
 	idle_time = randf() * TAU
 	
-	# Randomly choose sprite set (50/50 brown or grey)
+	# Randomly select one of the 20 asteroid images
+	var random_index = randi() % ASTEROID_IMAGES.size()
+	selected_asteroid_image = ASTEROID_IMAGES[random_index]
+	
+	# Keep sprite_color_set for backward compatibility (not used for new asteroids)
 	sprite_color_set = "Brown" if randf() < 0.5 else "Grey"
 	
 	# Calculate base scale based on total resources
@@ -320,7 +349,7 @@ func update_visual():
 	# Progressive size based on depletion percentage
 	var depletion_percent = remaining_resources / total_resources if total_resources > 0 else 0
 	
-	# Determine size tier (0=big, 1=med, 2=small, 3=tiny)
+	# Determine size tier (0=big, 1=med, 2=small, 3=tiny) - used for rotation speed and particles
 	var new_tier = 0
 	if depletion_percent > 0.75:
 		new_tier = 0  # Big
@@ -331,17 +360,18 @@ func update_visual():
 	else:
 		new_tier = 3  # Tiny
 	
-	# Change sprite texture if tier changed
+	# Set sprite texture to selected asteroid image
+	if selected_asteroid_image.is_empty():
+		# Fallback: randomly select if not set (for backward compatibility)
+		var random_index = randi() % ASTEROID_IMAGES.size()
+		selected_asteroid_image = ASTEROID_IMAGES[random_index]
+	
+	# Load the selected asteroid image (Godot caches loaded resources, so this is efficient)
+	sprite.texture = load("res://assets/sprites/Meteors/" + selected_asteroid_image)
+	
+	# Spawn particle burst on size transition (when tier changes)
 	if new_tier != current_size_tier:
 		current_size_tier = new_tier
-		
-		# Select sprite array based on color set
-		var sprite_array = brown_sprites if sprite_color_set == "Brown" else grey_sprites
-		var tier_variants = sprite_array[current_size_tier]
-		
-		# Randomly pick variant for this tier
-		var variant = tier_variants[randi() % tier_variants.size()]
-		sprite.texture = load("res://assets/sprites/Meteors/" + variant)
 		
 		# Spawn particle burst on size transition
 		if is_scanned:  # Only show particles if scanned
@@ -354,8 +384,10 @@ func update_visual():
 	# Update rotation speed (faster as smaller)
 	current_rotation_speed = base_rotation_speed * (1.5 + (1.0 - depletion_percent))
 	
-	# Apply base scale from resources (dynamic sizing)
-	sprite.scale = Vector2.ONE * base_scale
+	# Apply base scale from resources (dynamic sizing) and depletion percentage
+	# Scale down as asteroid gets depleted
+	var depletion_scale = lerp(0.25, 0.5, depletion_percent)  # Scale from 25% to 50% based on depletion (further reduced)
+	sprite.scale = Vector2.ONE * base_scale * depletion_scale
 
 func on_depleted():
 	"""Called when asteroid is fully mined - EPIC DESTRUCTION!"""
@@ -432,11 +464,11 @@ func get_estimated_value() -> float:
 
 func calculate_base_scale(resources: float) -> float:
 	"""Calculate base scale factor based on total resources"""
-	# Scale between 0.6 and 1.5
+	# Scale between 0.15 and 0.35 (further reduced)
 	var min_resources = 500.0
 	var max_resources = 2000.0
-	var min_scale = 0.6
-	var max_scale = 1.5
+	var min_scale = 0.15
+	var max_scale = 0.35
 	
 	var normalized = (resources - min_resources) / (max_resources - min_resources)
 	normalized = clamp(normalized, 0.0, 1.0)
@@ -474,16 +506,16 @@ func create_shake_effect(duration: float):
 func spawn_debris_pieces():
 	"""Spawn debris pieces that fly outward"""
 	var num_pieces = randi_range(4, 6)
-	var debris_textures = [
-		"res://assets/sprites/Meteors/meteorBrown_tiny1.png",
-		"res://assets/sprites/Meteors/meteorBrown_tiny2.png",
-	]
 	
 	for i in range(num_pieces):
 		var debris = Sprite2D.new()
-		debris.texture = load(debris_textures[i % debris_textures.size()])
+		# Randomly select from asteroid images for debris
+		var random_debris_index = randi() % ASTEROID_IMAGES.size()
+		debris.texture = load("res://assets/sprites/Meteors/" + ASTEROID_IMAGES[random_debris_index])
 		debris.global_position = global_position
 		debris.modulate = sprite.modulate if sprite else Color.WHITE
+		# Scale down debris pieces
+		debris.scale = Vector2.ONE * randf_range(0.3, 0.6)
 		
 		# Calculate outward direction
 		var angle = (TAU / num_pieces) * i + randf_range(-0.3, 0.3)

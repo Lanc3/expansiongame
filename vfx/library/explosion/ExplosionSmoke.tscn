@@ -1,0 +1,47 @@
+[gd_scene load_steps=6 format=3]
+
+[ext_resource type="Script" path="res://scripts/vfx/ParticleProfile2D.gd" id="script_particle_profile"]
+[ext_resource type="Texture2D" path="res://assets/vfx_textures/smoke_07.png" id="texture_smoke"]
+
+[sub_resource type="Gradient" id="Gradient_smoke"]
+offsets = PackedFloat32Array(0, 0.3, 0.8, 1)
+colors = PackedColorArray(0.9, 0.6, 0.3, 0.9, 0.35, 0.2, 0.1, 0.7, 0.1, 0.1, 0.1, 0.4, 0.05, 0.05, 0.05, 0)
+
+[sub_resource type="Curve" id="Curve_smoke_scale"]
+_data = [Vector2(0, 0.2), 0.0, 0.0, 0, 0, Vector2(0.25, 0.9), 0.0, 0.0, 0, 0, Vector2(1, 1.1), 0.0, 0.0, 0, 0]
+
+[sub_resource type="ParticleProcessMaterial" id="Process_smoke"]
+emission_shape = 1
+emission_sphere_radius = 24.0
+initial_velocity_min = 40.0
+initial_velocity_max = 120.0
+angular_velocity = 8.0
+angular_velocity_random = 0.8
+damping = 4.0
+scale_min = 0.08
+scale_max = 0.24
+scale_curve = SubResource("Curve_smoke_scale")
+color_ramp = SubResource("Gradient_smoke")
+
+[node name="ExplosionSmoke" type="Node2D"]
+visible = false
+process_mode = 0
+script = ExtResource("script_particle_profile")
+particle_path = NodePath("Smoke")
+max_particles_low = 60
+max_particles_medium = 120
+max_particles_high = 160
+max_particles_ultra = 200
+lifetime = 1.8
+
+[node name="Smoke" type="GPUParticles2D" parent="."]
+amount = 140
+lifetime = 1.8
+preprocess = 0.1
+explosiveness = 0.8
+one_shot = true
+local_coords = false
+process_material = SubResource("Process_smoke")
+texture = ExtResource("texture_smoke")
+emitting = false
+

@@ -1,0 +1,38 @@
+[gd_resource type="Resource" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://scripts/data/QualityProfiles.gd" id="1_vmdfw"]
+
+[resource]
+script = ExtResource("1_vmdfw")
+default_profile = &"high"
+profiles = {
+&"high": {
+&"light_lifetime": 0.3,
+&"max_dynamic_lights": 150,
+&"max_gpu_particles": 120000,
+&"max_heavy_emitters": 12,
+&"trail_point_budget": 5000
+},
+&"low": {
+&"light_lifetime": 0.2,
+&"max_dynamic_lights": 48,
+&"max_gpu_particles": 40000,
+&"max_heavy_emitters": 4,
+&"trail_point_budget": 1500
+},
+&"medium": {
+&"light_lifetime": 0.25,
+&"max_dynamic_lights": 96,
+&"max_gpu_particles": 80000,
+&"max_heavy_emitters": 8,
+&"trail_point_budget": 3000
+},
+&"ultra": {
+&"light_lifetime": 0.35,
+&"max_dynamic_lights": 200,
+&"max_gpu_particles": 150000,
+&"max_heavy_emitters": 16,
+&"trail_point_budget": 6000
+}
+}
+

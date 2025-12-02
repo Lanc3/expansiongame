@@ -58,9 +58,20 @@ func spawn_mining_effect(position: Vector2):
 		spawn_effect(mining_effect_scene, position, 2.0)
 
 func spawn_explosion(position: Vector2):
-	if explosion_effect_scene:
-		spawn_effect(explosion_effect_scene, position, 1.0)
-	AudioManager.play_sound("explosion")
+	var parent_scene = get_tree().current_scene
+	if VfxDirector and parent_scene:
+		VfxDirector.spawn_explosion(parent_scene, position, .10)
+	elif explosion_effect_scene:
+		var effect = explosion_effect_scene.instantiate()
+		effect.global_position = position
+		effect.scale = Vector2(1.0, 1.0)  # Scale to 200% of original
+		get_tree().root.add_child(effect)
+		
+		await get_tree().create_timer(1.0).timeout
+		if is_instance_valid(effect):
+			effect.queue_free()
+	if AudioManager:
+		AudioManager.play_sound("explosion")
 
 func spawn_collection_effect(position: Vector2, color: Color):
 	# Create simple particle effect with color

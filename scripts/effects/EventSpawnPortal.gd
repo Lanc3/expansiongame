@@ -16,23 +16,21 @@ var current_spawn_index: int = 0
 var state_timer: float = 0.0
 var spawn_timer: float = 0.0
 
-# Visual components
-@onready var spiral_sprite: Sprite2D = $SpiralSprite if has_node("SpiralSprite") else null
-@onready var vortex_particles: CPUParticles2D = $VortexParticles if has_node("VortexParticles") else null
-@onready var ring_particles: CPUParticles2D = $RingParticles if has_node("RingParticles") else null
+# Visual components - matching Wormhole structure
+@onready var sprite: Sprite2D = $Sprite2D if has_node("Sprite2D") else null
+@onready var particles: CPUParticles2D = $CPUParticles2D if has_node("CPUParticles2D") else null
+@onready var glow_particles: CPUParticles2D = $GlowParticles if has_node("GlowParticles") else null
 @onready var spark_particles: CPUParticles2D = $SparkParticles if has_node("SparkParticles") else null
 @onready var audio_player: AudioStreamPlayer2D = $AudioPlayer if has_node("AudioPlayer") else null
 
-# Rotation animation
-var rotation_speed: float = 2.0  # Radians per second
+# Base color for event portal (red/orange theme to differentiate from zone wormholes)
+var base_modulate: Color = Color(1.0, 0.4, 0.2, 1.0)  # Orange/red for events
 
 func _ready():
 	z_index = -5  # Behind units
+	# Setup visual like wormhole
+	setup_visual()
 	print("EventSpawnPortal _ready() called")
-	print("  - spiral_sprite: ", spiral_sprite)
-	print("  - vortex_particles: ", vortex_particles)
-	print("  - ring_particles: ", ring_particles)
-	print("  - spark_particles: ", spark_particles)
 
 func setup(duration: float, spawn_list: Array):
 	"""Initialize portal with warning duration and entities to spawn"""
@@ -42,15 +40,16 @@ func setup(duration: float, spawn_list: Array):
 	current_state = PortalState.OPENING
 	state_timer = 0.0
 	
+	# Setup visual if not already done
+	setup_visual()
+	
 	# Start opening animation
 	start_opening_animation()
 
 func _process(delta: float):
 	state_timer += delta
 	
-	# Rotate spiral sprite continuously
-	if spiral_sprite:
-		spiral_sprite.rotation += rotation_speed * delta
+	# Shader handles rotation internally, so no manual rotation needed
 	
 	match current_state:
 		PortalState.OPENING:
@@ -69,10 +68,6 @@ func start_opening_animation():
 	scale = Vector2.ZERO
 	modulate.a = 0.0
 	
-	# Set initial transparency for spiral
-	if spiral_sprite:
-		spiral_sprite.modulate.a = 0.0
-	
 	print("Portal initial scale: ", scale, " alpha: ", modulate.a)
 	
 	# Play opening sound
@@ -88,26 +83,19 @@ func start_opening_animation():
 	
 	# Fade in (but keep semi-transparent)
 	tween.tween_property(self, "modulate:a", 0.8, warning_duration * 0.3)
-	
-	# Fade in spiral sprite to 50% opacity
-	if spiral_sprite:
-		var spiral_tween = create_tween()
-		spiral_tween.tween_property(spiral_sprite, "modulate:a", 0.5, warning_duration * 0.3)
-		start_spiral_pulse()
 
 func process_opening(delta: float):
 	"""Update opening animation"""
-	# Gradually increase particle intensity
-	if vortex_particles:
+	# Gradually increase particle intensity (similar to wormhole)
+	if particles:
 		var progress = state_timer / warning_duration
-		vortex_particles.amount = int(lerp(0, 50, progress))
-		vortex_particles.scale_amount_max = lerp(3.0, 5.0, progress)
-		vortex_particles.emitting = true
+		particles.amount = int(lerp(0, 30, progress))
+		particles.emitting = true
 	
-	if ring_particles:
+	if glow_particles:
 		var progress = state_timer / warning_duration
-		ring_particles.amount = int(lerp(0, 30, progress))
-		ring_particles.emitting = true
+		glow_particles.amount = int(lerp(0, 15, progress))
+		glow_particles.emitting = true
 	
 	# Check if opening complete
 	if state_timer >= warning_duration:
@@ -187,12 +175,15 @@ func spawn_next_entity():
 
 func spawn_flash_effect():
 	"""Create flash effect when entity spawns"""
-	if spiral_sprite:
-		# Flash bright (but maintain transparency at 50%)
-		spiral_sprite.modulate = Color(2.0, 2.0, 2.0, 0.7)
-		
+	if sprite and sprite.material is ShaderMaterial:
+		var mat = sprite.material as ShaderMaterial
+		# Flash bright using shader parameters
+		mat.set_shader_parameter("base_color", base_modulate * 2.0)
 		var tween = create_tween()
-		tween.tween_property(spiral_sprite, "modulate", Color(1.0, 1.0, 1.0, 0.5), 0.3)
+		tween.tween_method(
+			func(val): mat.set_shader_parameter("base_color", base_modulate * val),
+			2.0, 1.0, 0.3
+		)
 
 func start_closing_animation():
 	"""Begin portal closing sequence"""
@@ -220,13 +211,13 @@ func start_closing_animation():
 func process_closing(delta: float):
 	"""Update closing animation"""
 	# Reduce particle amounts
-	if vortex_particles:
+	if particles:
 		var progress = state_timer / 2.0  # 2 second close
-		vortex_particles.amount = int(lerp(50, 0, progress))
+		particles.amount = int(lerp(30, 0, progress))
 	
-	if ring_particles:
+	if glow_particles:
 		var progress = state_timer / 2.0
-		ring_particles.amount = int(lerp(30, 0, progress))
+		glow_particles.amount = int(lerp(15, 0, progress))
 
 func on_portal_closed():
 	"""Portal fully closed - cleanup"""
@@ -234,13 +225,100 @@ func on_portal_closed():
 	portal_closed.emit()
 	queue_free()
 
-func start_spiral_pulse():
-	"""Pulsing animation for spiral sprite"""
-	if not spiral_sprite:
-		return
+func setup_visual():
+	"""Setup portal visuals using same implementation as Wormhole"""
+	if sprite:
+		# Load the wormhole shader
+		var shader = load("res://shaders/wormhole_object.gdshader")
+		if shader:
+			var material = ShaderMaterial.new()
+			material.shader = shader
+			material.set_shader_parameter("base_color", base_modulate)
+			
+			# Use similar parameters to depth wormholes
+			material.set_shader_parameter("swirl_strength", 8.0)
+			material.set_shader_parameter("core_size", 0.2)
+				
+			sprite.material = material
+			
+			# Use a simple placeholder texture for the shader to work on
+			var image = Image.create(256, 256, false, Image.FORMAT_RGBA8)
+			image.fill(Color.WHITE)
+			var texture = ImageTexture.create_from_image(image)
+			sprite.texture = texture
+			sprite.scale = Vector2(1.5, 1.5)
+			
+			# Reset rotation as shader handles rotation internally
+			sprite.rotation = 0.0
+		else:
+			print("EventSpawnPortal: Failed to load shader!")
+			# Fallback to simple circle if shader fails
+			sprite.modulate = base_modulate
+			var image = Image.create(128, 128, false, Image.FORMAT_RGBA8)
+			image.fill(Color.TRANSPARENT)
+			for x in range(128):
+				for y in range(128):
+					var dx = x - 64
+					var dy = y - 64
+					var dist = sqrt(dx * dx + dy * dy)
+					if dist < 50:
+						image.set_pixel(x, y, Color(1, 1, 1, 1))
+			sprite.texture = ImageTexture.create_from_image(image)
 	
-	var tween = create_tween()
-	tween.set_loops()
-	tween.tween_property(spiral_sprite, "modulate:a", 0.35, 0.8)
-	tween.tween_property(spiral_sprite, "modulate:a", 0.5, 0.8)
+	# Setup swirling particles (same as wormhole)
+	if particles:
+		particles.emitting = true
+		particles.amount = 30
+		particles.lifetime = 3.0
+		particles.explosiveness = 0.0
+		particles.randomness = 0.5
+		
+		# Orbital motion
+		particles.emission_shape = CPUParticles2D.EMISSION_SHAPE_SPHERE
+		particles.emission_sphere_radius = 60.0
+		
+		particles.direction = Vector2(0, 0)
+		particles.spread = 180.0
+		particles.initial_velocity_min = 20.0
+		particles.initial_velocity_max = 40.0
+		
+		# Swirl effect using tangential acceleration
+		particles.tangential_accel_min = 50.0
+		particles.tangential_accel_max = 100.0
+		
+		# Color
+		particles.color = base_modulate
+		particles.color_ramp = create_portal_gradient()
+		
+		# Scale
+		particles.scale_amount_min = 2.0
+		particles.scale_amount_max = 4.0
+		
+		# Fade
+		particles.color.a = 0.8
+	
+	# Setup glow particles (same as wormhole)
+	if glow_particles:
+		glow_particles.emitting = true
+		glow_particles.amount = 15
+		glow_particles.lifetime = 2.0
+		glow_particles.emission_shape = CPUParticles2D.EMISSION_SHAPE_SPHERE
+		glow_particles.emission_sphere_radius = 40.0
+		
+		glow_particles.direction = Vector2(0, 0)
+		glow_particles.spread = 180.0
+		glow_particles.initial_velocity_min = 5.0
+		glow_particles.initial_velocity_max = 15.0
+		
+		glow_particles.color = Color(1.0, 1.0, 1.0, 0.6)
+		glow_particles.scale_amount_min = 1.0
+		glow_particles.scale_amount_max = 2.0
+
+func create_portal_gradient() -> Gradient:
+	"""Create color gradient for particles"""
+	var gradient = Gradient.new()
+	gradient.add_point(0.0, base_modulate)
+	gradient.add_point(0.5, base_modulate * 1.2)
+	gradient.add_point(1.0, Color(base_modulate.r, base_modulate.g, base_modulate.b, 0.0))
+	return gradient
 

@@ -14,6 +14,7 @@ const MAX_KEY_RESOURCES: int = 15
 
 # Unit buttons
 var unit_buttons: Dictionary = {}
+var total_units_label: Label
 
 # Unit type emoji mapping
 const UNIT_TYPE_EMOJIS = {
@@ -40,6 +41,9 @@ func _ready():
 	# Create key resource slots
 	_create_key_resource_slots()
 	
+	# Create total units label
+	_create_total_label()
+
 	# Create unit buttons
 	_create_unit_buttons()
 	
@@ -148,6 +152,19 @@ func _on_pins_changed():
 	"""Refresh when user pins/unpins resources"""
 	_refresh_key_resources()
 
+func _create_total_label():
+	"""Create label for total unit count"""
+	total_units_label = Label.new()
+	total_units_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	total_units_label.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
+	total_units_label.add_theme_font_size_override("font_size", 16)
+	total_units_label.add_theme_color_override("font_color", Color(0.8, 0.9, 1.0))
+	units_section.add_child(total_units_label)
+	
+	# Add spacer
+	var separator = VSeparator.new()
+	units_section.add_child(separator)
+
 func _create_unit_buttons():
 	"""Create button for each unit type"""
 	for unit_type in UNIT_TYPE_EMOJIS.keys():
@@ -162,6 +179,17 @@ func _update_unit_counts():
 	"""Update unit type counts"""
 	var player_units = EntityManager.get_units_by_team(0)
 	
+	# Update total count label
+	if total_units_label:
+		var total = player_units.size()
+		var max_units = GameManager.MAX_PLAYER_UNITS
+		total_units_label.text = "Units: %d/%d" % [total, max_units]
+		
+		if total >= max_units:
+			total_units_label.modulate = Color(1, 0.4, 0.4) # Red tint
+		else:
+			total_units_label.modulate = Color(1, 1, 1) # Normal
+
 	var counts = {
 		"CommandShip": 0,
 		"MiningDrone": 0,

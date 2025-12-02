@@ -28,11 +28,26 @@ func _update_load_button_state():
 		load_button.tooltip_text = "No saved game found"
 
 func _on_start_pressed():
-	GameManager.change_scene("res://scenes/main/GameScene.tscn")
+	var loading_scene = preload("res://scenes/ui/LoadingScene.tscn").instantiate()
+	loading_scene.target_scene_path = "res://scenes/main/GameScene.tscn"
+	loading_scene.is_save_game = false
+	get_tree().root.add_child(loading_scene)
+	# We don't queue_free MainMenu immediately, the LoadingScene covers it
+	# and switching scene will destroy the whole tree anyway if using change_scene
+	# But LoadingScene uses change_scene_to_packed, so we should probably just let it handle it.
+	# However, LoadingScene is added to root, so it persists until it changes the scene.
 
 func _on_load_pressed():
 	"""Load saved game"""
-	SaveLoadManager.load_game()
+	if SaveLoadManager.prepare_load():
+		var loading_scene = preload("res://scenes/ui/LoadingScene.tscn").instantiate()
+		loading_scene.target_scene_path = "res://scenes/main/GameScene.tscn"
+		loading_scene.is_save_game = true
+		get_tree().root.add_child(loading_scene)
+	else:
+		# Show error feedback if load fails
+		load_button.disabled = true
+		load_button.text = "Load Failed"
 
 func _on_blueprint_pressed():
 	# Open Cosmoteer-style ship builder

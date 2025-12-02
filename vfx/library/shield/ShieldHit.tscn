@@ -1,0 +1,30 @@
+[gd_scene load_steps=6 format=3]
+
+[ext_resource type="Shader" path="res://vfx/shaders/shield_hit.gdshader" id="shader_shield_hit"]
+[ext_resource type="Texture2D" path="res://assets/vfx_masks/shield_ripple_mask.png" id="texture_ripple"]
+[ext_resource type="Texture2D" path="res://assets/vfx_masks/shield_noise_distortion.png" id="texture_noise"]
+[ext_resource type="Texture2D" path="res://assets/vfx_masks/shield_fresnel_gradient.png" id="texture_fresnel"]
+
+[sub_resource type="ShaderMaterial" id="ShaderMaterial_shield_hit"]
+shader = ExtResource("shader_shield_hit")
+shader_parameter/base_color = Color(0.2, 0.8, 1, 1)
+shader_parameter/hit_origin = Vector2(0.5, 0.5)
+shader_parameter/fresnel_power = 2.25
+shader_parameter/refract_strength = 0.02
+shader_parameter/ring_thickness = 0.08
+shader_parameter/ring_fade = 0.35
+shader_parameter/ripple_scale = 1.0
+shader_parameter/ripple_mask = ExtResource("texture_ripple")
+shader_parameter/noise_tex = ExtResource("texture_noise")
+shader_parameter/fresnel_gradient = ExtResource("texture_fresnel")
+
+[node name="ShieldHit" type="Node2D"]
+visible = false
+
+[node name="Pulse" type="Polygon2D" parent="."]
+polygon = PackedVector2Array(-128, -128, 128, -128, 128, 128, -128, 128)
+uv = PackedVector2Array(0, 0, 1, 0, 1, 1, 0, 1)
+color = Color(1, 1, 1, 1)
+z_index = 5
+material = SubResource("ShaderMaterial_shield_hit")
+

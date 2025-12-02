@@ -137,13 +137,8 @@ func setup_test_scenario():
 		
 		print("TestScenarioSetup: Initial fog revealed around %d starting units" % player_units.size())
 
-func _input(event: InputEvent):
-	# Test hotkeys for spawning buildings
-	if event is InputEventKey and event.pressed and not event.echo:
-		match event.keycode:
-			KEY_R:
-				# Press R to spawn a Research Building at mouse position
-				spawn_test_research_building()
+# R key binding removed - now used for missile launcher in ShipComponentPanel
+# If you need to test research building spawning, use the Builder Drone UI instead
 
 func spawn_test_research_building():
 	"""Spawn a Research Building at camera/mouse position for testing"""

@@ -54,19 +54,18 @@ func save_game() -> bool:
 	save_completed.emit(true)
 	return true
 
-func load_game() -> bool:
-	"""Load game state from disk"""
-	
+var pending_save_data: Dictionary = {}
+
+func prepare_load() -> bool:
+	"""Prepare for loading by reading and parsing the save file"""
 	var file_path = SAVE_DIR + SAVE_FILE
 	if not FileAccess.file_exists(file_path):
 		push_error("Save file does not exist: " + file_path)
-		load_completed.emit(false)
 		return false
 	
 	var file = FileAccess.open(file_path, FileAccess.READ)
 	if file == null:
 		push_error("Failed to open save file for reading: " + str(FileAccess.get_open_error()))
-		load_completed.emit(false)
 		return false
 	
 	var json_string = file.get_as_text()
@@ -76,30 +75,53 @@ func load_game() -> bool:
 	var parse_result = json.parse(json_string)
 	if parse_result != OK:
 		push_error("Failed to parse save file JSON")
-		load_completed.emit(false)
 		return false
 	
-	var save_data = json.data
-	
+	pending_save_data = json.data
+	return true
+
+func continue_loading():
+	"""Apply the loaded game state after scene transition"""
+	if pending_save_data.is_empty():
+		push_error("No pending save data to load!")
+		load_completed.emit(false)
+		return
+
 	# Set flag BEFORE reloading scene to prevent initial spawning
 	is_loading_save = true
 	
-	# Load the game scene fresh
+	# Reset game state
 	GameManager.reset_game()
 	get_tree().paused = false
-	get_tree().change_scene_to_file("res://scenes/main/GameScene.tscn")
+	
+	# Note: Scene transition is handled by LoadingScene now
 	
 	# Wait for scene to be ready
 	await get_tree().process_frame
 	await get_tree().process_frame
 	
 	# Restore game state
-	_load_game_state(save_data)
+	await _load_game_state(pending_save_data)
 	
 	# Clear flag after loading completes
 	is_loading_save = false
+	pending_save_data = {}
 	
 	load_completed.emit(true)
+
+func load_game() -> bool:
+	"""Legacy load game method (direct load)"""
+	if not prepare_load():
+		load_completed.emit(false)
+		return false
+	
+	# Load the game scene directly
+	get_tree().change_scene_to_file("res://scenes/main/GameScene.tscn")
+	
+	# Wait for scene to be ready
+	await get_tree().process_frame
+	
+	continue_loading()
 	return true
 
 func _save_resources() -> Dictionary:

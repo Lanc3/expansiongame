@@ -1,0 +1,45 @@
+[gd_scene load_steps=6 format=3]
+
+[ext_resource type="Script" path="res://scripts/vfx/ParticleProfile2D.gd" id="script_particle_profile"]
+[ext_resource type="Texture2D" path="res://assets/vfx_textures/flame_02.png" id="texture_flame_small"]
+
+[sub_resource type="Gradient" id="Gradient_plume_s"]
+offsets = PackedFloat32Array(0, 0.3, 0.7, 1)
+colors = PackedColorArray(0.2, 0.6, 1, 0.95, 0.1, 0.4, 0.9, 0.8, 0.1, 0.2, 0.6, 0.3, 0.05, 0.1, 0.25, 0)
+
+[sub_resource type="Curve" id="Curve_plume_s"]
+_data = [Vector2(0, 1), 0.0, 0.0, 0, 0, Vector2(1, 0), 0.0, 0.0, 0, 0]
+
+[sub_resource type="ParticleProcessMaterial" id="Process_plume_s"]
+emission_shape = 4
+spread = 12.0
+initial_velocity_min = 160.0
+initial_velocity_max = 220.0
+direction = Vector2(0, 1)
+gravity = Vector2(0, 0)
+damping = 0.8
+scale_min = 0.08
+scale_max = 0.2
+scale_curve = SubResource("Curve_plume_s")
+color_ramp = SubResource("Gradient_plume_s")
+
+[node name="EnginePlume_S" type="Node2D"]
+visible = false
+script = ExtResource("script_particle_profile")
+particle_path = NodePath("Particles")
+max_particles_low = 20
+max_particles_medium = 40
+max_particles_high = 56
+max_particles_ultra = 72
+lifetime = 0.6
+
+[node name="Particles" type="GPUParticles2D" parent="."]
+amount = 48
+lifetime = 0.6
+local_coords = true
+preprocess = 0.1
+direction = Vector2(0, 1)
+z_index = -1
+process_material = SubResource("Process_plume_s")
+texture = ExtResource("texture_flame_small")
+

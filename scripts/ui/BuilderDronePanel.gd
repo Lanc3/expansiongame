@@ -239,5 +239,7 @@ func _get_building_icon(building_type: String) -> String:
 			return "⛏"
 		"PowerPlant":
 			return "⚙"
+		"MiningStation":
+			return "🛰"
 		_:
 			return "🏭"  # Default factory icon

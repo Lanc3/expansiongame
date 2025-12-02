@@ -160,24 +160,51 @@ func _on_rotate_cw_pressed():
 	update_stats()
 
 func build_component_palette():
-	"""Create level-selectable buttons for all components"""
-	# Define component categories
+	"""Create level-selectable buttons for all components - supports all 21 weapon types"""
+	# Define component categories - organized by type with weapon subcategories
 	var categories = {
 		"Energy": ["power_core"],
 		"Propulsion": ["engine"],
-		"Weapons": ["laser_weapon", "missile_launcher"],
-		"Defense": ["shield_generator", "repair_bot"]
+		"Kinetic Weapons": ["laser_weapon", "autocannon", "railgun", "gatling", "sniper_cannon", "shotgun"],
+		"Energy Weapons": ["ion_cannon", "plasma_cannon", "particle_beam", "tesla_coil", "disruptor"],
+		"Explosive Weapons": ["missile_launcher", "flak_cannon", "torpedo", "rocket_pod", "mortar", "mine_layer"],
+		"Special Weapons": ["cryo_cannon", "emp_burst", "gravity_well", "repair_beam"],
+		"Defense": ["shield_generator", "repair_bot"],
+		"Operations": ["scanner", "miner"]
 	}
 	
-	for category_name in categories.keys():
+	# Category order for display
+	var category_order = ["Energy", "Propulsion", "Kinetic Weapons", "Energy Weapons", "Explosive Weapons", "Special Weapons", "Defense", "Operations"]
+	
+	for category_name in category_order:
+		if not categories.has(category_name):
+			continue
+			
 		# Add category label
 		var category_label = Label.new()
 		category_label.text = category_name + ":"
-		category_label.add_theme_color_override("font_color", Color(0.7, 0.7, 0.7, 1))
+		
+		# Color code weapon categories
+		var label_color = Color(0.7, 0.7, 0.7, 1)
+		match category_name:
+			"Kinetic Weapons":
+				label_color = Color(0.9, 0.8, 0.4, 1)  # Brass/yellow
+			"Energy Weapons":
+				label_color = Color(0.4, 0.7, 1.0, 1)  # Blue
+			"Explosive Weapons":
+				label_color = Color(1.0, 0.6, 0.3, 1)  # Orange
+			"Special Weapons":
+				label_color = Color(0.8, 0.4, 1.0, 1)  # Purple
+		
+		category_label.add_theme_color_override("font_color", label_color)
 		component_list.add_child(category_label)
 		
 		# Add components in this category with level selectors
 		for comp_type in categories[category_name]:
+			# Check if this component type is defined
+			if not CosmoteerComponentDefs.COMPONENT_TYPES.has(comp_type):
+				continue
+				
 			# Create ComponentLevelButton
 			var level_btn = ComponentLevelButton.new()
 			level_btn.setup(comp_type, 1)  # Default to level 1
@@ -189,7 +216,7 @@ func build_component_palette():
 			selected_component_levels[comp_type] = 1  # Default to level 1
 		
 		# Add spacer after category (except last)
-		if category_name != "Defense":
+		if category_name != "Operations":
 			var spacer = Control.new()
 			spacer.custom_minimum_size = Vector2(0, 8)
 			component_list.add_child(spacer)

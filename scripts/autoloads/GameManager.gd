@@ -13,6 +13,8 @@ var current_zone: Dictionary = {
 	"visited": true
 }
 
+const MAX_PLAYER_UNITS: int = 10
+
 func _ready():
 	process_mode = Node.PROCESS_MODE_ALWAYS
 

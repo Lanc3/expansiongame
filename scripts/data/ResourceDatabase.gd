@@ -173,6 +173,25 @@ func get_resource_tier(id: int) -> int:
 		return 0
 	return resource.tier
 
+func get_resource_icon_path(id: int) -> String:
+	"""Get the path to the resource icon image file"""
+	var resource = get_resource_by_id(id)
+	if resource.is_empty():
+		return ""
+	
+	var resource_name = resource.name
+	
+	# Handle naming mismatches between database and file names
+	var name_mapping = {
+		"Phosphorus": "Phosphorous",
+		"Cosmicite": "Comicite"
+	}
+	
+	if resource_name in name_mapping:
+		resource_name = name_mapping[resource_name]
+	
+	return "res://assets/ui/Resources/%s.png" % resource_name
+
 func get_weighted_random_resource() -> int:
 	"""Get a random resource ID weighted by tier rarity"""
 	# First, select a tier based on weights

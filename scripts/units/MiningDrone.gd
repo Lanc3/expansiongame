@@ -2,7 +2,8 @@ extends BaseUnit
 class_name MiningDrone
 
 @export var mining_rate: float = 10.0  # Resources per second
-@export var mining_range: float = 50.0
+@export var mining_range: float = 250.0  # Increased further for longer range
+@export var mining_start_range: float = 400.0  # Distance at which ship stops moving and starts mining
 @export var max_cargo: float = 100.0
 
 var carrying_resources: float = 0.0
@@ -15,10 +16,8 @@ var return_target: Node2D = null
 var last_mined_resource: Node2D = null  # Remember what we were mining
 
 # Mining laser visual
-var mining_laser: Line2D = null
-var laser_texture: Texture2D = null
-var laser_offset: float = 0.0
-var laser_scroll_speed: float = 100.0
+var laser_2d: Laser2D = null
+var laser_2d_scene: PackedScene = preload("res://scenes/components/Laser2D.tscn")
 
 # Cargo indicator UI
 var cargo_indicator: Control = null
@@ -60,6 +59,13 @@ func _process(_delta: float):
 func _exit_tree():
 	if is_instance_valid(cargo_indicator):
 		cargo_indicator.queue_free()
+	# Clean up mining beam when drone is destroyed
+	hide_mining_laser()
+
+func clear_commands():
+	"""Override to ensure mining laser is stopped when commands are cleared"""
+	hide_mining_laser()
+	super.clear_commands()
 
 func update_cargo_bar():
 	# Update floating UI
@@ -94,9 +100,10 @@ func process_gathering_state(delta: float):
 			complete_current_command()
 		return
 	
-	# Move to resource if not in range
+	# Move to resource if not in mining start range
 	var distance = global_position.distance_to(target_entity.global_position)
-	if distance > mining_range:
+	if distance > mining_start_range:
+		hide_mining_laser()  # Hide laser when moving to asteroid
 		target_position = target_entity.global_position
 		
 		# Use NavigationAgent2D for pathfinding
@@ -116,12 +123,6 @@ func process_gathering_state(delta: float):
 	# In range - stop and mine
 	velocity = Vector2.ZERO
 	
-	# Update laser visual
-	if target_entity and distance <= mining_range:
-		update_mining_laser(target_entity, delta)
-	else:
-		hide_mining_laser()
-	
 	# Check if asteroid is scanned
 	if not target_entity.is_scanned:
 		# Cannot mine unscanned asteroid - wait or idle
@@ -129,7 +130,13 @@ func process_gathering_state(delta: float):
 		hide_mining_laser()
 		return
 	
-			# Mine resource
+	# Update laser visual - only when actively mining (in mining start range, scanned, not moving)
+	if target_entity and distance <= mining_start_range and target_entity.is_scanned and velocity.length() < 5.0:
+		update_mining_laser(target_entity, delta)
+	else:
+		hide_mining_laser()
+	
+	# Mine resource
 	mining_timer += delta
 	if mining_timer >= 0.5:  # Mine every 0.5 seconds
 		mining_timer = 0.0
@@ -262,6 +269,16 @@ func find_deposit_target() -> Node2D:
 			elif unit.has_method("deposit_resources"):
 				return unit
 	
+	var zone_buildings = []
+	if EntityManager:
+		zone_buildings = EntityManager.get_buildings_in_zone(current_zone)
+
+	for building in zone_buildings:
+		if not is_instance_valid(building):
+			continue
+		if building.has_method("deposit_resources"):
+			return building
+
 	return null
 
 func deposit_resources():
@@ -301,84 +318,107 @@ func start_returning():
 func start_mining(resource: Node2D):
 	target_entity = resource
 	
-	# Move to resource first if not in range
-	if global_position.distance_to(resource.global_position) > mining_range:
+	# Move to resource first if not in mining start range
+	if global_position.distance_to(resource.global_position) > mining_start_range:
 		target_position = resource.global_position
 		ai_state = AIState.MOVING
 		# Will transition to GATHERING once we arrive
 	else:
 		ai_state = AIState.GATHERING
 
+func start_move_to(target: Vector2):
+	"""Override to ensure mining laser stops when moving"""
+	hide_mining_laser()
+	super.start_move_to(target)
+
+func check_movement_transitions():
+	"""Override to use mining_start_range for mining transitions"""
+	# Check if we should transition from MOVING to GATHERING for mining
+	if ai_state != AIState.MOVING:
+		return
+	
+	if not is_instance_valid(target_entity):
+		return
+	
+	if current_command_index >= command_queue.size():
+		return
+	
+	var cmd = command_queue[current_command_index]
+	
+	# For mining commands, transition when in mining_start_range
+	if cmd.type == 3 and can_mine():  # MINE command
+		var distance = global_position.distance_to(target_entity.global_position)
+		if distance <= mining_start_range:
+			ai_state = AIState.GATHERING
+			velocity = Vector2.ZERO
+			return
+	
+	# Call parent for other transitions
+	super.check_movement_transitions()
+
 ## Mining Laser Methods
 
 func create_mining_laser():
-	"""Create the mining laser Line2D"""
-	mining_laser = Line2D.new()
-	mining_laser.width = 3.0
-	mining_laser.default_color = Color(0.3, 1.0, 0.3, 0.8)  # Green with transparency
-	mining_laser.z_index = 10  # Above asteroids and units
-	mining_laser.visible = false
-	
-	# Load laser texture
-	laser_texture = load("res://assets/sprites/Lasers/laserGreen07.png")
-	mining_laser.texture = laser_texture
-	mining_laser.texture_mode = Line2D.LINE_TEXTURE_STRETCH
-	
-	add_child(mining_laser)
+	"""Create and configure Laser2D component"""
+	if laser_2d_scene:
+		laser_2d = laser_2d_scene.instantiate()
+		add_child(laser_2d)
+		
+		# Configure laser for mining context
+		laser_2d.max_length = mining_start_range * 1.5  # Long enough to reach asteroids at mining start range
+		laser_2d.start_distance = 25.0  # Small offset from drone center
+		laser_2d.color = Color(0.3, 1.0, 0.3, 0.8)  # Mining green
+		laser_2d.cast_speed = 7000.0  # Fast extension
+		laser_2d.growth_time = 0.1  # Quick appearance
+		
+		# Configure collision layers - hit asteroids (layer 3, value 4) but not ships
+		laser_2d.collision_mask = 4  # Layer 3 = Resources/Asteroids (collision_layer = 4)
+		laser_2d.is_casting = false  # Start inactive
 
 func update_mining_laser(target: Node2D, delta: float):
 	"""Update laser visual connecting drone to asteroid"""
-	if not mining_laser:
+	if not target or not is_instance_valid(target):
+		hide_mining_laser()
 		return
 	
-	mining_laser.visible = true
-	mining_laser.clear_points()
+	# Ensure laser is created
+	if not laser_2d:
+		create_mining_laser()
 	
-	# Start point at drone (slightly forward)
-	var start_point = Vector2.ZERO
+	if not laser_2d or not is_instance_valid(laser_2d):
+		return
 	
-	# End point at asteroid (in local coordinates)
-	var end_point = to_local(target.global_position)
+	# Point laser at asteroid relative to drone's rotation
+	# The laser extends along Vector2.RIGHT in its local space
+	# Convert target position to local space to get relative direction
+	var local_target_pos = to_local(target.global_position)
+	var local_direction = local_target_pos.normalized()
+	# Set rotation so laser fires from front of ship toward asteroid
+	laser_2d.rotation = local_direction.angle()
 	
-	mining_laser.add_point(start_point)
-	mining_laser.add_point(end_point)
+	# Update max_length to ensure laser can reach asteroid (but let collision detection stop it)
+	var distance = global_position.distance_to(target.global_position)
+	# Set max_length to at least the distance plus a buffer, but ensure it's long enough
+	# The raycast will stop at the collision point, so max_length just needs to be long enough
+	laser_2d.max_length = max(distance + 50.0, mining_start_range * 1.2)
 	
-	# Animate laser with pulse effect
-	laser_offset += laser_scroll_speed * delta
-	var pulse = 1.0 + sin(laser_offset * 0.1) * 0.3
-	mining_laser.width = 3.0 * pulse
-	mining_laser.default_color.a = 0.6 + sin(laser_offset * 0.05) * 0.2
+	# Reset target_position to ensure laser extends from start when first activated
+	# Don't force it to full length - let collision detection handle stopping at asteroid
+	if not laser_2d.is_casting:
+		laser_2d.target_position = Vector2.ZERO
+		laser_2d.is_casting = true
 
 func hide_mining_laser():
 	"""Hide the mining laser"""
-	if mining_laser:
-		mining_laser.visible = false
+	if laser_2d and is_instance_valid(laser_2d):
+		laser_2d.is_casting = false
 
 func spawn_laser_impact_effect(position: Vector2):
 	"""Spawn particle effect at laser impact point"""
-	var particles = CPUParticles2D.new()
-	particles.global_position = position
-	particles.emitting = true
-	particles.one_shot = true
-	particles.amount = 5
-	particles.lifetime = 0.3
-	particles.explosiveness = 0.8
-	particles.z_index = 10  # Above asteroids
-	
-	# Small sparks
-	particles.direction = Vector2(0, -1)
-	particles.spread = 45.0
-	particles.initial_velocity_min = 20.0
-	particles.initial_velocity_max = 40.0
-	particles.scale_amount_min = 0.5
-	particles.scale_amount_max = 1.0
-	particles.color = Color(0.3, 1.0, 0.3)  # Green to match laser
-	
-	get_parent().add_child(particles)
-	
-	await get_tree().create_timer(0.5).timeout
-	if is_instance_valid(particles):
-		particles.queue_free()
+	var parent_node = get_parent()
+	if VfxDirector and parent_node:
+		var local_pos = parent_node.to_local(position)
+		VfxDirector.spawn_scorch_decal(parent_node, local_pos, 0.12, randf_range(0.0, TAU))
 
 ## Cargo Indicator Methods
 

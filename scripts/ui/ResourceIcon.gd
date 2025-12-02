@@ -3,6 +3,7 @@ class_name ResourceIcon
 
 ## Displays a single resource with colored background, acronym, and count
 
+@onready var icon_texture: TextureRect = $VBox/IconTexture
 @onready var background: ColorRect = $VBox/Background
 @onready var acronym_label: Label = $VBox/AcronymLabel
 @onready var count_label: Label = $VBox/CountLabel
@@ -27,6 +28,37 @@ func setup(res_id: int, res_data: Dictionary):
 	
 	if acronym_label:
 		acronym_label.text = generate_3letter_acronym(res_data.name)
+	
+	# Load and set resource icon
+	if icon_texture:
+		var icon_path = ResourceDatabase.get_resource_icon_path(res_id)
+		if icon_path != "" and ResourceLoader.exists(icon_path):
+			var texture = load(icon_path)
+			if texture:
+				icon_texture.texture = texture
+				icon_texture.visible = true
+				icon_texture.custom_minimum_size = Vector2(30, 30)
+				
+				# Apply shader to remove white backgrounds
+				var shader_path = "res://shaders/remove_white_background.gdshader"
+				if ResourceLoader.exists(shader_path):
+					var shader = load(shader_path) as Shader
+					if shader:
+						var material = ShaderMaterial.new()
+						material.shader = shader
+						icon_texture.material = material
+				
+				# Hide acronym label when icon is present
+				if acronym_label:
+					acronym_label.visible = false
+			else:
+				icon_texture.visible = false
+				if acronym_label:
+					acronym_label.visible = true
+		else:
+			icon_texture.visible = false
+			if acronym_label:
+				acronym_label.visible = true
 	
 	tooltip_text = "%s (Tier %d)" % [res_data.name, res_data.tier]
 	update_count(0)

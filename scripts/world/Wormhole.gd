@@ -85,26 +85,47 @@ func _ready():
 func setup_visual():
 	"""Setup wormhole visuals"""
 	if sprite:
-		# Use a circular sprite (we'll use a simple colored circle)
-		sprite.modulate = base_modulate
-		
-		# Create a simple circular texture procedurally
-		var image = Image.create(128, 128, false, Image.FORMAT_RGBA8)
-		image.fill(Color.TRANSPARENT)
-		
-		# Draw a circle
-		for x in range(128):
-			for y in range(128):
-				var dx = x - 64
-				var dy = y - 64
-				var dist = sqrt(dx * dx + dy * dy)
-				if dist < 50:
-					var alpha = 1.0 - (dist / 50.0) * 0.5
-					image.set_pixel(x, y, Color(base_modulate.r, base_modulate.g, base_modulate.b, alpha))
-		
-		var texture = ImageTexture.create_from_image(image)
-		sprite.texture = texture
-		sprite.scale = Vector2(1.5, 1.5)
+		# Load the wormhole shader
+		var shader = load("res://shaders/wormhole_object.gdshader")
+		if shader:
+			var material = ShaderMaterial.new()
+			material.shader = shader
+			material.set_shader_parameter("base_color", base_modulate)
+			
+			# Adjust parameters based on type
+			if wormhole_type == WormholeType.LATERAL:
+				material.set_shader_parameter("swirl_strength", 6.0)
+				material.set_shader_parameter("core_size", 0.25)
+			else:
+				material.set_shader_parameter("swirl_strength", 8.0)
+				material.set_shader_parameter("core_size", 0.2)
+				
+			sprite.material = material
+			
+			# Use a simple placeholder texture for the shader to work on
+			# The shader discards pixels based on UV, so a square texture is fine
+			var image = Image.create(256, 256, false, Image.FORMAT_RGBA8)
+			image.fill(Color.WHITE)
+			var texture = ImageTexture.create_from_image(image)
+			sprite.texture = texture
+			sprite.scale = Vector2(1.5, 1.5)
+			
+			# Reset rotation as shader handles rotation internally
+			sprite.rotation = 0.0
+		else:
+			print("Wormhole: Failed to load shader!")
+			# Fallback to simple circle if shader fails
+			sprite.modulate = base_modulate
+			var image = Image.create(128, 128, false, Image.FORMAT_RGBA8)
+			image.fill(Color.TRANSPARENT)
+			for x in range(128):
+				for y in range(128):
+					var dx = x - 64
+					var dy = y - 64
+					var dist = sqrt(dx * dx + dy * dy)
+					if dist < 50:
+						image.set_pixel(x, y, Color(1, 1, 1, 1))
+			sprite.texture = ImageTexture.create_from_image(image)
 	
 	# Setup swirling particles
 	if particles:
@@ -166,14 +187,28 @@ func create_wormhole_gradient() -> Gradient:
 func _process(delta: float):
 	"""Animate wormhole rotation and selection glow"""
 	if sprite:
-		sprite.rotation += delta * 0.5
+		# sprite.rotation += delta * 0.5 # Shader handles rotation now
 		
 		# Pulsing glow when selected
-		if is_selected:
-			var pulse = 1.0 + sin(Time.get_ticks_msec() * 0.003) * 0.3
-			sprite.modulate = base_modulate * pulse
+		if sprite.material is ShaderMaterial:
+			var mat = sprite.material as ShaderMaterial
+			if is_selected:
+				# Increase pulse amount and speed when selected
+				mat.set_shader_parameter("pulse_amount", 0.15)
+				mat.set_shader_parameter("pulse_speed", 5.0)
+				# Also brighten the base color slightly
+				mat.set_shader_parameter("base_color", base_modulate * 1.5)
+			else:
+				mat.set_shader_parameter("pulse_amount", 0.05)
+				mat.set_shader_parameter("pulse_speed", 2.0)
+				mat.set_shader_parameter("base_color", base_modulate)
 		else:
-			sprite.modulate = base_modulate
+			# Fallback for non-shader
+			if is_selected:
+				var pulse = 1.0 + sin(Time.get_ticks_msec() * 0.003) * 0.3
+				sprite.modulate = base_modulate * pulse
+			else:
+				sprite.modulate = base_modulate
 
 func select_wormhole():
 	"""Select this wormhole and emit signal"""
@@ -183,19 +218,30 @@ func select_wormhole():
 func deselect_wormhole():
 	"""Deselect this wormhole"""
 	is_selected = false
-	sprite.modulate = base_modulate
+	if sprite.material is ShaderMaterial:
+		(sprite.material as ShaderMaterial).set_shader_parameter("base_color", base_modulate)
+		(sprite.material as ShaderMaterial).set_shader_parameter("pulse_amount", 0.05)
+		(sprite.material as ShaderMaterial).set_shader_parameter("pulse_speed", 2.0)
+	else:
+		sprite.modulate = base_modulate
 
 func _on_mouse_entered():
 	"""Handle mouse hover"""
 	is_hovered = true
 	if sprite and not is_selected:
-		sprite.modulate = base_modulate * 1.5
+		if sprite.material is ShaderMaterial:
+			(sprite.material as ShaderMaterial).set_shader_parameter("base_color", base_modulate * 1.5)
+		else:
+			sprite.modulate = base_modulate * 1.5
 
 func _on_mouse_exited():
 	"""Handle mouse exit"""
 	is_hovered = false
 	if sprite and not is_selected:
-		sprite.modulate = base_modulate
+		if sprite.material is ShaderMaterial:
+			(sprite.material as ShaderMaterial).set_shader_parameter("base_color", base_modulate)
+		else:
+			sprite.modulate = base_modulate
 
 func update_label():
 	"""Update wormhole label based on type and destination"""

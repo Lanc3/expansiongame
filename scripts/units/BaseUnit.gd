@@ -10,6 +10,7 @@ enum ProcessingState { FULL, REDUCED, PAUSED }
 
 @export var unit_name: String = "Unit"
 @export var team_id: int = 0
+@export var zone_id: String = ""
 @export var max_health: float = 100.0
 @export var move_speed: float = 150.0
 @export var acceleration: float = 500.0
@@ -484,7 +485,8 @@ func can_attack() -> bool:
 func can_mine() -> bool:
 	return false  # Override in MiningDrone
 
-func take_damage(amount: float, attacker: Node2D = null):
+func take_damage(amount: float, attacker: Node2D = null, hit_position: Vector2 = Vector2.ZERO):
+	"""Apply damage to unit. hit_position is optional and used by CustomShip for destructible hull system."""
 	current_health = max(0, current_health - amount)
 	health_changed.emit(current_health)
 	update_health_bar()

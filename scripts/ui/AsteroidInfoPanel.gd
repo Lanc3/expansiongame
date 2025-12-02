@@ -128,6 +128,34 @@ func create_resource_bar(comp: Dictionary) -> HBoxContainer:
 	var container = HBoxContainer.new()
 	container.custom_minimum_size = Vector2(0, 25)
 	
+	# Resource icon
+	var icon_texture = TextureRect.new()
+	icon_texture.custom_minimum_size = Vector2(24, 24)
+	icon_texture.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
+	icon_texture.expand_mode = TextureRect.EXPAND_FIT_WIDTH_PROPORTIONAL
+	
+	var icon_path = ResourceDatabase.get_resource_icon_path(comp.type_id)
+	if icon_path != "" and ResourceLoader.exists(icon_path):
+		var texture = load(icon_path)
+		if texture:
+			icon_texture.texture = texture
+			icon_texture.visible = true
+			
+			# Apply shader to remove white backgrounds
+			var shader_path = "res://shaders/remove_white_background.gdshader"
+			if ResourceLoader.exists(shader_path):
+				var shader = load(shader_path) as Shader
+				if shader:
+					var material = ShaderMaterial.new()
+					material.shader = shader
+					icon_texture.material = material
+		else:
+			icon_texture.visible = false
+	else:
+		icon_texture.visible = false
+	
+	container.add_child(icon_texture)
+	
 	# Progress bar
 	var progress_bar = ProgressBar.new()
 	progress_bar.custom_minimum_size = Vector2(100, 20)

@@ -20,6 +20,9 @@ func select_unit(unit: Node2D, add_to_selection: bool = false):
 	if not is_instance_valid(unit):
 		return
 	
+	if unit.has_meta("station_drone") and unit.get_meta("station_drone"):
+		return
+
 	# Check if it's an asteroid
 	if unit is ResourceNode:
 		select_asteroid(unit)
@@ -84,6 +87,9 @@ func select_units_in_rect(rect: Rect2, add_to_selection: bool = false):
 		if not is_instance_valid(unit):
 			continue
 		
+		if unit.has_meta("station_drone") and unit.get_meta("station_drone"):
+			continue
+
 		# Only select player units (team_id 0)
 		if unit.has_method("get") and unit.team_id == 0:
 			if rect.has_point(unit.global_position):
@@ -149,6 +155,9 @@ func select_units_by_type(unit_class_name: String):
 	
 	for unit in player_units:
 		if not is_instance_valid(unit):
+			continue
+		
+		if unit.has_meta("station_drone") and unit.get_meta("station_drone"):
 			continue
 		
 		var matches = false

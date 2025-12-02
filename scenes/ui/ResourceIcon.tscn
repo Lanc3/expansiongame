@@ -14,6 +14,14 @@ theme_override_constants/separation = 1
 custom_minimum_size = Vector2(0, 20)
 layout_mode = 2
 
+[node name="IconTexture" type="TextureRect" parent="VBox"]
+layout_mode = 2
+custom_minimum_size = Vector2(30, 30)
+size_flags_vertical = 3
+stretch_mode = 5
+expand_mode = 1
+modulate = Color(1, 1, 1, 1)
+
 [node name="AcronymLabel" type="Label" parent="VBox"]
 layout_mode = 2
 theme_override_font_sizes/font_size = 9

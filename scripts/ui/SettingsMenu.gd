@@ -12,6 +12,11 @@ signal closed
 @onready var close_button: Button = $SettingsPanel/VBoxContainer/CloseButton
 @onready var settings_panel: Panel = $SettingsPanel
 @onready var background_overlay: ColorRect = $BackgroundOverlay
+@onready var bloom_enabled_checkbox: CheckBox = $SettingsPanel/VBoxContainer/BloomSection/CheckBox
+@onready var bloom_strength_slider: HSlider = $SettingsPanel/VBoxContainer/BloomSection/StrengthSection/HBox/BloomStrengthSlider
+@onready var bloom_amount_slider: HSlider = $SettingsPanel/VBoxContainer/BloomSection/AmountSection/HBox/BloomAmountSlider
+@onready var bloom_strength_label: Label = $SettingsPanel/VBoxContainer/BloomSection/StrengthSection/HBox/ValueLabel
+@onready var bloom_amount_label: Label = $SettingsPanel/VBoxContainer/BloomSection/AmountSection/HBox/ValueLabel
 
 func _ready():
 	process_mode = Node.PROCESS_MODE_ALWAYS
@@ -22,6 +27,14 @@ func _ready():
 	sfx_slider.value_changed.connect(_on_sfx_volume_changed)
 	close_button.pressed.connect(_on_close_pressed)
 	
+	# Connect bloom controls
+	if bloom_enabled_checkbox:
+		bloom_enabled_checkbox.toggled.connect(_on_bloom_enabled_changed)
+	if bloom_strength_slider:
+		bloom_strength_slider.value_changed.connect(_on_bloom_strength_changed)
+	if bloom_amount_slider:
+		bloom_amount_slider.value_changed.connect(_on_bloom_amount_changed)
+	
 	# Load current settings
 	if AudioManager:
 		master_slider.value = AudioManager.get_master_volume() * 100
@@ -29,6 +42,17 @@ func _ready():
 		sfx_slider.value = AudioManager.get_sfx_volume() * 100
 		
 		_update_value_labels()
+	
+	# Load bloom settings
+	if GraphicsSettingsManager:
+		if bloom_enabled_checkbox:
+			bloom_enabled_checkbox.button_pressed = GraphicsSettingsManager.get_glow_enabled()
+		if bloom_strength_slider:
+			bloom_strength_slider.value = GraphicsSettingsManager.get_glow_strength() * 100
+		if bloom_amount_slider:
+			bloom_amount_slider.value = GraphicsSettingsManager.get_glow_bloom() * 100
+		
+		_update_bloom_labels()
 
 func show_settings():
 	"""Show settings menu with fade-in animation"""
@@ -79,6 +103,26 @@ func _update_value_labels():
 	master_value_label.text = "%d%%" % master_slider.value
 	music_value_label.text = "%d%%" % music_slider.value
 	sfx_value_label.text = "%d%%" % sfx_slider.value
+
+func _update_bloom_labels():
+	if bloom_strength_label and bloom_strength_slider:
+		bloom_strength_label.text = "%.1f" % (bloom_strength_slider.value / 100.0)
+	if bloom_amount_label and bloom_amount_slider:
+		bloom_amount_label.text = "%d%%" % bloom_amount_slider.value
+
+func _on_bloom_enabled_changed(enabled: bool):
+	if GraphicsSettingsManager:
+		GraphicsSettingsManager.set_glow_enabled(enabled)
+
+func _on_bloom_strength_changed(value: float):
+	if GraphicsSettingsManager:
+		GraphicsSettingsManager.set_glow_strength(value / 100.0)
+		_update_bloom_labels()
+
+func _on_bloom_amount_changed(value: float):
+	if GraphicsSettingsManager:
+		GraphicsSettingsManager.set_glow_bloom(value / 100.0)
+		_update_bloom_labels()
 
 func _on_close_pressed():
 	hide_settings()

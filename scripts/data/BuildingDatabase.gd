@@ -171,6 +171,19 @@ const BUILDINGS = {
 		health = 550.0,
 		requires_research = "building_mining_platform"
 	},
+
+	"MiningStation": {
+		scene = "res://scenes/buildings/MiningStation.tscn",
+		build_time = 90.0,
+		cost = {0: 220, 1: 200, 10: 180, 14: 80},  # Iron, Carbon, Copper, Nickel
+		max_per_zone = 1,
+		collision_radius = 120.0,
+		display_name = "Mining Station",
+		description = "Mobile mining hub that coordinates scouts and miners across a wide radius.",
+		icon_path = "res://assets/ui/Grey/panel_beveledGrey.png",
+		health = 1800.0,
+		requires_research = ""
+	},
 	
 	"TeleportPad": {
 		scene = "res://scenes/buildings/TeleportPad.tscn",

@@ -2,19 +2,21 @@
 
 [ext_resource type="PackedScene" uid="uid://cgdbgusf45058" path="res://scenes/units/BaseUnit.tscn" id="1_0p0pg"]
 [ext_resource type="Script" uid="uid://bgn04up2yhpqa" path="res://scripts/units/MiningDrone.gd" id="2_0gryq"]
-[ext_resource type="Texture2D" uid="uid://gly0nqxaxxj2" path="res://assets/sprites/UI/cursor.png" id="2_kp3rh"]
+[ext_resource type="Texture2D" uid="uid://bt7wxauu7pahs" path="res://assets/sprites/units/MiningDrone.png" id="3_kp3rh"]
 
 [node name="BaseUnit" instance=ExtResource("1_0p0pg")]
 rotation = 3.880331
 script = ExtResource("2_0gryq")
 mining_rate = 5.0
 mining_range = 50.0
+mining_start_range = 400.0
 max_cargo = 100.0
 unit_name = "Mining Drone"
 
 [node name="Sprite2D" parent="." index="1"]
 visible = false
 
-[node name="Sprite2D2" type="Sprite2D" parent="." index="5"]
-rotation = 2.3449745
-texture = ExtResource("2_kp3rh")
+[node name="Sprite2D2" type="Sprite2D" parent="." index="4"]
+rotation = 4.699004
+scale = Vector2(0.1, 0.1)
+texture = ExtResource("3_kp3rh")

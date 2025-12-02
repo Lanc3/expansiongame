@@ -1,0 +1,42 @@
+[gd_scene load_steps=6 format=3]
+
+[ext_resource type="Script" path="res://scripts/vfx/ParticleProfile2D.gd" id="script_particle_profile"]
+[ext_resource type="Texture2D" path="res://assets/vfx_textures/flare_01.png" id="texture_flare"]
+
+[sub_resource type="Gradient" id="Gradient_flash"]
+offsets = PackedFloat32Array(0, 0.4, 1)
+colors = PackedColorArray(1, 1, 1, 1, 1, 0.65, 0.2, 0.9, 0.5, 0.1, 0, 0)
+
+[sub_resource type="ParticleProcessMaterial" id="Process_flash"]
+emission_shape = 0
+initial_velocity_min = 450.0
+initial_velocity_max = 600.0
+angular_velocity = 18.0
+spread = 180.0
+gravity = Vector2(0, 0)
+scale_min = 0.12
+scale_max = 0.24
+color_ramp = SubResource("Gradient_flash")
+
+[node name="ExplosionFlash" type="Node2D"]
+visible = false
+process_mode = 0
+script = ExtResource("script_particle_profile")
+particle_path = NodePath("Burst")
+max_particles_low = 40
+max_particles_medium = 72
+max_particles_high = 100
+max_particles_ultra = 128
+lifetime = 0.35
+
+[node name="Burst" type="GPUParticles2D" parent="."]
+amount = 72
+lifetime = 0.35
+explosiveness = 1.0
+one_shot = true
+preprocess = 0.05
+process_material = SubResource("Process_flash")
+draw_order = 2
+texture = ExtResource("texture_flare")
+emitting = false
+

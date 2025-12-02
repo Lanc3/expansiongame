@@ -226,9 +226,9 @@ func auto_scan_for_targets():
 				# Switch to aggressive mode when engaging
 				become_aggressive()
 
-func take_damage(amount: float, attacker: Node2D = null):
+func take_damage(amount: float, attacker: Node2D = null, hit_position: Vector2 = Vector2.ZERO):
 	"""Override to trigger aggressive behavior when damaged"""
-	super.take_damage(amount, attacker)
+	super.take_damage(amount, attacker, hit_position)
 	
 	# Become aggressive when attacked
 	become_aggressive()

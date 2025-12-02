@@ -197,7 +197,8 @@ func spawn_real_building():
 	var building_scene = load(scene_path)
 	var building = building_scene.instantiate()
 	building.global_position = global_position
-	building.zone_id = zone_id
+	if building is BaseUnit:
+		building.zone_id = zone_id
 	
 	# Add to appropriate zone layer
 	var zone_data = ZoneManager.get_zone(zone_id) if ZoneManager else {}

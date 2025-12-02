@@ -51,6 +51,13 @@ func _input(event: InputEvent):
 
 func handle_mouse_button(event: InputEventMouseButton):
 	if event.button_index == MOUSE_BUTTON_LEFT:
+		# Check for active component command override (prevent selection clearing during targeting)
+		if SelectionManager.has_selection():
+			for unit in SelectionManager.selected_units:
+				if is_instance_valid(unit) and unit is CustomShip:
+					if unit.has_method("has_active_component_command") and unit.has_active_component_command():
+						return # Let unit handle input via _unhandled_input
+
 		if event.pressed:
 			start_selection(event.position)
 		else:
@@ -244,6 +251,21 @@ func issue_command(screen_pos: Vector2, queue: bool = false):
 	
 	if selected_units.is_empty():
 		return
+	
+	# CustomShip component command override: if any selected CustomShip has an active component mode, route here
+	for unit in selected_units:
+		if is_instance_valid(unit) and unit is CustomShip:
+			# Force check if manual weapons are active - this should override standard movement
+			if "active_weapon_indices" in unit and not unit.active_weapon_indices.is_empty():
+				if unit.has_method("process_component_command"):
+					# Pass current mouse position, but the result is what matters
+					if unit.process_component_command(world_pos):
+						return
+			
+			if unit.has_method("has_active_component_command") and unit.has_active_component_command():
+				if unit.has_method("process_component_command"):
+					if unit.process_component_command(world_pos):
+						return
 	
 	var cmd = CommandSystem.get_command_at_position(world_pos)
 	cmd.queue_command = queue
@@ -484,6 +506,12 @@ func is_mouse_over_ui(mouse_pos: Vector2) -> bool:
 	var inventory_panel = get_tree().root.find_child("ResourceInventoryPanel", true, false)
 	if inventory_panel and inventory_panel.visible:
 		if inventory_panel is Control and inventory_panel.get_global_rect().has_point(mouse_pos):
+			return true
+	
+	# Check ShipComponentPanel (custom ship component UI)
+	var ship_comp_panel = get_tree().root.find_child("ShipComponentPanel", true, false)
+	if ship_comp_panel and ship_comp_panel.visible:
+		if ship_comp_panel is Control and ship_comp_panel.get_global_rect().has_point(mouse_pos):
 			return true
 	
 	# Check Minimap

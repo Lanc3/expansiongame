@@ -35,6 +35,7 @@ SelectionManager="*res://scripts/autoloads/SelectionManager.gd"
 EntityManager="*res://scripts/autoloads/EntityManager.gd"
 FeedbackManager="*res://scripts/autoloads/FeedbackManager.gd"
 AudioManager="*res://scripts/autoloads/AudioManager.gd"
+GraphicsSettingsManager="*res://scripts/autoloads/GraphicsSettingsManager.gd"
 ButtonSoundHelper="*res://scripts/autoloads/ButtonSoundHelper.gd"
 CommandSystem="*res://scripts/autoloads/CommandSystem.gd"
 FormationManager="*res://scripts/autoloads/FormationManager.gd"
@@ -47,6 +48,7 @@ LootDropSystem="*res://scripts/systems/LootDropSystem.gd"
 EventManager="*res://scripts/systems/EventManager.gd"
 BlueprintPaths="*res://scripts/autoloads/BlueprintPaths.gd"
 ProjectilePool="*res://scripts/autoloads/ProjectilePool.gd"
+VfxDirector="*res://scripts/vfx/VfxDirector.gd"
 
 [display]
 
@@ -133,5 +135,7 @@ deselect_all={
 
 [rendering]
 
-renderer/rendering_method="gl_compatibility"
-renderer/rendering_method.mobile="gl_compatibility"
+renderer/rendering_method.mobile="forward_plus"
+anti_aliasing/quality/use_taa=true
+anti_aliasing/quality/use_taa.mobile=true
+environment/volumetric_fog/enable=true

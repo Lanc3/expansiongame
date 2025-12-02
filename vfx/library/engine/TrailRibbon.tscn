@@ -1,0 +1,28 @@
+[gd_scene load_steps=5 format=3]
+
+[ext_resource type="Shader" path="res://vfx/shaders/trail.gdshader" id="shader_trail"]
+[ext_resource type="Texture2D" path="res://assets/vfx_masks/trail_color_mask.png" id="texture_mask"]
+[ext_resource type="Texture2D" path="res://assets/vfx_masks/trail_noise_distort.png" id="texture_noise"]
+
+[sub_resource type="ShaderMaterial" id="ShaderMaterial_trail"]
+shader = ExtResource("shader_trail")
+shader_parameter/color_start = Color(0.9, 0.2, 0.2, 1)
+shader_parameter/color_end = Color(1, 0.9, 0.2, 0)
+shader_parameter/fade_distance = 0.35
+shader_parameter/width_fade = 0.2
+shader_parameter/mask_scale = 1.0
+shader_parameter/noise_strength = 0.25
+shader_parameter/noise_speed = 0.6
+shader_parameter/mask_tex = ExtResource("texture_mask")
+shader_parameter/noise_tex = ExtResource("texture_noise")
+
+[node name="TrailRibbon" type="Line2D"]
+width = 14.0
+joint_mode = 2
+default_color = Color(1, 1, 1, 1)
+begin_cap_mode = 1
+end_cap_mode = 1
+texture_mode = 2
+material = SubResource("ShaderMaterial_trail")
+points = PackedVector2Array(0, 0, -32, 0, -64, 0, -128, 0)
+

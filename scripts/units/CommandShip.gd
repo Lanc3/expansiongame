@@ -8,6 +8,9 @@ var stored_common: float = 0.0
 var stored_rare: float = 0.0
 var stored_exotic: float = 0.0
 
+# Engine trails
+var engine_particles: Array = []
+
 # Production system
 signal production_started(unit_type: String)
 signal production_completed(unit_type: String)
@@ -27,6 +30,9 @@ func _ready():
 	current_health = max_health
 	move_speed = 20.0
 	vision_range = 1600.0  # Command ship has largest vision (doubled from 800)
+	
+	# Create engine trails
+	_create_engine_particles()
 
 func _process(delta: float):
 	super._process(delta)
@@ -67,6 +73,54 @@ func can_attack() -> bool:
 func can_mine() -> bool:
 	return false
 
+func update_visual():
+	super.update_visual()
+	_update_engine_particles()
+
+func _create_engine_particles():
+	"""Create engine beam effects"""
+	# Positions for engine trails (back of ship)
+	# CommandShip has rotation 0 pointing Right (+X)
+	# Engines should point Left (-X)
+	var positions = [Vector2(-45, -15), Vector2(-45, 15)]
+	
+	for pos in positions:
+		# Rotation PI/2 makes the beam (which points Down +Y) point Left (-X)
+		# because +Y rotated 90 deg CW is -X? Wait.
+		# (0, 1) rotated +90 deg (PI/2) is (-1, 0). Correct.
+		# VfxDirector.spawn_engine_plume(size, parent, position, rotation, intensity)
+		if VfxDirector:
+			var beam = VfxDirector.spawn_engine_plume(&"medium", self, pos, PI/2, 0.0)
+			if beam:
+				beam.z_index = -1
+				engine_particles.append(beam)
+
+func _update_engine_particles():
+	"""Update engine intensity based on velocity"""
+	if engine_particles.is_empty():
+		return
+	
+	var is_moving = velocity.length() > 5.0
+	var throttle = clamp(velocity.length() / max(move_speed, 1.0), 0.35, 1.0)
+	
+	for beam in engine_particles:
+		if is_instance_valid(beam):
+			if is_moving:
+				beam.intensity = throttle
+			else:
+				beam.intensity = 0.0
+
+func can_build_more_units() -> bool:
+	"""Check if global unit limit allows building more"""
+	var current_units = EntityManager.get_units_by_team(0).size()
+	
+	# Count queued units
+	var queued_count = production_queue.size()
+	if is_producing:
+		queued_count += 1
+		
+	return (current_units + queued_count) < GameManager.MAX_PLAYER_UNITS
+
 # ============================================================================
 # PRODUCTION SYSTEM
 # ============================================================================
@@ -90,6 +144,10 @@ func process_production(delta: float):
 func add_to_queue(unit_type: String) -> bool:
 	"""Add a unit to the production queue"""
 	if production_queue.size() >= MAX_QUEUE_SIZE:
+		return false
+	
+	# Check global unit limit
+	if not can_build_more_units():
 		return false
 	
 	var cost = calculate_production_cost(unit_type)

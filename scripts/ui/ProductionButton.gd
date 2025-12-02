@@ -173,10 +173,17 @@ func update_availability():
 	var can_afford = ResourceManager.can_afford_cost(cost)
 	var queue_not_full = command_ship.production_queue.size() < command_ship.MAX_QUEUE_SIZE
 	
-	build_button.disabled = not (can_afford and queue_not_full)
+	var limit_reached = false
+	if command_ship.has_method("can_build_more_units"):
+		if not command_ship.can_build_more_units():
+			limit_reached = true
+	
+	build_button.disabled = not (can_afford and queue_not_full and not limit_reached)
 	
 	# Update button text
-	if not queue_not_full:
+	if limit_reached:
+		build_button.text = "Limit Reached"
+	elif not queue_not_full:
 		build_button.text = "Queue Full"
 	elif not can_afford:
 		build_button.text = "Need Resources"

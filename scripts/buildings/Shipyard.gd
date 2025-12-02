@@ -66,6 +66,17 @@ func add_to_queue(blueprint: CosmoteerShipBlueprint) -> bool:
 			FeedbackManager.show_message("Production queue is full!")
 		return false
 	
+	# Check global unit limit
+	var current_units = EntityManager.get_units_by_team(0).size()
+	var queued_count = production_queue.size()
+	if is_producing:
+		queued_count += 1
+		
+	if (current_units + queued_count) >= GameManager.MAX_PLAYER_UNITS:
+		if FeedbackManager:
+			FeedbackManager.show_message("Unit limit reached!")
+		return false
+	
 	# Validate blueprint
 	print("Shipyard: Validating blueprint...")
 	var validation_errors = validate_blueprint(blueprint)
